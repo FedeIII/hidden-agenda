@@ -9,6 +9,7 @@ import webpackConfig from './webpack.config.babel';
 
 const paths = {
     distDir: 'dist',
+    distFiles: 'dist/*',
     distImgs: 'dist/img',
     clientBundle: 'dist/client-bundle.js?(.map)',
 
@@ -35,8 +36,8 @@ gulp.task('lint', () =>
 );
 
 gulp.task('clean', () => del([
-    paths.distImgs,
-    paths.distDir
+    paths.distImgs + '*',
+    paths.distFiles
 ]));
 
 gulp.task('sass', () =>
