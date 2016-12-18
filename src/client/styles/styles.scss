@@ -1,0 +1,264 @@
+$hex-margin: 4px;
+$row-margin: 4.7%;
+$hex-gradient-amplitude: 30%;
+$hex-base-color: #a1abb7;
+$piece-margin: 10%;
+
+$darkenLevelByCell: (
+        (0,  3,  3,  6),
+      (3,  2,  4,  2,  3),
+    (3,  4,  3,  0,  4,  3),
+  (6,  2,  0,  0,  3,  2,  0),
+    (3,  4,  3,  0,  4,  3),
+      (3,  2,  4,  2,  3),
+        (0,  3,  3,  6),
+);
+
+@function getDarkenLevel($row, $cell) {
+    $darkenLevel: nth(nth($darkenLevelByCell, $row + 1), $cell + 1);
+
+    @return $darkenLevel;
+}
+
+@function getHexagonDarken($row, $cell) {
+    $level: getDarkenLevel($row, $cell);
+
+    @return $level * 6;
+}
+
+@function getHexBaseColor($row, $cell) {
+    $level: getLevel($row, $cell);
+
+    $darken: getHexagonDarken($row, $cell);
+    @return darken($hex-base-color, $darken);
+}
+
+@function getHexGradientAngle($row, $cell) {
+    $angle: 0deg;
+
+    @if ($row > 3) {
+        $angle: 180deg;
+    }
+
+    @if ($row == 3 and $cell < 4) {
+        $angle: 270deg;
+    }
+
+    @if ($row == 3 and $cell >= 4) {
+        $angle: 90deg;
+    }
+
+    @return $angle;
+}
+
+@function getHexGradient($row, $cell) {
+    $color: getHexBaseColor($row, $cell);
+    $color-light: lighten($color, $hex-gradient-amplitude/2);
+    $color-dark: darken($color, $hex-gradient-amplitude/2);
+    $color-light-narrow: darken($color-light, $hex-gradient-amplitude/4);
+    $color-dark-narrow: lighten($color-dark, $hex-gradient-amplitude/4);
+
+    $angle: getHexGradientAngle($row, $cell);
+
+    $gradient-main-colors: ($color-light-narrow, $color-dark-narrow);
+
+    @if ($row == 3) {
+        $gradient-main-colors: ($color-light, $color-dark);
+    }
+
+    $gradients: (
+        linear-gradient($angle, nth($gradient-main-colors, 1) 0%, nth($gradient-main-colors, 2) 100%),
+        linear-gradient($angle - 60, $color-light 0%, $color-dark 100%),
+        linear-gradient($angle + 60, $color-light 0%, $color-dark 100%),
+        linear-gradient($angle, lighten(nth($gradient-main-colors, 1), 5%) 0%, lighten(nth($gradient-main-colors, 2), 5%) 100%),
+        linear-gradient($angle - 60, lighten($color-light, 5%) 0%, lighten($color-dark, 5%) 100%),
+        linear-gradient($angle + 60, lighten($color-light, 5%) 0%, lighten($color-dark, 5%) 100%)
+    );
+
+    @if ($row == 3 and $cell == 3) {
+        $gradients: (
+            radial-gradient(circle, lighten($color-light-narrow, 10%) 0%, lighten($color-dark-narrow, 10%) 100%),
+            radial-gradient(circle, lighten($color-light-narrow, 10%) 0%, lighten($color-dark-narrow, 10%) 100%),
+            radial-gradient(circle, lighten($color-light-narrow, 10%) 0%, lighten($color-dark-narrow, 10%) 100%),
+            radial-gradient(circle, lighten($color-light-narrow, 15%) 0%, lighten($color-dark-narrow, 15%) 100%),
+            radial-gradient(circle, lighten($color-light-narrow, 15%) 0%, lighten($color-dark-narrow, 15%) 100%),
+            radial-gradient(circle, lighten($color-light-narrow, 15%) 0%, lighten($color-dark-narrow, 15%) 100%)
+        );
+    }
+
+    @return $gradients;
+}
+
+body {
+    font: 14px "Century Gothic", Futura, sans-serif;
+    margin: 20px;
+}
+
+.game {
+    display: flex;
+    flex-direction: column;;
+}
+
+.game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+}
+
+.game-board {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column
+}
+
+.board-row {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    margin-top: $row-margin;
+    justify-content: center;
+
+    @for $row from 0 through 6 {
+        &-#{$row} {
+            $numberOfCells: 10 - $row;
+
+            @if $row < 4 {
+                $numberOfCells: $row + 4;
+            }
+
+            $total-margin: $numberOfCells * $hex-margin;
+            $hexagon-width: calc((100% - #{$total-margin}) / 7);
+
+            & .hexagon {
+                width: $hexagon-width;
+                height: 0;
+                padding-bottom: 7.8%;
+            }
+        }
+    }
+}
+
+.hexagon {
+    $hexagon: #{&};
+    position: relative;
+    margin-right: $hex-margin;
+
+    &:before,
+    &:after {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 100%;
+    }
+
+    &:before {
+        transform: rotate(60deg);
+    }
+
+    &:after {
+        transform: rotate(-60deg);
+    }
+
+    &--highlighted {
+        box-sizing: border-box;
+        border-left: 2px solid red;
+        border-right: 2px solid red;
+
+        &:before {
+            box-sizing: border-box;
+            border-left: 2px solid red;
+            border-right: 2px solid red;
+        }
+
+        &:after {
+            box-sizing: border-box;
+            border-left: 2px solid red;
+            border-right: 2px solid red;
+        }
+    }
+
+    @for $row from 0 through 6 {
+        $numberOfCells: 10 - $row;
+
+        @if $row < 4 {
+            $numberOfCells: $row + 4;
+        }
+
+        @for $cell from 0 through $numberOfCells - 1 {
+            &--row-#{$row} {
+                &-cell-#{$cell} {
+
+                    $gradients: getHexGradient($row, $cell);
+
+                    background: nth($gradients, 1);
+
+                    &:before {
+                        background: nth($gradients, 2);
+                    }
+
+                    &:after {
+                        background: nth($gradients, 3);
+                    }
+
+                    &:hover {
+                        background: nth($gradients, 4);
+
+                        &:before {
+                            background: nth($gradients, 5);
+                        }
+
+                        &:after {
+                            background: nth($gradients, 6);
+                        }
+                    }
+
+                }
+            }
+        }
+    }
+}
+
+.piece {
+    position: absolute;
+    width: 80%;
+    top: -50%;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin-left: 10%;
+    margin-top: 13%;
+    z-index: 1;
+
+    &--direction {
+        &-up {
+            &-right {
+                transform: rotate(-60deg);
+            }
+            &-left {
+                transform: rotate(-120deg);
+            }
+        }
+        &-down {
+            &-right {
+                transform: rotate(60deg);
+            }
+            &-left {
+                transform: rotate(120deg);
+            }
+        }
+        &-right {
+            transform: rotate(0deg);
+        }
+        &-left {
+            transform: rotate(180deg);
+        }
+    }
+
+    &--selected {
+        filter: brightness(10);
+    }
+}
