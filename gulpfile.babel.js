@@ -8,16 +8,19 @@ import livereload from 'gulp-livereload';
 import webpackConfig from './webpack.config.babel';
 
 const paths = {
+    distDir: 'dist',
+    distImgs: 'dist/img',
     clientBundle: 'dist/client-bundle.js?(.map)',
+
     allSrcJs: 'src/**/*.js?(x)',
+    clientEntryPoint: 'src/client/app.jsx',
     serverSrcJs: 'src/server/**/*.js?(x)',
     sharedSrcJs: 'src/shared/**/*.js?(x)',
     styles: 'src/client/styles/**/*.scss',
-    clientEntryPoint: 'src/client/app.jsx',
+    images: 'img/*.*',
+    index: 'index.html',
     gulpFile: 'gulpfile.babel.js',
-    webpackFile: 'webpack.config.babel.js',
-    distDir: 'dist',
-    libDir: 'lib'
+    webpackFile: 'webpack.config.babel.js'
 };
 
 gulp.task('lint', () =>
@@ -32,8 +35,8 @@ gulp.task('lint', () =>
 );
 
 gulp.task('clean', () => del([
-    paths.libDir,
-    paths.clientBundle
+    paths.distImgs,
+    paths.distDir
 ]));
 
 gulp.task('sass', () =>
@@ -42,7 +45,15 @@ gulp.task('sass', () =>
         .pipe(gulp.dest(paths.distDir))
 );
 
-gulp.task('main', ['clean', 'sass'], () =>
+gulp.task('static', () => {
+    gulp.src(paths.images)
+        .pipe(gulp.dest(paths.distImgs));
+
+    gulp.src(paths.index)
+        .pipe(gulp.dest(paths.distDir));
+});
+
+gulp.task('main', ['clean', 'sass', 'static'], () =>
     gulp.src(paths.clientEntryPoint)
         .pipe(webpack(webpackConfig))
         .pipe(gulp.dest(paths.distDir))
