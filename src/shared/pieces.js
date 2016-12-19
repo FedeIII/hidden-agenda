@@ -1,3 +1,5 @@
+import cells from 'shared/cells';
+
 // direction:
 //  [0] vertical:
 //      1: up
@@ -57,10 +59,30 @@ const agent = {
         return this.create(to, [v, h]);
     },
 
-    getAvailableCells(direction, adjacentCells) {
+    getAvailableCells(piece, adjacentCells) {
         const availableCells = [];
 
-        return availableCells.concat(adjacentCells);
+        const currentCell = cells.get(piece.position[0], piece.position[1]);
+        const cellInDirection = currentCell.getCellInDirection(piece.direction);
+        const cellIndex = adjacentCells.findIndex((cell) => {
+            return cell[0] === cellInDirection[0] && cell[1] === cellInDirection[1];
+        });
+
+        const indices = [cellIndex - 1, cellIndex, cellIndex + 1].map((value) => {
+            if (value < 0) {
+                return adjacentCells.length + value;
+            } else if (value >= adjacentCells.length) {
+                return value - adjacentCells.length;
+            } else {
+                return value;
+            }
+        });
+
+        return availableCells.concat([
+            adjacentCells[indices[0]],
+            adjacentCells[indices[1]],
+            adjacentCells[indices[2]]
+        ]);
     }
 };
 
@@ -84,7 +106,7 @@ const pieces = {
     },
 
     getAvailableCells(piece, adjacentCells) {
-        return agent.getAvailableCells(piece.direction, adjacentCells);
+        return agent.getAvailableCells(piece, adjacentCells);
     }
 };
 

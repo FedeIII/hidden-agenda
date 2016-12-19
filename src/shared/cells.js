@@ -3,7 +3,7 @@ const cells = [];
 
 const createGetCellInDirection = function createGetCellInDirection (r, c) {
     return function getCellInDirection ([v, h]) {
-        let hDiff = h;
+        let hDiff = (h === 0) ? 1 : -1;
         if (r < 3) {
             if (v > 0) {
                 hDiff = -h;
@@ -21,6 +21,8 @@ const createGetCellInDirection = function createGetCellInDirection (r, c) {
                 hDiff = -h;
             }
         }
+
+        return [r - v, c + hDiff];
     }
 };
 
