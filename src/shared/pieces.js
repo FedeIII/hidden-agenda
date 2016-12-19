@@ -1,11 +1,31 @@
 // direction:
-//  [0]: horizontal:
-//      1: left
-//      0: right
-//  [1]: vertical:
+//  [0] vertical:
 //      1: up
 //      0: horizontal
 //      -1: down
+//  [1] horizontal:
+//      1: left
+//      0: right
+
+function isUp (from, to) {
+    return from[0] > to[0];
+}
+
+function isSideways (from, to) {
+    return from[0] === to[0];
+}
+
+function isBottomHalf (to) {
+    return to[0] > 3;
+}
+
+function isUpIntoTheMiddle (from, to) {
+    return to[0] === 3 && isUp(from, to);
+}
+
+function invertHorizontal (h) {
+    return +!h;
+}
 
 const agent = {
     create(position, direction) {
@@ -20,21 +40,17 @@ const agent = {
         const hDiff = from[1] - to[1];
         let h;
 
-        if (v > 0) {
-            h = (hDiff === 0) ? 0 : 1;
-        } else if (v === 0) {
+        if (isSideways(from, to)) {
             h = (hDiff === -1) ? 0 : 1;
-        } else if (v < 0) {
-            h = (hDiff === 0) ? 1 : 0;
-        }
-
-        if (to[0] > 3 || (to[0] === 3 && v > 0)) {
-            if (v > 0) {
-                h = (hDiff === 0) ? 1 : 0;
-            } else if (v === 0) {
-                h = (hDiff === -1) ? 0 : 1;
-            } else if (v < 0) {
+        } else {
+            if (isUp(from, to)) {
                 h = (hDiff === 0) ? 0 : 1;
+            } else {
+                h = (hDiff === 0) ? 1 : 0;
+            }
+
+            if (isBottomHalf(to) || isUpIntoTheMiddle(from, to)) {
+                h = invertHorizontal(h);
             }
         }
 

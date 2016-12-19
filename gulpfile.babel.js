@@ -54,7 +54,7 @@ gulp.task('static', () => {
         .pipe(gulp.dest(paths.distDir));
 });
 
-gulp.task('main', ['clean', 'sass', 'static'], () =>
+gulp.task('main', ['sass', 'static'], () =>
     gulp.src(paths.clientEntryPoint)
         .pipe(webpack(webpackConfig))
         .pipe(gulp.dest(paths.distDir))
