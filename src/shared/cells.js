@@ -3,32 +3,57 @@ const cells = {};
 const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
 const cellsProps = [];
 
-const getCellProps = function getCellProps (r, c) {
+const createGetCellInDirection = function createGetCellInDirection (r, c) {
+    return function getCellInDirection ([v, h]) {
+        let hDiff = h;
+        if (r < 3) {
+            if (v > 0) {
+                hDiff = -h;
+            } else if (v < 0) {
+                hDiff = +!h;
+            }
+        } else if (r === 3) {
+            if (v !== 0) {
+                hDiff = -h;
+            }
+        } else if (r > 3) {
+            if (v > 0) {
+                hDiff = +!h;
+            } else if (v < 0) {
+                hDiff = -h;
+            }
+        }
+    }
+};
+
+const getAdjacentCells = function getAdjacentCells (r, c) {
     const upperCells = (r <= 3) ?
         [[r - 1, c - 1], [r - 1, c]] :
         [[r - 1, c], [r - 1, c + 1]];
-    const rowCells = [[r, c - 1], [r, c + 1]];
+    const rowCellLeft = [[r, c - 1]];
+    const rowCellRight = [[r, c + 1]];
     const lowerCells = (r < 3) ?
-        [[r + 1, c], [r + 1, c + 1]] :
-        [[r + 1, c - 1], [r + 1, c]];
-    const adjacentCells = [].concat(upperCells, rowCells, lowerCells);
+        [[r + 1, c + 1], [r + 1, c]] :
+        [[r + 1, c], [r + 1, c - 1]];
 
-    return {
-        adjacentCells
-    };
+    return [].concat(upperCells, rowCellRight, lowerCells, rowCellLeft);
 };
 
 cellsByRow.forEach((numberOfCells) => {
     const row = [];
-    for (let i = 0; i < numberOfCells; i++) {
-        row.push(getCellProps(cellsProps.length, i));
+    for (let c = 0; c < numberOfCells; c++) {
+        const r = cellsProps.length;
+        row.push({
+            adjacentCells: getAdjacentCells(r, c),
+            getCellInDirection: createGetCellInDirection(r, c)
+        });
     }
 
     cellsProps.push(row);
 });
 
-cells.getAdjacentCells = function getAdjacentCells (r, c) {
-    return cellsProps[r][c].adjacentCells;
+cells.getCellProps = function getCellProps (r, c) {
+    return cellsProps[r][c];
 }
 
 export default cells;

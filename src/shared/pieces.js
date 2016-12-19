@@ -57,8 +57,10 @@ const agent = {
         return this.create(to, [v, h]);
     },
 
-    getAvailableCells(adjacentCells) {
-        return adjacentCells;
+    getAvailableCells(direction, adjacentCells) {
+        const availableCells = [];
+
+        return availableCells.concat(adjacentCells);
     }
 };
 
@@ -82,7 +84,7 @@ const pieces = {
     },
 
     getAvailableCells(piece, adjacentCells) {
-        return agent.getAvailableCells(adjacentCells);
+        return agent.getAvailableCells(piece.direction, adjacentCells);
     }
 };
 
