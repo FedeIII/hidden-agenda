@@ -25,7 +25,7 @@ class Game extends React.Component {
 
     getAvailableCells(pieceName) {
         const piece = this.state.pieces[pieceName];
-        const cellProps = cells.getCellProps(piece.position[0], piece.position[1]);
+        const cellProps = cells.get(piece.position[0], piece.position[1]);
         const availableCells = pieces.getAvailableCells(piece, cellProps.adjacentCells);
 
         return availableCells;

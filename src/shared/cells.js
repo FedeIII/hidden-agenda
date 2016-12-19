@@ -1,7 +1,5 @@
-const cells = {};
-
 const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
-const cellsProps = [];
+const cells = [];
 
 const createGetCellInDirection = function createGetCellInDirection (r, c) {
     return function getCellInDirection ([v, h]) {
@@ -42,18 +40,18 @@ const getAdjacentCells = function getAdjacentCells (r, c) {
 cellsByRow.forEach((numberOfCells) => {
     const row = [];
     for (let c = 0; c < numberOfCells; c++) {
-        const r = cellsProps.length;
+        const r = cells.length;
         row.push({
             adjacentCells: getAdjacentCells(r, c),
             getCellInDirection: createGetCellInDirection(r, c)
         });
     }
 
-    cellsProps.push(row);
+    cells.push(row);
 });
 
-cells.getCellProps = function getCellProps (r, c) {
-    return cellsProps[r][c];
-}
-
-export default cells;
+export default {
+    get(r, c) {
+        return cells[r][c];
+    }
+};
