@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 
 import Board from 'components/board';
+import Hq from 'components/hq';
 import cells from 'shared/cells';
 import pieces from 'shared/pieces';
 
@@ -58,6 +59,12 @@ class Game extends React.Component {
                             deselectPiece={() => this.deselectPiece()}
                             movePiece={(p, r, c) => this.movePiece(p, r, c)}
                         />
+                    </div>
+                    <div className="hqs">
+                        <Hq team="0" />
+                        <Hq team="1" />
+                        <Hq team="2" />
+                        <Hq team="3" />
                     </div>
                 </div>
             </div>
