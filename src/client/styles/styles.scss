@@ -89,6 +89,10 @@ $darkenLevelByCell: (
     @return $gradients;
 }
 
+$maxNumberOfCells: 7;
+$total-margin: $maxNumberOfCells * $hex-margin;
+$hexagon-width: calc((100% - #{$total-margin}) / #{$maxNumberOfCells});
+
 body {
     font: 14px "Century Gothic", Futura, sans-serif;
     margin: 0;
@@ -117,20 +121,22 @@ body {
 
 .hqs {
     position: relative;
-    width: 50%;
     display: flex;
     flex-direction: column;
-    padding: 8px;
+    width: 33%;
 }
 
 .hq {
+    $hq-padding: 8px;
+    $hq-border: 2px;
     position: relative;
-    width: 100%;
+    width: calc(100% - #{$hq-padding} * 2 - #{$hq-border} * 2);
     height: 25%;
     display: flex;
     flex-direction: column;
-    border: 2px solid gray;
+    border: $hq-border solid gray;
     margin-bottom: 8px;
+    padding: $hq-padding;
 
     &-0 {
         background-color: white;
@@ -147,6 +153,40 @@ body {
     &-3 {
         background-color: yellow;
     }
+
+    &__row {
+        position: relative;
+        display: flex;
+        height: 33%;
+
+        &--0 {
+            top: 0;
+            left: 0;
+        }
+
+        &--1 {
+            top: 9%;
+            left: 13%;
+        }
+
+        &--2 {
+            top: 18%;
+            left: 51%;
+        }
+    }
+
+    &__store {
+        position: relative;
+        width: 50%;
+        height: 100%;
+        transform: rotate(-30deg);
+    }
+
+    & .hexagon {
+        top: 25%;
+        width: 22%;
+        height: 75%;
+    }
 }
 
 .board-row {
@@ -156,23 +196,10 @@ body {
     margin-top: $row-margin;
     justify-content: center;
 
-    @for $row from 0 through 6 {
-        &-#{$row} {
-            $numberOfCells: 10 - $row;
-
-            @if $row < 4 {
-                $numberOfCells: $row + 4;
-            }
-
-            $total-margin: $numberOfCells * $hex-margin;
-            $hexagon-width: calc((100% - #{$total-margin}) / 7);
-
-            & .hexagon {
-                width: $hexagon-width;
-                height: 0;
-                padding-bottom: 7.8%;
-            }
-        }
+    & .hexagon {
+        width: $hexagon-width;
+        height: 0;
+        padding-bottom: 7.8%;
     }
 }
 
