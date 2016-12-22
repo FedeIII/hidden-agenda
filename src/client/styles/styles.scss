@@ -165,27 +165,29 @@ body {
         }
 
         &--1 {
-            top: 9%;
+            top: 16%;
             left: 13%;
         }
 
         &--2 {
-            top: 18%;
-            left: 51%;
+            top: 33%;
+            left: 53%;
         }
     }
 
+    $hex-store-margin: $hex-margin / 2;
+
     &__store {
         position: relative;
-        width: 50%;
+        width: calc(#{$hexagon-width} * 4 + #{$hex-store-margin} * 4);
         height: 100%;
         transform: rotate(-30deg);
     }
 
     & .hexagon {
         top: 25%;
-        width: 22%;
-        height: 75%;
+        width: 25%;
+        margin-right: $hex-store-margin;
     }
 }
 
