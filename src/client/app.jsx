@@ -50,6 +50,10 @@ class Game extends React.Component {
         return (
             <div className="game">
                 <div className="game-container">
+                    <div className="hqs">
+                        <Hq team="0" />
+                        <Hq team="1" />
+                    </div>
                     <div className="game-board">
                         <Board
                             pieces={this.state.pieces}
@@ -61,8 +65,6 @@ class Game extends React.Component {
                         />
                     </div>
                     <div className="hqs">
-                        <Hq team="0" />
-                        <Hq team="1" />
                         <Hq team="2" />
                         <Hq team="3" />
                     </div>

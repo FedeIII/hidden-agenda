@@ -117,21 +117,23 @@ body {
     width: 50%;
     display: flex;
     flex-direction: column;
+    padding: 0 20px;
 }
 
 .hqs {
     position: relative;
     display: flex;
     flex-direction: column;
-    width: 33%;
+    justify-content: space-around;
+    width: 28%;
 }
 
 .hq {
     $hq-padding: 8px;
     $hq-border: 2px;
     position: relative;
-    width: calc(100% - #{$hq-padding} * 2 - #{$hq-border} * 2);
-    height: 25%;
+    // width: calc(100% - #{$hq-padding} * 2 - #{$hq-border} * 2);
+    height: 33%;
     display: flex;
     flex-direction: column;
     border: $hq-border solid gray;
@@ -154,40 +156,12 @@ body {
         background-color: yellow;
     }
 
-    &__row {
-        position: relative;
-        display: flex;
-        height: 33%;
-
-        &--0 {
-            top: 0;
-            left: 0;
-        }
-
-        &--1 {
-            top: 20%;
-            left: 11%;
-        }
-
-        &--2 {
-            top: 39%;
-            left: 43%;
-        }
-    }
-
-    $hex-store-margin: $hex-margin / 2;
-
     &__store {
-        position: relative;
-        width: calc(#{$hexagon-width} * 4 + #{$hex-store-margin} * 4);
-        height: 75%;
-        transform: rotate(-30deg);
-    }
-
-    & .hexagon {
-        top: 25%;
-        width: 20%;
-        margin-right: $hex-store-margin;
+        width: 100%;
+        height: 100%;
+        background-image: url('img/hexgrid.png');
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
     }
 }
 
