@@ -88,7 +88,7 @@ const agent = {
 
 const initialState = {
     agent1: agent.create([3, 3], [1, 0]),
-    agent2: agent.create([0, 0], [-1, 1])
+    agent2: agent.create([-1, -1], [1, 0])
 };
 
 const pieces = {

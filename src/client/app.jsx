@@ -51,7 +51,12 @@ class Game extends React.Component {
             <div className="game">
                 <div className="game-container">
                     <div className="hqs">
-                        <Hq team="0" />
+                        <Hq
+                            team="0"
+                            pieces={this.state.pieces}
+                            selectPiece={(p) => this.selectPiece(p)}
+                            deselectPiece={() => this.deselectPiece()}
+                        />
                         <Hq team="1" />
                     </div>
                     <div className="game-board">
