@@ -14,7 +14,7 @@ const paths = {
     clientBundle: 'dist/client-bundle.js?(.map)',
 
     allSrcJs: 'src/**/*.js?(x)',
-    clientEntryPoint: 'src/client/app.jsx',
+    clientEntryPoint: 'src/client/index.js',
     serverSrcJs: 'src/server/**/*.js?(x)',
     sharedSrcJs: 'src/shared/**/*.js?(x)',
     styles: 'src/client/styles/**/*.scss',

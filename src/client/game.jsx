@@ -1,5 +1,4 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
 
 import Board from 'components/board';
 import Hq from 'components/hq';
@@ -79,9 +78,4 @@ class Game extends React.Component {
     }
 }
 
-// ========================================
-
-ReactDOM.render(
-    <Game />,
-    document.querySelector('.app')
-);
+export default Game;
