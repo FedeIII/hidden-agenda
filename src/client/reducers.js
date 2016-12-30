@@ -7,6 +7,7 @@ const initialState = {
             pieceId: '0-A1',
             onBoard: false,
             position: null,
+            direction: [1, 0],
             selected: false
         }
     },
@@ -15,6 +16,7 @@ const initialState = {
             pieceId: '1-A1',
             onBoard: false,
             position: null,
+            direction: [1, 0],
             selected: false
         }
     },
@@ -23,6 +25,7 @@ const initialState = {
             pieceId: '2-A1',
             onBoard: false,
             position: null,
+            direction: [1, 0],
             selected: false
         }
     },
@@ -31,6 +34,7 @@ const initialState = {
             pieceId: '3-A1',
             onBoard: false,
             position: null,
+            direction: [1, 0],
             selected: false
         }
     },

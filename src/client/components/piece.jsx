@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {PropTypes} from 'react';
 
 const directionClassMap = {
     vertical: {
@@ -12,22 +12,23 @@ const directionClassMap = {
     }
 };
 
-function Piece(props) {
-    const verticalClass = directionClassMap.vertical[props.direction[0]];
-    const horizontalClass = directionClassMap.horizontal[props.direction[1]];
+function Piece ({
+    pieceId,
+    onBoard,
+    position,
+    direction,
+    selected,
+    onPieceClick
+}) {
+    const verticalClass = directionClassMap.vertical[direction[0]];
+    const horizontalClass = directionClassMap.horizontal[direction[1]];
     let directionClass = `piece--direction${verticalClass}${horizontalClass}`;
 
     let className = `piece ${directionClass}`;
-    className += props.selected ? ' piece--selected' : '';
+    className += selected ? ' piece--selected' : '';
 
     return (
-        <img src="img/agent.png" className={className} onClick={() => {
-            if (props.selected) {
-                props.deselectPiece();
-            } else {
-                props.selectPiece();
-            }
-        }} />
+        <img src="img/agent.png" className={className} onClick={() => onPieceClick(pieceId)} />
     );
 }
 

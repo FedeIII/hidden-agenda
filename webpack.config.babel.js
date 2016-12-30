@@ -18,6 +18,7 @@ export default {
         alias: {
             client: 'client',
             components: 'client/components',
+            containers: 'client/containers',
             shared: 'shared'
         }
     }
