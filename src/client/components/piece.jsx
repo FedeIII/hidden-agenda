@@ -13,7 +13,7 @@ const directionClassMap = {
 };
 
 function Piece ({
-    pieceId,
+    id,
     onBoard,
     position,
     direction,
@@ -28,7 +28,7 @@ function Piece ({
     className += selected ? ' piece--selected' : '';
 
     return (
-        <img src="img/agent.png" className={className} onClick={() => onPieceClick(pieceId)} />
+        <img src="img/agent.png" className={className} onClick={() => onPieceClick(id)} />
     );
 }
 

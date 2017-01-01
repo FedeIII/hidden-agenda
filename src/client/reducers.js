@@ -4,25 +4,25 @@ import {TOGGLE_PIECE, MOVE_PIECE} from './actions';
 const initialState = {
     team0: {
         agent1: {
-            pieceId: '0-A1',
+            id: '0-A1',
             onBoard: false,
-            position: null,
+            position: [3, 3],
             direction: [1, 0],
             selected: false
         }
     },
     team1: {
         agent1: {
-            pieceId: '1-A1',
+            id: '1-A1',
             onBoard: false,
-            position: null,
+            position: [0, 0],
             direction: [1, 0],
             selected: false
         }
     },
     team2: {
         agent1: {
-            pieceId: '2-A1',
+            id: '2-A1',
             onBoard: false,
             position: null,
             direction: [1, 0],
@@ -31,7 +31,7 @@ const initialState = {
     },
     team3: {
         agent1: {
-            pieceId: '3-A1',
+            id: '3-A1',
             onBoard: false,
             position: null,
             direction: [1, 0],
