@@ -3,24 +3,14 @@ import {connect} from 'react-redux';
 import Board from 'components/board';
 import {movePiece} from 'client/actions';
 
-function concatPieces ({team0, team1, team2, team3}) {
-    return []
-        .concat(Object.values(team0))
-        .concat(Object.values(team1))
-        .concat(Object.values(team2))
-        .concat(Object.values(team3));
-}
-
-function getSelectedPiece (pieces) {
-    return pieces.find(piece => piece.selected);
+function getSelectedPiece (state) {
+    return state.find(piece => piece.selected);
 }
 
 function mapStateToProps (state) {
-    const pieces = concatPieces(state);
-
     return {
-        pieces: pieces,
-        selectedPiece: getSelectedPiece(pieces)
+        pieces: state,
+        selectedPiece: getSelectedPiece(state)
     };
 }
 

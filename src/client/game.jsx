@@ -1,22 +1,22 @@
 import React from 'react';
 
 import BoardContainer from 'containers/boardContainer';
-import Hq from 'components/hq';
+import HqContainer from 'containers/hqContainer';
 
 function Game () {
     return (
         <div className="game">
             <div className="game-container">
                 <div className="hqs">
-                    <Hq team="0" />
-                    <Hq team="1" />
+                    <HqContainer team="0" />
+                    <HqContainer team="1" />
                 </div>
                 <div className="game-board">
                     <BoardContainer />
                 </div>
                 <div className="hqs">
-                    <Hq team="2" />
-                    <Hq team="3" />
+                    <HqContainer team="2" />
+                    <HqContainer team="3" />
                 </div>
             </div>
         </div>

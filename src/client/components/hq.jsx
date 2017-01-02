@@ -1,21 +1,13 @@
 import React, {PropTypes} from 'react';
 
-import Piece from './piece';
+import PieceContainer from 'containers/pieceContainer';
 
 function renderPieces (pieces) {
-    const Pieces = [];
-    for (let pieceName in pieces) {
-        const piece = pieces[pieceName];
-        const PieceComponent = <Piece
-                                    direction={piece.direction}
-                                    // selected={this.props.isPieceSelected}
-                                    // selectPiece={() => this.props.selectPiece(piece)}
-                                    // deselectPiece={() => this.props.deselectPiece()}
-                                />
-        Pieces.push(PieceComponent);
-    }
-
-    return Pieces;
+    return pieces.map(piece =>
+        <PieceContainer
+            {...piece}
+        />
+    );
 }
 
 function Hq ({
@@ -29,16 +21,16 @@ function Hq ({
     return (
         <div key={`team${team}`} className={className}>
             <div className="hq__store">
-                {pieces}
+                {Pieces}
             </div>
         </div>
     );
 }
 
-Hq.propTypes = {
-    team: PropTypes.string.isRequired,
-    pieces: PropTypes.object
-};
+// Hq.propTypes = {
+//     team: PropTypes.string.isRequired,
+//     pieces: PropTypes.object
+// };
 
 // class Hq extends React.Component {
 //     renderPieces() {

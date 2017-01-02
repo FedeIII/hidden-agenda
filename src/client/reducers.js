@@ -1,94 +1,55 @@
 import {combineReducers} from 'redux';
 import {TOGGLE_PIECE, MOVE_PIECE} from './actions';
 
-const initialState = {
-    team0: {
-        agent1: {
-            id: '0-A1',
-            onBoard: false,
-            position: [3, 3],
-            direction: [1, 0],
-            selected: false
-        }
-    },
-    team1: {
-        agent1: {
-            id: '1-A1',
-            onBoard: false,
-            position: [0, 0],
-            direction: [1, 0],
-            selected: false
-        }
-    },
-    team2: {
-        agent1: {
-            id: '2-A1',
-            onBoard: false,
-            position: null,
-            direction: [1, 0],
-            selected: false
-        }
-    },
-    team3: {
-        agent1: {
-            id: '3-A1',
-            onBoard: false,
-            position: null,
-            direction: [1, 0],
-            selected: false
-        }
-    },
-    availableCells: []
-};
-
-function getTeamFromPiece (pieceId) {
-    return 'team' + pieceId.charAt(0);
-}
-
-function getPieceNameFromPiece (pieceId) {
-    return 'agent' + pieceId.charAt(3);
-}
-
-function getPieceInfo (pieceId) {
+function createPiece (id) {
     return {
-        pieceTeam: getTeamFromPiece(pieceId),
-        pieceName: getPieceNameFromPiece(pieceId)
-    };
+        id,
+        position: null,
+        direction: null,
+        selected: false
+    }
 }
 
-function createNewTeamInfo (teamInfo, teamKey) {
-    const newTeamInfo = {};
-    newTeamInfo[teamKey] = teamInfo;
+const pieceIds = [
+    '0-A1', '0-A2', '0-A3', '0-A4', '0-A5',
+    '1-A1', '1-A2', '1-A3', '1-A4', '1-A5',
+    '2-A1', '2-A2', '2-A3', '2-A4', '2-A5',
+    '3-A1', '3-A2', '3-A3', '3-A4', '3-A5'
+];
 
-    return newTeamInfo;
-}
+const initialState = pieceIds.map(id => createPiece(id));
 
 function toggledPieceState (state, pieceId) {
-    const {pieceTeam, pieceName} = getPieceInfo(pieceId);
-    const pieceSelected = state[pieceTeam][pieceName].selected;
-    const changedState = createNewTeamInfo(state[pieceTeam], pieceTeam);
-    changedState[pieceTeam][pieceName].selected = !pieceSelected;
+    return state.map(piece => {
+        if (piece.id === pieceId) {
+            piece.selected = !piece.selected;
+        } else {
+            piece.selected = false;
+        }
 
-    return changedState;
+        return piece;
+    });
 }
 
 function movedPieceState (state, {pieceId, coords}) {
-    const {pieceTeam, pieceName} = getPieceInfo(pieceId);
-    const changedState = createNewTeamInfo(state[pieceTeam], pieceTeam);
-    changedState[pieceTeam][pieceName].position = coords;
-    changedState[pieceTeam][pieceName].selected = false;
+    return state.map(piece => {
+        if (piece.id === pieceId) {
+            piece.position = coords;
+            piece.selected = false;
+        }
 
-    return changedState;
+        return piece;
+    });
 }
 
-export default function gameReducer (state = initialState, action) {
+export default function gameReducer (state = initialState, action = {}) {
     switch (action.type) {
         case TOGGLE_PIECE:
-            return Object.assign({}, state,
+            return [].concat(
                 toggledPieceState(state, action.payload.pieceId)
             );
         case MOVE_PIECE:
-            return Object.assign({}, state,
+            return [].concat(
                 movedPieceState(state, action.payload)
             );
         default:

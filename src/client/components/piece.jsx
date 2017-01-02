@@ -14,18 +14,30 @@ const directionClassMap = {
 
 function Piece ({
     id,
-    onBoard,
     position,
     direction,
     selected,
     onPieceClick
 }) {
-    const verticalClass = directionClassMap.vertical[direction[0]];
-    const horizontalClass = directionClassMap.horizontal[direction[1]];
-    let directionClass = `piece--direction${verticalClass}${horizontalClass}`;
 
-    let className = `piece ${directionClass}`;
-    className += selected ? ' piece--selected' : '';
+    function getClassName () {
+        let className = 'piece';
+
+        if (direction) {
+            const verticalClass = directionClassMap.vertical[direction[0]];
+            const horizontalClass = directionClassMap.horizontal[direction[1]];
+            className += ` piece--direction${verticalClass}${horizontalClass}`;
+        } else {
+            className += ` piece--hq piece--hq--${id.slice(2)}`;
+        }
+
+        className += selected ? ' piece--selected' : '';
+
+
+        return className;
+    }
+
+    let className = getClassName();
 
     return (
         <img src="img/agent.png" className={className} onClick={() => onPieceClick(id)} />
