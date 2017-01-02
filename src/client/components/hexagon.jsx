@@ -1,38 +1,46 @@
-import React from 'react';
+import React, {PropTypes} from 'react';
 
-import Piece from './piece';
+import PieceContainer from 'containers/pieceContainer';
 
-class Hexagon extends React.Component {
-    handleClick() {
-        if (this.props.highlighted) {
-            this.props.movePiece(this.props.row, this.props.cell);
+function Hexagon ({
+    row, cell,
+    piece,
+    highlighted,
+    onClick,
+}) {
+
+    function handleClick () {
+        if (highlighted) {
+            onClick();
         }
     }
 
-    renderPiece() {
-        if (this.props.piece) {
+    function renderPiece () {
+        if (piece) {
             return (
-                <Piece
-                    direction={this.props.piece.direction}
-                    selected={this.props.isPieceSelected}
-                    selectPiece={() => this.props.selectPiece(this.props.piece)}
-                    deselectPiece={() => this.props.deselectPiece()}
+                <PieceContainer
+                    {...piece}
                 />
             );
         }
     }
 
-    render() {
-        let className = `hexagon hexagon--row-${this.props.row}-cell-${this.props.cell}`;
-        className += this.props.highlighted ? ' hexagon--highlighted' : '';
-        const piece = this.renderPiece();
+    let className = `hexagon hexagon--row-${row}-cell-${cell}`;
+    className += highlighted ? ' hexagon--highlighted' : '';
+    const PieceComponent = renderPiece();
 
-        return (
-            <div className={className} onClick={() => this.handleClick()}>
-                {piece}
-            </div>
-        );
-    }
+    return (
+        <div className={className} onClick={() => handleClick()}>
+            {PieceComponent}
+        </div>
+    );
 }
+
+Hexagon.propTypes = {
+    row: PropTypes.number.isRequired,
+    cell: PropTypes.number.isRequired,
+    piece: PropTypes.object,
+    highlighted: PropTypes.bool
+};
 
 export default Hexagon;

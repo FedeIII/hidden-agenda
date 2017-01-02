@@ -1,8 +1,13 @@
 const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
 const cells = [];
 
-const createGetCellInDirection = function createGetCellInDirection (r, c) {
-    return function getCellInDirection ([v, h]) {
+const mockCell = {
+    adjacentCells: [],
+    getCoordsInDirection: () => [null, null]
+};
+
+function createGetCoordsInDirection (r, c) {
+    return function getCoordsInDirection ([v, h]) {
         let hDiff = (h === 0) ? 1 : -1;
         if (r < 3) {
             if (v > 0) {
@@ -26,7 +31,7 @@ const createGetCellInDirection = function createGetCellInDirection (r, c) {
     }
 };
 
-const getAdjacentCells = function getAdjacentCells (r, c) {
+function getAdjacentCells (r, c) {
     const upperCells = (r <= 3) ?
         [[r - 1, c - 1], [r - 1, c]] :
         [[r - 1, c], [r - 1, c + 1]];
@@ -45,7 +50,7 @@ cellsByRow.forEach((numberOfCells) => {
         const r = cells.length;
         row.push({
             adjacentCells: getAdjacentCells(r, c),
-            getCellInDirection: createGetCellInDirection(r, c)
+            getCoordsInDirection: createGetCoordsInDirection(r, c)
         });
     }
 
@@ -54,6 +59,10 @@ cellsByRow.forEach((numberOfCells) => {
 
 export default {
     get(r, c) {
-        return cells[r][c];
+        if (r && c) {
+            return cells[r][c];
+        } else {
+            return mockCell;
+        }
     }
 };

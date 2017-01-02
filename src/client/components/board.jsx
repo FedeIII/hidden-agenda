@@ -1,84 +1,89 @@
-import React from 'react';
+import React, {PropTypes} from 'react';
 
-import Hexagon from './hexagon';
+import cells from 'shared/cells';
+import Hexagon from 'components/hexagon';
 
-class Board extends React.Component {
-    getCellAvailability(r, c) {
-        if (this.props.availableCells) {
-            const isCellAvailable = this.props.availableCells.some((cell) => {
-                return cell[0] === r && cell[1] === c;
-            });
+function getHighlightedCells (selectedPiece) {
+    const highlightedCells = [];
 
-            return isCellAvailable;
-        }
+    if (selectedPiece) {
+        const selectedPieceCell = cells.get(
+            selectedPiece.position[0],
+            selectedPiece.position[1]
+        );
+
+        highlightedCells.push(
+            selectedPieceCell.getCoordsInDirection(selectedPiece.direction)
+        );
     }
 
-    selectPiece(piece) {
-        let pieceName;
+    return highlightedCells;
+}
 
-        for (let key in this.props.pieces) {
-            if (this.props.pieces[key] === piece) {
-                pieceName = key;
-            }
-        }
+function Board ({
+    pieces,
+    selectedPiece,
+    onHexagonClick
+}) {
 
-        this.props.selectPiece(pieceName);
-    }
+    const highlightedCells = getHighlightedCells(selectedPiece);
 
-    renderHexagon(r, c) {
-        let pieceInHexagon, pieceInHexagonName;
-        const pieces = this.props.pieces;
-        for (let pieceName in pieces) {
-            const piece = pieces[pieceName];
-            if (piece.position[0] === r &&
-                piece.position[1] === c) {
-                    pieceInHexagon = piece;
-                    pieceInHexagonName = pieceName;
-                }
-        }
-        const isAvailable = this.getCellAvailability(r, c);
-        const isPieceSelected = (pieceInHexagonName === this.props.pieceSelected);
+    function renderHexagon (r, c) {
+        const piece = pieces.find(({position}) =>
+            position &&
+            position[0] === r &&
+            position[1] === c
+        );
+
+        const highlighted = !!highlightedCells.find(
+            coords => coords[0] === r && coords[1] === c
+        );
 
         return (
             <Hexagon
                 key={`${r}${c}`}
                 row={r} cell={c}
-                piece={pieceInHexagon}
-                isPieceSelected={isPieceSelected}
-                highlighted={isAvailable}
-                selectPiece={(p) => this.selectPiece(p)}
-                deselectPiece={() => this.props.deselectPiece()}
-                movePiece={(r, c) => this.props.movePiece(this.props.pieceSelected, r, c)}
+                piece={piece}
+                highlighted={highlighted}
+                onClick={() => onHexagonClick([r, c])}
             />
         );
     }
 
-    render() {
-        const i = [0, 1, 2, 3, 4, 5, 6];
+    const rowNumbers = [0, 1, 2, 3, 4, 5, 6];
+    const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
 
-        const rows = i.map(row => {
-            const className = `board-row board-row-${row}`;
-            const numberOfCells = (row < 4) * (row + 4) +
-                                    (row > 3) * (10 - row);
-            const cells = [];
+    const rows = rowNumbers.map(row => {
+        const className = `board-row board-row-${row}`;
+        const numberOfCells = cellsByRow[row];
+        const cells = [];
 
-            for (let cell = 0; cell < numberOfCells; cell++) {
-                cells.push(this.renderHexagon(row, cell));
-            }
-
-            return (
-                <div key={row} className={className}>
-                    {cells}
-                </div>
-            );
-        });
+        for (let cell = 0; cell < numberOfCells; cell++) {
+            cells.push(renderHexagon(row, cell));
+        }
 
         return (
-            <div>
-                {rows}
+            <div key={row} className={className}>
+                {cells}
             </div>
         );
-    }
+    });
+
+    return (
+        <div>
+            {rows}
+        </div>
+    );
 }
+
+Board.propTypes = {
+    pieces: PropTypes.arrayOf(PropTypes.shape({
+        position: PropTypes.arrayOf((coords) => {
+            if (coords.length !== 2) {
+                return new Error('wrong coords, bro');
+            }
+        })
+    })).isRequired
+};
 
 export default Board;
