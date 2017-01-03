@@ -4,7 +4,7 @@ import {createStore} from 'redux';
 import {Provider} from 'react-redux';
 
 import Game from './game';
-import gameReducer from 'client/reducers';
+import gameReducer from 'reducers/gameReducer';
 import {togglePiece, movePiece} from 'client/actions';
 
 const store = createStore(gameReducer);

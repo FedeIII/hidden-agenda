@@ -2,8 +2,8 @@ import {connect} from 'react-redux';
 
 import Hq from 'components/hq';
 
-function getTeamPieces (state, team) {
-    return state.filter(piece =>
+function getTeamPieces (statePieces, team) {
+    return statePieces.filter(piece =>
         piece.id.charAt(0) === team
         && !piece.position
     );
@@ -11,7 +11,7 @@ function getTeamPieces (state, team) {
 
 function mapStateToProps (state, {team}) {
     return {
-        pieces: getTeamPieces(state, team)
+        pieces: getTeamPieces(state.pieces, team)
     }
 }
 

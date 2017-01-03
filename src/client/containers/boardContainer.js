@@ -5,8 +5,8 @@ import pieces from 'shared/pieces';
 import Board from 'components/board';
 import {movePiece} from 'client/actions';
 
-function getSelectedPiece (state) {
-    return state.find(piece => piece.selected);
+function getSelectedPiece (statePieces) {
+    return statePieces.find(piece => piece.selected);
 }
 
 function getHighlightedCells (selectedPiece) {
@@ -14,10 +14,10 @@ function getHighlightedCells (selectedPiece) {
 }
 
 function mapStateToProps (state) {
-    const selectedPiece = getSelectedPiece(state);
+    const selectedPiece = getSelectedPiece(state.pieces);
 
     return {
-        pieces: state,
+        pieces: state.pieces,
         selectedPiece: selectedPiece,
         highlightedCells: getHighlightedCells(selectedPiece)
     };

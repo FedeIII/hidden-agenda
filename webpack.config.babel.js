@@ -19,6 +19,7 @@ export default {
             client: 'client',
             components: 'client/components',
             containers: 'client/containers',
+            reducers: 'client/reducers',
             shared: 'shared'
         }
     }
