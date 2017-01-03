@@ -1,10 +1,13 @@
 const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
 const cells = [];
 
-const mockCell = {
-    adjacentCells: [],
-    getCoordsInDirection: () => [null, null]
-};
+function inBoard ([r, c]) {
+    if (r >= 0 && r < 7) {
+        if (c >= 0 && c < cellsByRow[r]) {
+            return true;
+        }
+    }
+}
 
 function createGetCoordsInDirection (r, c) {
     return function getCoordsInDirection ([v, h]) {
@@ -27,7 +30,11 @@ function createGetCoordsInDirection (r, c) {
             }
         }
 
-        return [r - v, c + hDiff];
+        const coords = [r - v, c + hDiff];
+
+        if (inBoard(coords)) {
+            return coords;
+        }
     }
 };
 
@@ -63,10 +70,8 @@ cellsByRow.forEach((numberOfCells) => {
 
 export default {
     get([r, c]) {
-        if (r && c) {
+        if (inBoard([r, c])) {
             return cells[r][c];
-        } else {
-            return mockCell;
         }
     },
 
