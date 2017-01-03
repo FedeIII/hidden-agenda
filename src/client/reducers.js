@@ -34,6 +34,10 @@ function toggledPieceState (state, pieceId) {
 function movedPieceState (state, {pieceId, coords}) {
     return state.map(piece => {
         if (piece.id === pieceId) {
+            if (!piece.position) {
+                piece.direction = [1, 0];
+            }
+
             piece.position = coords;
             piece.selected = false;
         }

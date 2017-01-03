@@ -5,6 +5,7 @@ import PieceContainer from 'containers/pieceContainer';
 function renderPieces (pieces) {
     return pieces.map(piece =>
         <PieceContainer
+            key={piece.id}
             {...piece}
         />
     );

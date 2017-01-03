@@ -23,6 +23,7 @@ function Piece ({
     function getClassName () {
         let className = 'piece';
 
+        //TODO: give value to direction once placed on board
         if (direction) {
             const verticalClass = directionClassMap.vertical[direction[0]];
             const horizontalClass = directionClassMap.horizontal[direction[1]];

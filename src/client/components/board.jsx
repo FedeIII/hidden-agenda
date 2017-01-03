@@ -7,10 +7,7 @@ function getHighlightedCells (selectedPiece) {
     const highlightedCells = [];
 
     if (selectedPiece) {
-        const selectedPieceCell = cells.get(
-            selectedPiece.position[0],
-            selectedPiece.position[1]
-        );
+        const selectedPieceCell = cells.get(selectedPiece.position);
 
         highlightedCells.push(
             selectedPieceCell.getCoordsInDirection(selectedPiece.direction)
@@ -23,10 +20,11 @@ function getHighlightedCells (selectedPiece) {
 function Board ({
     pieces,
     selectedPiece,
+    highlightedCells,
     onHexagonClick
 }) {
 
-    const highlightedCells = getHighlightedCells(selectedPiece);
+    // const highlightedCells = getHighlightedCells(selectedPiece);
 
     function renderHexagon (r, c) {
         const piece = pieces.find(({position}) =>

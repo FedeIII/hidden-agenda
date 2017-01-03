@@ -3,7 +3,10 @@ import {connect} from 'react-redux';
 import Hq from 'components/hq';
 
 function getTeamPieces (state, team) {
-    return state.filter(piece => piece.id.charAt(0) === team);
+    return state.filter(piece =>
+        piece.id.charAt(0) === team
+        && !piece.position
+    );
 }
 
 function mapStateToProps (state, {team}) {

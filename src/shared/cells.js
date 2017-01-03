@@ -31,38 +31,46 @@ function createGetCoordsInDirection (r, c) {
     }
 };
 
-function getAdjacentCells (r, c) {
-    const upperCells = (r <= 3) ?
-        [[r - 1, c - 1], [r - 1, c]] :
-        [[r - 1, c], [r - 1, c + 1]];
-    const rowCellLeft = [[r, c - 1]];
-    const rowCellRight = [[r, c + 1]];
-    const lowerCells = (r < 3) ?
-        [[r + 1, c + 1], [r + 1, c]] :
-        [[r + 1, c], [r + 1, c - 1]];
+// function getAdjacentCells (r, c) {
+//     const upperCells = (r <= 3) ?
+//         [[r - 1, c - 1], [r - 1, c]] :
+//         [[r - 1, c], [r - 1, c + 1]];
+//     const rowCellLeft = [[r, c - 1]];
+//     const rowCellRight = [[r, c + 1]];
+//     const lowerCells = (r < 3) ?
+//         [[r + 1, c + 1], [r + 1, c]] :
+//         [[r + 1, c], [r + 1, c - 1]];
+//
+//     return [].concat(upperCells, rowCellRight, lowerCells, rowCellLeft);
+// };
 
-    return [].concat(upperCells, rowCellRight, lowerCells, rowCellLeft);
-};
+const allCells = [];
 
 cellsByRow.forEach((numberOfCells) => {
     const row = [];
     for (let c = 0; c < numberOfCells; c++) {
         const r = cells.length;
         row.push({
-            adjacentCells: getAdjacentCells(r, c),
+            // adjacentCells: getAdjacentCells(r, c),
             getCoordsInDirection: createGetCoordsInDirection(r, c)
         });
+
+        allCells.push([r, c]);
     }
 
     cells.push(row);
 });
 
 export default {
-    get(r, c) {
+    get([r, c]) {
         if (r && c) {
             return cells[r][c];
         } else {
             return mockCell;
         }
+    },
+
+    getAllAvailableCells() {
+        return allCells;
     }
 };

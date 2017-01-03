@@ -136,7 +136,6 @@ body {
     display: flex;
     flex-direction: column;
     border: $hq-border solid gray;
-    margin-bottom: 8px;
     padding: $hq-padding;
 
     &-0 {
@@ -149,7 +148,7 @@ body {
 
     &-2 {
         background-color: black;
-        filter: brightness(1.5);
+        filter: brightness(3);
     }
 
     &-3 {
