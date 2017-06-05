@@ -41,7 +41,11 @@ function Piece ({
     let className = getClassName();
 
     return (
-        <img src="img/agent.png" className={className} onClick={() => onPieceClick(id)} />
+        <img
+            src="img/agent.png"
+            className={className}
+            onClick={() => onPieceClick(id)}
+        />
     );
 }
 

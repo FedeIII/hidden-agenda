@@ -3,37 +3,51 @@ import React, {PropTypes} from 'react';
 import cells from 'shared/cells';
 import Hexagon from 'components/hexagon';
 
-function getHighlightedCells (selectedPiece) {
-    const highlightedCells = [];
+// function getHighlightedCells (selectedPiece) {
+//     const highlightedCells = [];
+//
+//     if (selectedPiece) {
+//         const selectedPieceCell = cells.get(selectedPiece.position);
+//
+//         highlightedCells.push(
+//             selectedPieceCell.getCoordsInDirection(selectedPiece.direction)
+//         );
+//     }
+//
+//     return highlightedCells;
+// }
 
-    if (selectedPiece) {
-        const selectedPieceCell = cells.get(selectedPiece.position);
+const rowNumbers = [0, 1, 2, 3, 4, 5, 6];
+const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
 
-        highlightedCells.push(
-            selectedPieceCell.getCoordsInDirection(selectedPiece.direction)
-        );
-    }
-
-    return highlightedCells;
+function arraysEqual (a, b) {
+    return a.reduce((mem, ai, i) => mem && (ai === b[i]), true);
 }
 
-function Board ({
-    pieces,
-    selectedPiece,
-    highlightedCells,
-    onHexagonClick
-}) {
+class Board extends React.Component {
 
-    // const highlightedCells = getHighlightedCells(selectedPiece);
+    // ({
+    //     pieces,
+    //     selectedPiece,
+    //     highlightedCells,
+    //     onHexagonClick,
+    //     onMouseMove
+    // })
 
-    function renderHexagon (r, c) {
-        const piece = pieces.find(({position}) =>
+    shouldComponentUpdate ({followMouse, selectedPiece, highlightedCells}) {
+        return followMouse
+                || (this.props.selectedPiece !== selectedPiece)
+                || !arraysEqual(this.props.highlightedCells, highlightedCells);
+    }
+
+    renderHexagon (r, c) {
+        const piece = this.props.pieces.find(({position}) =>
             position &&
             position[0] === r &&
             position[1] === c
         );
 
-        const highlighted = !!highlightedCells.find(
+        const highlighted = !!this.props.highlightedCells.find(
             coords => coords[0] === r && coords[1] === c
         );
 
@@ -43,35 +57,35 @@ function Board ({
                 row={r} cell={c}
                 piece={piece}
                 highlighted={highlighted}
-                onClick={() => onHexagonClick([r, c])}
+                onClick={() => this.props.onHexagonClick([r, c])}
+                onMouseMove={() => this.props.onMouseMove()}
             />
         );
     }
 
-    const rowNumbers = [0, 1, 2, 3, 4, 5, 6];
-    const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
+    render () {
+        this.rows = rowNumbers.map(row => {
+            const className = `board-row board-row-${row}`;
+            const numberOfCells = cellsByRow[row];
+            const cells = [];
 
-    const rows = rowNumbers.map(row => {
-        const className = `board-row board-row-${row}`;
-        const numberOfCells = cellsByRow[row];
-        const cells = [];
+            for (let cell = 0; cell < numberOfCells; cell++) {
+                cells.push(this.renderHexagon(row, cell));
+            }
 
-        for (let cell = 0; cell < numberOfCells; cell++) {
-            cells.push(renderHexagon(row, cell));
-        }
+            return (
+                <div key={row} className={className}>
+                    {cells}
+                </div>
+            );
+        });
 
         return (
-            <div key={row} className={className}>
-                {cells}
+            <div>
+                {this.rows}
             </div>
         );
-    });
-
-    return (
-        <div>
-            {rows}
-        </div>
-    );
+    }
 }
 
 Board.propTypes = {

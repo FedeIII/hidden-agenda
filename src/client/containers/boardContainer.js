@@ -3,23 +3,28 @@ import {connect} from 'react-redux';
 import pieces from 'shared/pieces';
 
 import Board from 'components/board';
-import {movePiece} from 'client/actions';
+import {movePiece, directPiece} from 'client/actions';
 
 function getSelectedPiece (statePieces) {
     return statePieces.find(piece => piece.selected);
 }
 
-function getHighlightedCells (selectedPiece) {
-    return pieces.getHighlightedCells(selectedPiece);
+function getHighlightedCells (showMoveCells, selectedPiece) {
+    if (showMoveCells) {
+        return pieces.getHighlightedCells(selectedPiece);
+    } else {
+        return [];
+    }
 }
 
-function mapStateToProps (state) {
-    const selectedPiece = getSelectedPiece(state.pieces);
+function mapStateToProps ({pieces, followMouse, showMoveCells}) {
+    const selectedPiece = getSelectedPiece(pieces);
 
     return {
-        pieces: state.pieces,
+        pieces: pieces,
         selectedPiece: selectedPiece,
-        highlightedCells: getHighlightedCells(selectedPiece)
+        highlightedCells: getHighlightedCells(showMoveCells, selectedPiece),
+        followMouse: followMouse
     };
 }
 
@@ -29,7 +34,13 @@ function mergeProps (stateProps, dispatchProps, ownProps) {
         stateProps,
         {
             onHexagonClick: coords => {
-                dispatchProps.dispatch(movePiece(stateProps.selectedPiece.id, coords))
+                dispatchProps.dispatch(movePiece(stateProps.selectedPiece.id, coords));
+            },
+
+            onMouseMove: id => {
+                if (stateProps.followMouse) {
+                    dispatchProps.dispatch(directPiece(id));
+                }
             }
         }
     );

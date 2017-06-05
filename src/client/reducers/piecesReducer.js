@@ -1,4 +1,4 @@
-import {TOGGLE_PIECE, MOVE_PIECE} from 'client/actions';
+import {TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE} from 'client/actions';
 
 function toggledPieceState (statePieces, pieceId) {
     return statePieces.map(piece => {
@@ -20,7 +20,16 @@ function movedPieceState (statePieces, {pieceId, coords}) {
             }
 
             piece.position = coords;
-            piece.selected = false;
+        }
+
+        return piece;
+    });
+}
+
+function directedPieceState (statePieces, {pieceId, direction}) {
+    return statePieces.map(piece => {
+        if (piece.id === pieceId) {
+            piece.direction = direction;
         }
 
         return piece;
@@ -36,6 +45,10 @@ export default function piecesReducer (state, action) {
         case MOVE_PIECE:
             return [].concat(
                 movedPieceState(state.pieces, action.payload)
+            );
+        case DIRECT_PIECE:
+            return [].concat(
+                directedPieceState(state.pieces, action.payload)
             );
         default:
             return state.pieces;

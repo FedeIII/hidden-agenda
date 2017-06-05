@@ -3,6 +3,8 @@ import {combineReducers} from 'redux';
 import {TOGGLE_PIECE, MOVE_PIECE} from 'client/actions';
 import piecesReducer from 'reducers/piecesReducer';
 import followMouseReducer from 'reducers/followMouseReducer';
+import showMoveCellsReducer from 'reducers/showMoveCellsReducer';
+import mousePositionReducer from 'reducers/mousePositionReducer';
 
 function createPiece (id) {
     return {
@@ -22,12 +24,16 @@ const pieceIds = [
 
 const initialState = {
     pieces: pieceIds.map(id => createPiece(id)),
-    followMouse: false
-}
+    followMouse: false,
+    showMoveCells: false,
+    mousePosition: null
+};
 
 export default function gameReducer (state = initialState, action = {}) {
     return {
         pieces: piecesReducer(state, action),
-        followMouse: followMouseReducer(state, action)
+        followMouse: followMouseReducer(state, action),
+        showMoveCells: showMoveCellsReducer(state, action),
+        mousePosition: mousePositionReducer(state, action)
     };
 }
