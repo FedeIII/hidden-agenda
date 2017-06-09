@@ -15,17 +15,7 @@ function toggledPieceState (statePieces, pieceId) {
 }
 
 function movedPieceState (statePieces, {pieceId, coords}) {
-    return statePieces.map(piece => {
-        if (piece.id === pieceId) {
-            if (!piece.position) {
-                piece.direction = [1, 0];
-            }
-
-            piece.position = coords;
-        }
-
-        return piece;
-    });
+    return pieces.move(statePieces, pieceId, coords);
 }
 
 function directedPieceState (statePieces, cell) {

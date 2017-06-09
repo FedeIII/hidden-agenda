@@ -4,8 +4,7 @@ import Hq from 'components/hq';
 
 function getTeamPieces (statePieces, team) {
     return statePieces.filter(piece =>
-        piece.id.charAt(0) === team
-        && !piece.position
+        piece.id.charAt(0) === team && !piece.position
     );
 }
 
