@@ -10,12 +10,6 @@ function Hexagon ({
     onMouseEnter
 }) {
 
-    function handleClick () {
-        if (highlighted) {
-            onClick();
-        }
-    }
-
     function renderPiece () {
         if (piece) {
             return (
@@ -31,7 +25,7 @@ function Hexagon ({
     const PieceComponent = renderPiece();
 
     return (
-        <div className={className} onClick={() => handleClick()} onMouseEnter={onMouseEnter}>
+        <div className={className} onClick={() => onClick()} onMouseEnter={onMouseEnter}>
             {PieceComponent}
         </div>
     );

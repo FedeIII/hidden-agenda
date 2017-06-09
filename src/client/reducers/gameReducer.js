@@ -25,15 +25,13 @@ const pieceIds = [
 const initialState = {
     pieces: pieceIds.map(id => createPiece(id)),
     followMouse: false,
-    showMoveCells: false,
-    mousePosition: null
+    showMoveCells: false
 };
 
 export default function gameReducer (state = initialState, action = {}) {
     return {
         pieces: piecesReducer(state, action),
         followMouse: followMouseReducer(state, action),
-        showMoveCells: showMoveCellsReducer(state, action),
-        mousePosition: mousePositionReducer(state, action)
+        showMoveCells: showMoveCellsReducer(state, action)
     };
 }

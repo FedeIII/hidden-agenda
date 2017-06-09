@@ -109,5 +109,11 @@ export default {
         const h = getHorizontalDirection(from, to);
 
         return [v, h];
+    },
+
+    isCellInList(cell, list) {
+        return !!list.find(
+            ([r, c]) => cell[0] === r && cell[1] === c
+        );
     }
 };

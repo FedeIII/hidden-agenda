@@ -1,9 +1,10 @@
 import {connect} from 'react-redux';
 
 import piecesHelper from 'shared/pieces';
+import cells from 'shared/cells';
 
 import Board from 'components/board';
-import {movePiece, directPiece} from 'client/actions';
+import {movePiece, directPiece, setDirection} from 'client/actions';
 
 function getHighlightedCells (showMoveCells, pieces) {
     if (showMoveCells) {
@@ -22,19 +23,22 @@ function mapStateToProps ({pieces, followMouse, showMoveCells}) {
     };
 }
 
-function mergeProps (stateProps, dispatchProps, ownProps) {
+function mergeProps (stateProps, {dispatch}, ownProps) {
     return Object.assign({},
         ownProps,
         stateProps,
         {
             onHexagonClick: coords => {
-                dispatchProps.dispatch(movePiece(stateProps.selectedPiece.id, coords));
+                if (stateProps.followMouse) {
+                    dispatch(setDirection());
+                } else if (cells.isCellInList(coords, stateProps.highlightedCells)) {
+                    dispatch(movePiece(stateProps.selectedPiece.id, coords));
+                }
             },
 
             onMouseEnter: (r, c) => {
                 if (!stateProps.highlightedCells.length && stateProps.selectedPiece) {
-                    const selectedPiece = piecesHelper.getSelectedPiece(stateProps.pieces);
-                    dispatchProps.dispatch(directPiece(selectedPiece, [r, c]));
+                    dispatch(directPiece([r, c]));
                 }
             }
         }

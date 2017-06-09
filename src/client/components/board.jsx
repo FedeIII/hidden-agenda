@@ -34,12 +34,6 @@ class Board extends React.Component {
     //     onMouseEnter
     // })
 
-    // shouldComponentUpdate ({followMouse, selectedPiece, highlightedCells}) {
-    //     return followMouse
-    //             || (this.props.selectedPiece !== selectedPiece)
-    //             || !arraysEqual(this.props.highlightedCells, highlightedCells);
-    // }
-
     renderHexagon (r, c) {
         const piece = this.props.pieces.find(({position}) =>
             position &&
