@@ -22,8 +22,9 @@ function getAgentCells (selectedPiece) {
     return cells.getAllAvailableCells();
 }
 
-const pieces = {
-    getHighlightedCells(selectedPiece) {
+const API = {
+    getHighlightedCells(pieces) {
+        const selectedPiece = API.getSelectedPiece(pieces);
         const pieceType = selectedPiece && selectedPiece.id.charAt(2);
 
         switch (pieceType) {
@@ -32,7 +33,22 @@ const pieces = {
             default:
                 return [];
         }
+    },
+
+    getSelectedPiece(pieces) {
+        return pieces.find(piece => piece.selected);
+    },
+
+    changeSelectedPieceDirection(pieces, direction) {
+        const {id} = API.getSelectedPiece(pieces);
+        return pieces.map(piece => {
+            if (piece.id === id) {
+                piece.direction = direction;
+            }
+
+            return piece;
+        });
     }
 };
 
-export default pieces;
+export default API;

@@ -15,9 +15,9 @@ export function movePiece (pieceId, coords) {
 };
 
 export const DIRECT_PIECE = 'DIRECT_PIECE';
-export function directPiece (pieceId, direction) {
+export function directPiece (selectedPiece, cell) {
     return {
         type: DIRECT_PIECE,
-        payload: {pieceId, direction}
+        payload: {selectedPiece, cell}
     };
 };

@@ -1,3 +1,12 @@
+
+//           0,0  0,1  0,2  0,3
+//        1,0  1,1  1,2  1,3  1,4
+//     2,0  2,1  2,2  2,3  2,4  2,5
+//  3,0  3,1  3,2  3,3  3,4  3,5  3,6
+//     4,0  4,1  4,2  4,3  4,4  4,5
+//        5,0  5,1  5,2  5,3  5,4
+//           6,0  6,1  6,2  6,3
+
 const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
 const cells = [];
 
@@ -38,6 +47,22 @@ function createGetCoordsInDirection (r, c) {
     }
 };
 
+function getVerticalDirection (from, to) {
+    if (from[0] > to[0]) {return 1;}
+
+    if (from[0] === to[0]) {return 0}
+
+    if (from[0] < to[0]) {return -1}
+}
+
+function getHorizontalDirection (from, to) {
+    if (from[1] > to[1]) {return 1;}
+
+    if (from[1] === to[1]) {return 0;}
+
+    if (from[1] < to[1]) {return 0;}
+}
+
 // function getAdjacentCells (r, c) {
 //     const upperCells = (r <= 3) ?
 //         [[r - 1, c - 1], [r - 1, c]] :
@@ -77,5 +102,12 @@ export default {
 
     getAllAvailableCells() {
         return allCells;
+    },
+
+    getDirection(from, to) {
+        const v = getVerticalDirection(from, to);
+        const h = getHorizontalDirection(from, to);
+
+        return [v, h];
     }
 };

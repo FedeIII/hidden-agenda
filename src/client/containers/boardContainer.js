@@ -1,35 +1,25 @@
 import {connect} from 'react-redux';
 
-import pieces from 'shared/pieces';
+import piecesHelper from 'shared/pieces';
 
 import Board from 'components/board';
 import {movePiece, directPiece} from 'client/actions';
 
-function getSelectedPiece (statePieces) {
-    return statePieces.find(piece => piece.selected);
-}
-
-function getHighlightedCells (showMoveCells, selectedPiece) {
+function getHighlightedCells (showMoveCells, pieces) {
     if (showMoveCells) {
-        return pieces.getHighlightedCells(selectedPiece);
+        return piecesHelper.getHighlightedCells(pieces);
     } else {
         return [];
     }
 }
 
 function mapStateToProps ({pieces, followMouse, showMoveCells}) {
-    const selectedPiece = getSelectedPiece(pieces);
-
     return {
         pieces: pieces,
-        selectedPiece: selectedPiece,
-        highlightedCells: getHighlightedCells(showMoveCells, selectedPiece),
+        selectedPiece: piecesHelper.getSelectedPiece(pieces),
+        highlightedCells: getHighlightedCells(showMoveCells, pieces),
         followMouse: followMouse
     };
-}
-
-function getSelectedPiece (pieces) {
-    return pieces.find(piece => piece.selected);
 }
 
 function mergeProps (stateProps, dispatchProps, ownProps) {
@@ -43,11 +33,8 @@ function mergeProps (stateProps, dispatchProps, ownProps) {
 
             onMouseEnter: (r, c) => {
                 if (!stateProps.highlightedCells.length && stateProps.selectedPiece) {
-                    const {id, direction} = getSelectedPiece(stateProps.pieces);
-                    dispatchProps.dispatch(directPiece({
-                        pieceId: id,
-                        direction
-                    }));
+                    const selectedPiece = piecesHelper.getSelectedPiece(stateProps.pieces);
+                    dispatchProps.dispatch(directPiece(selectedPiece, [r, c]));
                 }
             }
         }

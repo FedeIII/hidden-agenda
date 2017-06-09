@@ -1,3 +1,5 @@
+import cells from 'shared/cells';
+import pieces from 'shared/pieces';
 import {TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE} from 'client/actions';
 
 function toggledPieceState (statePieces, pieceId) {
@@ -26,14 +28,9 @@ function movedPieceState (statePieces, {pieceId, coords}) {
     });
 }
 
-function directedPieceState (statePieces, {pieceId, direction}) {
-    return statePieces.map(piece => {
-        if (piece.id === pieceId) {
-            piece.direction = direction;
-        }
-
-        return piece;
-    });
+function directedPieceState (statePieces, {selectedPiece, cell}) {
+    const direction = cells.getDirection(selectedPiece.position, cell);
+    return pieces.changeSelectedPieceDirection(statePieces, direction);
 }
 
 export default function piecesReducer (state, action) {
