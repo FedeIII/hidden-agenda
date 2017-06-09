@@ -7,7 +7,7 @@ function Hexagon ({
     piece,
     highlighted,
     onClick,
-    onMouseMove
+    onMouseEnter
 }) {
 
     function handleClick () {
@@ -31,7 +31,7 @@ function Hexagon ({
     const PieceComponent = renderPiece();
 
     return (
-        <div className={className} onClick={() => handleClick()} onMouseMove={onMouseMove}>
+        <div className={className} onClick={() => handleClick()} onMouseEnter={onMouseEnter}>
             {PieceComponent}
         </div>
     );

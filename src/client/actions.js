@@ -21,12 +21,3 @@ export function directPiece (pieceId, direction) {
         payload: {pieceId, direction}
     };
 };
-
-export const SET_MOUSE = 'SET_MOUSE';
-export function setMouse (position) {
-    debugger;
-    return {
-        type: SET_MOUSE,
-        payload: {position}
-    };
-};

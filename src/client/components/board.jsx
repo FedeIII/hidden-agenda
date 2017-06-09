@@ -31,14 +31,14 @@ class Board extends React.Component {
     //     selectedPiece,
     //     highlightedCells,
     //     onHexagonClick,
-    //     onMouseMove
+    //     onMouseEnter
     // })
 
-    shouldComponentUpdate ({followMouse, selectedPiece, highlightedCells}) {
-        return followMouse
-                || (this.props.selectedPiece !== selectedPiece)
-                || !arraysEqual(this.props.highlightedCells, highlightedCells);
-    }
+    // shouldComponentUpdate ({followMouse, selectedPiece, highlightedCells}) {
+    //     return followMouse
+    //             || (this.props.selectedPiece !== selectedPiece)
+    //             || !arraysEqual(this.props.highlightedCells, highlightedCells);
+    // }
 
     renderHexagon (r, c) {
         const piece = this.props.pieces.find(({position}) =>
@@ -58,7 +58,7 @@ class Board extends React.Component {
                 piece={piece}
                 highlighted={highlighted}
                 onClick={() => this.props.onHexagonClick([r, c])}
-                onMouseMove={() => this.props.onMouseMove()}
+                onMouseEnter={() => this.props.onMouseEnter(r, c)}
             />
         );
     }

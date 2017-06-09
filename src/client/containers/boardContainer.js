@@ -28,6 +28,10 @@ function mapStateToProps ({pieces, followMouse, showMoveCells}) {
     };
 }
 
+function getSelectedPiece (pieces) {
+    return pieces.find(piece => piece.selected);
+}
+
 function mergeProps (stateProps, dispatchProps, ownProps) {
     return Object.assign({},
         ownProps,
@@ -37,9 +41,13 @@ function mergeProps (stateProps, dispatchProps, ownProps) {
                 dispatchProps.dispatch(movePiece(stateProps.selectedPiece.id, coords));
             },
 
-            onMouseMove: id => {
-                if (stateProps.followMouse) {
-                    dispatchProps.dispatch(directPiece(id));
+            onMouseEnter: (r, c) => {
+                if (!stateProps.highlightedCells.length && stateProps.selectedPiece) {
+                    const {id, direction} = getSelectedPiece(stateProps.pieces);
+                    dispatchProps.dispatch(directPiece({
+                        pieceId: id,
+                        direction
+                    }));
                 }
             }
         }
