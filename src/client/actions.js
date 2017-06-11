@@ -21,10 +21,3 @@ export function directPiece (cell) {
         payload: cell
     };
 };
-
-export const SET_DIRECTION = 'SET_DIRECTION';
-export function setDirection () {
-    return {
-        type: SET_DIRECTION
-    };
-};

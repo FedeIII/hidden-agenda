@@ -5,10 +5,8 @@ import Piece from 'components/piece';
 
 function mapDispatchToProps (dispatch) {
     return {
-        onPieceClick: (id) => {
-            dispatch(togglePiece(id))
-        }
-    }
+        onPieceClick: id => dispatch(togglePiece(id))
+    };
 }
 
 const PieceContainer = connect(

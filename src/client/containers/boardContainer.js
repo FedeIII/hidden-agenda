@@ -4,7 +4,7 @@ import piecesHelper from 'shared/pieces';
 import cells from 'shared/cells';
 
 import Board from 'components/board';
-import {movePiece, directPiece, setDirection} from 'client/actions';
+import {togglePiece, movePiece, directPiece} from 'client/actions';
 
 function getHighlightedCells (showMoveCells, pieces) {
     if (showMoveCells) {
@@ -30,7 +30,8 @@ function mergeProps (stateProps, {dispatch}, ownProps) {
         {
             onHexagonClick: coords => {
                 if (stateProps.followMouse) {
-                    dispatch(setDirection());
+                    const selectedPiece = piecesHelper.getSelectedPiece(stateProps.pieces);
+                    dispatch(togglePiece(selectedPiece.id));
                 } else if (cells.isCellInList(coords, stateProps.highlightedCells)) {
                     dispatch(movePiece(stateProps.selectedPiece.id, coords));
                 }

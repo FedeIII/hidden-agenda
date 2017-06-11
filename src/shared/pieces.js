@@ -92,6 +92,16 @@ const API = {
         return pieceIds.map(id => createPiece(id));
     },
 
+    toggle(pieces, id) {
+        return pieces.map(piece => {
+            if (piece.id === id) {
+                piece.selected = !piece.selected;
+            }
+
+            return piece;
+        });
+    },
+
     move(pieces, id, cell) {
         let movedPieces = movePieces(pieces, id, cell);
         movedPieces = killPieces(movedPieces, id);
