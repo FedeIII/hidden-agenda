@@ -2,8 +2,18 @@ import cells from 'shared/cells';
 import pieces from 'shared/pieces';
 import {TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE} from 'client/actions';
 
+function hasToToggle (selectedPiece, pieceId) {
+    return !selectedPiece ||
+            (selectedPiece && selectedPiece.id === pieceId);
+}
+
 function toggledPieceState (statePieces, pieceId) {
-    return pieces.toggle(statePieces, pieceId);
+    const selectedPiece = pieces.getSelectedPiece(statePieces);
+    if (hasToToggle(selectedPiece, pieceId)) {
+        return pieces.toggle(statePieces, pieceId);
+    } else {
+        return statePieces;
+    }
 }
 
 function movedPieceState (statePieces, {pieceId, coords}) {
