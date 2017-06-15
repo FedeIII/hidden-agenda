@@ -5,7 +5,7 @@ import Piece from 'components/piece';
 
 function mapDispatchToProps (dispatch) {
     return {
-        onPieceClick: id => dispatch(togglePiece(id))
+        onClick: id => dispatch(togglePiece(id))
     };
 }
 

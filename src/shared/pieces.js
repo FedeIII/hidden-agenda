@@ -1,4 +1,5 @@
 import cells from 'shared/cells';
+import {areCoordsInList, directions} from 'shared/utils';
 
 // direction:
 //  [0] vertical:
@@ -21,22 +22,33 @@ function createPiece (id) {
         id,
         position: null,
         direction: null,
+        selectedDirection: null,
         selected: false,
         killed: false
     }
 }
 
-function getAgentCells (selectedPiece) {
-    if (selectedPiece.position) {
-        const availableCell = cells.get(selectedPiece.position).getCoordsInDirection(selectedPiece.direction);
+function getAgentCells (agent) {
+    if (agent.position) {
+        const availableCell = cells.get(agent.position).getCoordsInDirection(agent.direction);
         if (availableCell) {
             return [
-                cells.get(selectedPiece.position).getCoordsInDirection(selectedPiece.direction)
+                cells.get(agent.position).getCoordsInDirection(agent.direction)
             ];
         }
     }
 
     return cells.getAllAvailableCells();
+}
+
+function getAgentDirections (agent) {
+    const index = directions.findIndex(agent.direction);
+
+    return [
+        directions.getPrevious(index),
+        directions.get(index),
+        directions.getFollowing(index)
+    ];
 }
 
 function isDifferentPiece (piece1, piece2) {
@@ -55,6 +67,7 @@ function movePieces (pieces, id, cell) {
         if (piece.id === id) {
             if (!piece.position) {
                 piece.direction = [1, 0];
+                piece.selectedDirection = [1, 0];
             }
 
             piece.position = cell;
@@ -87,6 +100,30 @@ function killPieces (pieces, movedId) {
     return killedPieces;
 }
 
+function getType (piece) {
+    return piece && piece.id.charAt(2);
+}
+
+function getPossibleDirections (piece) {
+    const pieceType = getType(piece);
+
+    switch (pieceType) {
+        case 'A':
+            return getAgentDirections(piece);
+        default:
+            return [];
+    }
+}
+
+function togglePiece (piece) {
+    if (piece.selected) {
+        piece.selected = false;
+        piece.direction = piece.selectedDirection;
+    } else {
+        piece.selected = true;
+    }
+}
+
 const API = {
     init() {
         return pieceIds.map(id => createPiece(id));
@@ -95,7 +132,7 @@ const API = {
     toggle(pieces, id) {
         return pieces.map(piece => {
             if (piece.id === id) {
-                piece.selected = !piece.selected;
+                togglePiece(piece);
             }
 
             return piece;
@@ -111,7 +148,7 @@ const API = {
 
     getHighlightedCells(pieces) {
         const selectedPiece = API.getSelectedPiece(pieces);
-        const pieceType = selectedPiece && selectedPiece.id.charAt(2);
+        const pieceType = getType(selectedPiece);
 
         switch (pieceType) {
             case 'A':
@@ -126,10 +163,13 @@ const API = {
     },
 
     changeSelectedPieceDirection(pieces, direction) {
-        const {id} = API.getSelectedPiece(pieces);
+        const selectedPiece = API.getSelectedPiece(pieces);
         return pieces.map(piece => {
-            if (piece.id === id) {
-                piece.direction = direction;
+            if (piece.id === selectedPiece.id) {
+                const possibleDirections = getPossibleDirections(piece);
+                if (areCoordsInList(direction, possibleDirections)) {
+                    piece.selectedDirection = direction;
+                }
             }
 
             return piece;

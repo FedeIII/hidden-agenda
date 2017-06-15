@@ -19,9 +19,7 @@ function Hexagon ({
     function renderPiece () {
         if (piece) {
             return (
-                <PieceContainer
-                    {...piece}
-                />
+                <PieceContainer {...piece}/>
             );
         }
     }

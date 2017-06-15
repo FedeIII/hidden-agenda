@@ -1,7 +1,7 @@
 import {connect} from 'react-redux';
 
 import piecesHelper from 'shared/pieces';
-import cells from 'shared/cells';
+import {areCoordsInList} from 'shared/utils';
 
 import Board from 'components/board';
 import {togglePiece, movePiece, directPiece} from 'client/actions';
@@ -32,7 +32,7 @@ function mergeProps (stateProps, {dispatch}, ownProps) {
                 if (stateProps.followMouse) {
                     const selectedPiece = piecesHelper.getSelectedPiece(stateProps.pieces);
                     dispatch(togglePiece(selectedPiece.id));
-                } else if (cells.isCellInList(coords, stateProps.highlightedCells)) {
+                } else if (areCoordsInList(coords, stateProps.highlightedCells)) {
                     dispatch(movePiece(stateProps.selectedPiece.id, coords));
                 }
             },
