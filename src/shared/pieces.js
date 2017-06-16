@@ -187,6 +187,10 @@ const API = {
         return pieces.filter(piece =>
             piece.id.charAt(0) === team && !piece.position
         );
+    },
+
+    getTeam(id) {
+        return id.charAt(0);
     }
 };
 
