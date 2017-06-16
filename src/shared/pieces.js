@@ -41,14 +41,22 @@ function getAgentCells (agent) {
     return cells.getAllAvailableCells();
 }
 
-function getAgentDirections (agent) {
-    const index = directions.findIndex(agent.direction);
+function getThreeFrontDirections (direction) {
+    const index = directions.findIndex(direction);
 
     return [
         directions.getPrevious(index),
         directions.get(index),
         directions.getFollowing(index)
     ];
+}
+
+function getAgentDirections (agent) {
+    if (agent.direction) {
+        return getThreeFrontDirections(agent.direction);
+    } else {
+        return directions.getAll();
+    }
 }
 
 function isDifferentPiece (piece1, piece2) {
@@ -66,7 +74,6 @@ function movePieces (pieces, id, cell) {
     return pieces.map(piece => {
         if (piece.id === id) {
             if (!piece.position) {
-                piece.direction = [1, 0];
                 piece.selectedDirection = [1, 0];
             }
 

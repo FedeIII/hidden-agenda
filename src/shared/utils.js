@@ -16,6 +16,7 @@ const possibleDirections = [
     [-1,1],
     [0,1]
 ];
+
 export const directions = {
     findIndex(direction) {
         return possibleDirections.findIndex(
@@ -24,7 +25,11 @@ export const directions = {
     },
 
     get(index) {
-        return possibleDirections[index];
+        return [].concat(possibleDirections[index]);
+    },
+
+    getAll() {
+        return [].concat(possibleDirections);
     },
 
     getPrevious(index) {
@@ -33,7 +38,7 @@ export const directions = {
             i = possibleDirections.length + i;
         }
 
-        return possibleDirections[i];
+        return [].concat(possibleDirections[i]);
     },
 
     getFollowing(index) {
@@ -42,6 +47,6 @@ export const directions = {
             i = i - possibleDirections.length;
         }
 
-        return possibleDirections[i];
+        return [].concat(possibleDirections[i]);
     }
 }
