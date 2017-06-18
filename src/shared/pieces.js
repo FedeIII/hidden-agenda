@@ -30,11 +30,9 @@ function createPiece (id) {
 
 function getAgentCells (agent) {
     if (agent.position) {
-        const availableCell = cells.get(agent.position).getCoordsInDirection(agent.direction);
+        const availableCell = cells.get(agent.position).getCellNCellsInDirection(2, agent.direction);
         if (availableCell) {
-            return [
-                cells.get(agent.position).getCoordsInDirection(agent.direction)
-            ];
+            return [availableCell];
         }
     }
 

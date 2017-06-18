@@ -18,8 +18,8 @@ function inBoard ([r, c]) {
     }
 }
 
-function createGetCoordsInDirection (r, c) {
-    return function getCoordsInDirection ([v, h]) {
+function createGetCellInDirection (r, c) {
+    return function getCellInDirection ([v, h]) {
         let hDiff = (h === 0) ? 1 : -1;
         if (r < 3) {
             if (v > 0) {
@@ -46,6 +46,15 @@ function createGetCoordsInDirection (r, c) {
         }
     }
 };
+
+function createGetCellNCellsInDirection (r, c) {
+    return function getCellNCellsInDirection (n, [v, h]) {
+        return [...Array(n)].reduce(
+            nextCell => nextCell = nextCell && API.get(nextCell).getCellInDirection([v, h]),
+            [r, c]
+        );
+    }
+}
 
 function getVerticalDirection (from, to) {
     if (from[0] > to[0]) {return 1;}
@@ -84,7 +93,8 @@ cellsByRow.forEach((numberOfCells) => {
         const r = cells.length;
         row.push({
             // adjacentCells: getAdjacentCells(r, c),
-            getCoordsInDirection: createGetCoordsInDirection(r, c)
+            getCellInDirection: createGetCellInDirection(r, c),
+            getCellNCellsInDirection: createGetCellNCellsInDirection(r, c)
         });
 
         allCells.push([r, c]);
@@ -93,8 +103,8 @@ cellsByRow.forEach((numberOfCells) => {
     cells.push(row);
 });
 
-export default {
-    get([r, c]) {
+const API = {
+    get([r, c] = [-1, -1]) {
         if (inBoard([r, c])) {
             return cells[r][c];
         }
@@ -111,3 +121,5 @@ export default {
         return [v, h];
     }
 };
+
+export default API;

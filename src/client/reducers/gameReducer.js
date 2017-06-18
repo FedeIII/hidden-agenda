@@ -4,7 +4,6 @@ import {TOGGLE_PIECE, MOVE_PIECE} from 'client/actions';
 import piecesReducer from 'reducers/piecesReducer';
 import followMouseReducer from 'reducers/followMouseReducer';
 import showMoveCellsReducer from 'reducers/showMoveCellsReducer';
-import mousePositionReducer from 'reducers/mousePositionReducer';
 
 const initialState = {
     pieces: pieces.init(),
