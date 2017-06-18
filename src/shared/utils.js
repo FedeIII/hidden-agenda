@@ -1,5 +1,7 @@
-function areCoordsEqual (coords1, coords2) {
-    return !!(coords1[0] === coords2[0] && coords1[1] === coords2[1]);
+export function areCoordsEqual (coords1, coords2) {
+    if (coords1 && coords1) {
+        return !!(coords1[0] === coords2[0] && coords1[1] === coords2[1]);
+    }
 }
 
 export function areCoordsInList (coords, list) {

@@ -10,7 +10,7 @@ import Hexagon from 'components/hexagon';
 //         const selectedPieceCell = cells.get(selectedPiece.position);
 //
 //         highlightedCells.push(
-//             selectedPieceCell.getCellInDirection(selectedPiece.direction)
+//             selectedPieceCell.getPositionInDirection(selectedPiece.direction)
 //         );
 //     }
 //

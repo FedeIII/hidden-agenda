@@ -18,8 +18,8 @@ function inBoard ([r, c]) {
     }
 }
 
-function createGetCellInDirection (r, c) {
-    return function getCellInDirection ([v, h]) {
+function createGetPositionInDirection (r, c) {
+    return function getPositionInDirection ([v, h]) {
         let hDiff = (h === 0) ? 1 : -1;
         if (r < 3) {
             if (v > 0) {
@@ -47,11 +47,11 @@ function createGetCellInDirection (r, c) {
     }
 };
 
-function createGetCellNCellsInDirection (r, c) {
-    return function getCellNCellsInDirection (n, [v, h]) {
-        return [...Array(n)].reduce(
-            nextCell => nextCell = nextCell && API.get(nextCell).getCellInDirection([v, h]),
-            [r, c]
+function createGetPositionsInDirections (r, c) {
+    return function getPositionsInDirections (...directions) {
+        let nextPosition = [r, c];
+        return directions.map(
+            direction => nextPosition = API.get(nextPosition).getPositionInDirection(direction)
         );
     }
 }
@@ -93,8 +93,9 @@ cellsByRow.forEach((numberOfCells) => {
         const r = cells.length;
         row.push({
             // adjacentCells: getAdjacentCells(r, c),
-            getCellInDirection: createGetCellInDirection(r, c),
-            getCellNCellsInDirection: createGetCellNCellsInDirection(r, c)
+            position: [r, c],
+            getPositionInDirection: createGetPositionInDirection(r, c),
+            getPositionsInDirections: createGetPositionsInDirections(r, c)
         });
 
         allCells.push([r, c]);

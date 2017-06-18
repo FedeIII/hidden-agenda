@@ -1,4 +1,5 @@
 import cells from 'shared/cells';
+import {areCoordsEqual} from 'shared/utils';
 import {areCoordsInList, directions} from 'shared/utils';
 
 // direction:
@@ -28,15 +29,21 @@ function createPiece (id) {
     }
 }
 
-function getAgentCells (agent) {
-    if (agent.position) {
-        const availableCell = cells.get(agent.position).getCellNCellsInDirection(2, agent.direction);
-        if (availableCell) {
-            return [availableCell];
-        }
+function getAgentCells (agent, pieces) {
+    if (!agent.position) {
+        return cells.getAllAvailableCells();
     }
 
-    return cells.getAllAvailableCells();
+    const positions = cells.get(agent.position)
+        .getPositionsInDirections(agent.direction, agent.direction);
+
+    const isPieceBlocking = !!pieces.find(piece => areCoordsEqual(piece.position, positions[0]))
+
+    if (!isPieceBlocking) {
+        return [positions[1]];
+    }
+
+    return [];
 }
 
 function getThreeFrontDirections (direction) {
@@ -157,7 +164,7 @@ const API = {
 
         switch (pieceType) {
             case 'A':
-                return getAgentCells(selectedPiece);
+                return getAgentCells(selectedPiece, pieces);
             default:
                 return [];
         }
