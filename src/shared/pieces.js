@@ -29,18 +29,25 @@ function createPiece (id) {
     }
 }
 
+function getAgentInitialLocationCells () {
+    return cells.getAllAvailableCells();
+}
+
 function getAgentCells (agent, pieces) {
     if (!agent.position) {
-        return cells.getAllAvailableCells();
+        return getAgentInitialLocationCells();
     }
 
     const positions = cells.get(agent.position)
         .getPositionsInDirections(agent.direction, agent.direction);
-
     const isPieceBlocking = !!pieces.find(piece => areCoordsEqual(piece.position, positions[0]))
 
     if (!isPieceBlocking) {
-        return [positions[1]];
+        if (positions[1]) {
+            return [positions[1]];
+        }
+
+        return getAgentInitialLocationCells();
     }
 
     return [];
@@ -56,12 +63,17 @@ function getThreeFrontDirections (direction) {
     ];
 }
 
-function getAgentDirections (agent) {
-    if (agent.direction) {
-        return getThreeFrontDirections(agent.direction);
-    } else {
+function getAgentDirections (agent, pieces) {
+    if (!agent.direction) {
         return directions.getAll();
     }
+
+    const highlightedCells = API.getHighlightedCells(pieces);
+    if (highlightedCells.length) {
+        return getThreeFrontDirections(agent.direction);
+    }
+
+    return [];
 }
 
 function isDifferentPiece (piece1, piece2) {
@@ -116,12 +128,12 @@ function getType (piece) {
     return piece && piece.id.charAt(2);
 }
 
-function getPossibleDirections (piece) {
+function getPossibleDirections (piece, pieces) {
     const pieceType = getType(piece);
 
     switch (pieceType) {
         case 'A':
-            return getAgentDirections(piece);
+            return getAgentDirections(piece, pieces);
         default:
             return [];
     }
@@ -178,7 +190,7 @@ const API = {
         const selectedPiece = API.getSelectedPiece(pieces);
         return pieces.map(piece => {
             if (piece.id === selectedPiece.id) {
-                const possibleDirections = getPossibleDirections(piece);
+                const possibleDirections = getPossibleDirections(piece, pieces);
                 if (areCoordsInList(direction, possibleDirections)) {
                     piece.selectedDirection = direction;
                 }

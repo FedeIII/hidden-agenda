@@ -31,7 +31,9 @@ function mergeProps (stateProps, {dispatch}, ownProps) {
             onHexagonClick: coords => {
                 if (stateProps.followMouse) {
                     const selectedPiece = piecesHelper.getSelectedPiece(stateProps.pieces);
-                    dispatch(togglePiece(selectedPiece.id));
+                    if (selectedPiece) {
+                        dispatch(togglePiece(selectedPiece.id));
+                    }
                 } else if (areCoordsInList(coords, stateProps.highlightedCells)) {
                     dispatch(movePiece(stateProps.selectedPiece.id, coords));
                 }

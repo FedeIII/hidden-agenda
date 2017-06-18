@@ -1,5 +1,5 @@
 import React, {PropTypes} from 'react';
-
+import {areCoordsEqual} from 'shared/utils';
 import cells from 'shared/cells';
 import Hexagon from 'components/hexagon';
 
@@ -20,10 +20,6 @@ import Hexagon from 'components/hexagon';
 const rowNumbers = [0, 1, 2, 3, 4, 5, 6];
 const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
 
-function arraysEqual (a, b) {
-    return a.reduce((mem, ai, i) => mem && (ai === b[i]), true);
-}
-
 class Board extends React.Component {
 
     // ({
@@ -42,7 +38,7 @@ class Board extends React.Component {
         );
 
         const highlighted = !!this.props.highlightedCells.find(
-            coords => coords[0] === r && coords[1] === c
+            coords => areCoordsEqual(coords, [r,c])
         );
 
         return (

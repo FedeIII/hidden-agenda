@@ -32,6 +32,10 @@ yarn go
 
 ### Changelog
 
+* v0.2
+
+  * Finished regular Agents' movement, direction, capture, slide and blocking
+
 * v0.1
 
   * Initial layout for board and headquarters

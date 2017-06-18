@@ -51,7 +51,7 @@ function createGetPositionsInDirections (r, c) {
     return function getPositionsInDirections (...directions) {
         let nextPosition = [r, c];
         return directions.map(
-            direction => nextPosition = API.get(nextPosition).getPositionInDirection(direction)
+            direction => nextPosition = nextPosition && API.get(nextPosition).getPositionInDirection(direction)
         );
     }
 }
