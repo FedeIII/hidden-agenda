@@ -1,3 +1,11 @@
+export const START_GAME = 'START_GAME';
+export function startGame (players) {
+    return {
+        type: START_GAME,
+        payload: players
+    };
+};
+
 export const TOGGLE_PIECE = 'TOGGLE_PIECE';
 export function togglePiece (pieceId) {
     return {

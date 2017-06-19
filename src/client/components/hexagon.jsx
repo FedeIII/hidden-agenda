@@ -18,9 +18,7 @@ function Hexagon ({
 
     function renderPiece () {
         if (piece) {
-            return (
-                <PieceContainer {...piece}/>
-            );
+            return (<PieceContainer {...piece}/>);
         }
     }
 
