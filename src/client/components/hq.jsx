@@ -16,12 +16,12 @@ function Hq ({
     pieces
 }) {
 
-    const className = `hq hq-${team}`;
+    const className = `play-phase__hq play-phase__hq-${team}`;
     const Pieces = renderPieces(pieces);
 
     return (
         <div key={`team${team}`} className={className}>
-            <div className="hq__store">
+            <div className="play-phase__hq-store">
                 {Pieces}
             </div>
         </div>

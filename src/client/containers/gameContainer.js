@@ -2,8 +2,11 @@ import {connect} from 'react-redux';
 import Game from 'components/game';
 import {startGame} from 'client/actions';
 
-function mapStateToProps ({phase}) {
-    return {phase};
+function mapStateToProps ({phase, players}) {
+    return {
+        phase,
+        players
+    };
 }
 
 function mapDispatchToProps (dispatch) {

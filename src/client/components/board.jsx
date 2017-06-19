@@ -55,7 +55,7 @@ class Board extends React.Component {
 
     render () {
         this.rows = rowNumbers.map(row => {
-            const className = `board-row board-row-${row}`;
+            const className = `board__row board__row-${row}`;
             const numberOfCells = cellsByRow[row];
             const cells = [];
 

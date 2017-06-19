@@ -5,6 +5,6 @@ export default function phaseReducer (state, action) {
         case START_GAME:
             return 'play';
         default:
-            return 'start';
+            return state.phase;
     }
 }
