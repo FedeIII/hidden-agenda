@@ -201,6 +201,7 @@ body {
         position: relative;
         display: flex;
         flex-direction: row;
+        margin-bottom: 20px;
     }
 
     &__hqs {
@@ -246,6 +247,11 @@ body {
         background-image: url('img/hexgrid.png');
         background-size: 100% 100%;
         background-repeat: no-repeat;
+    }
+
+    &__buttons {
+        text-align: center;
+        padding: 20px;
     }
 }
 

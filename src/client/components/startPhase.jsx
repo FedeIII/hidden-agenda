@@ -48,7 +48,9 @@ class StartPhase extends React.Component {
     }
 
     onStartClick () {
-        const names = Object.keys(this.nameInputs).map(key => this.nameInputs[key].value);
+        const names = Object.keys(this.nameInputs)
+            .map(key => this.nameInputs[key] && this.nameInputs[key].value)
+            .filter(Boolean);
 
         this.props.onStart(names);
     }
