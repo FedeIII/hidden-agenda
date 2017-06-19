@@ -3,8 +3,8 @@ import {START_GAME} from 'client/actions';
 export default function playersReducer (state, action) {
     switch (action.type) {
         case START_GAME:
-            return Object.assign({}, action.payload);
+            return [].concat(action.payload);
         default:
-            return Object.assign({}, state.players);
+            return [].concat(state.players);
     }
 }

@@ -4,7 +4,7 @@ import HqContainer from 'containers/hqContainer';
 
 function PlayPhase ({players}) {
     function renderTurn () {
-        return `Player's turn: ${players.input1}`
+        return `Player's turn: ${players[0]}`
     }
 
     return (
