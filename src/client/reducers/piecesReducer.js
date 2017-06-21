@@ -27,7 +27,7 @@ function directedPieceState (statePieces, cell) {
 }
 
 export default function piecesReducer (state, action) {
-    if (!state.turnEnded) {
+    if (!state.hasTurnEnded) {
         switch (action.type) {
             case TOGGLE_PIECE:
                 return [].concat(

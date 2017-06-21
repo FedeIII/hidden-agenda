@@ -1,10 +1,10 @@
 import {START_GAME, NEXT_TURN, TOGGLE_PIECE} from 'client/actions';
 
-function isPieceBeingDropped ({turnEnded, followMouse}) {
-    return turnEnded || followMouse;
+function isPieceBeingDropped ({hasTurnEnded, followMouse}) {
+    return hasTurnEnded || followMouse;
 }
 
-export default function turnEndedReducer (state, action) {
+export default function hasTurnEndedReducer (state, action) {
     switch (action.type) {
         case NEXT_TURN:
             return false;
@@ -13,6 +13,6 @@ export default function turnEndedReducer (state, action) {
         case TOGGLE_PIECE:
             return isPieceBeingDropped(state);
         default:
-            return state.turnEnded;
+            return state.hasTurnEnded;
     }
 }
