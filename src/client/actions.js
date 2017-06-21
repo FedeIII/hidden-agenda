@@ -6,10 +6,10 @@ export function startGame (players) {
     };
 };
 
-export const END_TURN = 'END_TURN';
-export function endTurn () {
+export const NEXT_TURN = 'NEXT_TURN';
+export function nextTurn () {
     return {
-        type: END_TURN
+        type: NEXT_TURN
     };
 };
 

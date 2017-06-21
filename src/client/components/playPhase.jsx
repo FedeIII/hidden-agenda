@@ -2,9 +2,9 @@ import React from 'react';
 import BoardContainer from 'containers/boardContainer';
 import HqContainer from 'containers/hqContainer';
 
-function PlayPhase ({players, turn, endPlayerTurn}) {
+function PlayPhase ({players, nextPlayerTurn}) {
     function renderTurn () {
-        return `Player's turn: ${turn}`
+        return `Player's turn: ${players.find(player => player.turn).name}`;
     }
 
     return (
@@ -26,7 +26,7 @@ function PlayPhase ({players, turn, endPlayerTurn}) {
                 </div>
             </div>
             <div className="play-phase__buttons">
-                <button className="btn" onClick={endPlayerTurn}>END TURN</button>
+                <button className="btn" onClick={nextPlayerTurn}>NEXT TURN</button>
             </div>
         </div>
     );

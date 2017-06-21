@@ -27,20 +27,24 @@ function directedPieceState (statePieces, cell) {
 }
 
 export default function piecesReducer (state, action) {
-    switch (action.type) {
-        case TOGGLE_PIECE:
-            return [].concat(
-                toggledPieceState(state.pieces, action.payload.pieceId)
-            );
-        case MOVE_PIECE:
-            return [].concat(
-                movedPieceState(state.pieces, action.payload)
-            );
-        case DIRECT_PIECE:
-            return [].concat(
-                directedPieceState(state.pieces, action.payload)
-            );
-        default:
-            return state.pieces;
+    if (!state.turnEnded) {
+        switch (action.type) {
+            case TOGGLE_PIECE:
+                return [].concat(
+                    toggledPieceState(state.pieces, action.payload.pieceId)
+                );
+            case MOVE_PIECE:
+                return [].concat(
+                    movedPieceState(state.pieces, action.payload)
+                );
+            case DIRECT_PIECE:
+                return [].concat(
+                    directedPieceState(state.pieces, action.payload)
+                );
+            default:
+                return [].concat(state.pieces);
+        }
     }
+
+    return [].concat(state.pieces);
 }

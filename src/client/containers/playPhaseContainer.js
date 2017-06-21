@@ -1,18 +1,15 @@
 import PlayPhase from 'components/playPhase';
 import {connect} from 'react-redux';
-import {endTurn} from 'client/actions';
+import {nextTurn} from 'client/actions';
 
-function mapStateToProps ({players, turn}) {
-    return {
-        players,
-        turn
-    }
+function mapStateToProps ({players}) {
+    return {players}
 }
 
 function mapDispatchToProps (dispatch) {
     return {
-        endPlayerTurn() {
-            dispatch(endTurn());
+        nextPlayerTurn() {
+            dispatch(nextTurn());
         }
     };
 }
