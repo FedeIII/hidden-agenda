@@ -21,9 +21,9 @@ const pieceIds = [
 function createPiece (id) {
     return {
         id,
-        position: null,
-        direction: null,
-        selectedDirection: null,
+        position: undefined,
+        direction: undefined,
+        selectedDirection: undefined,
         selected: false,
         killed: false
     }
@@ -40,11 +40,13 @@ function getAgentCells (agent, pieces) {
 
     const positions = cells.get(agent.position)
         .getPositionsInDirections(agent.direction, agent.direction);
-    const isPieceBlocking = !!pieces.find(piece => areCoordsEqual(piece.position, positions[0]))
+    const isPieceBlocked = !!pieces.find(piece => areCoordsEqual(piece.position, positions[0]))
 
-    if (!isPieceBlocking) {
-        if (positions[1]) {
-            return [positions[1]];
+    if (!API.isPieceBlocked(agent, pieces)) {
+        const position = cells.get(agent.position)
+            .getPositionAfterDirections(agent.direction, agent.direction);
+        if (position) {
+            return [position];
         }
 
         return getAgentInitialLocationCells();
@@ -208,6 +210,11 @@ const API = {
 
     getTeam(id) {
         return id.charAt(0);
+    },
+
+    isPieceBlocked({position, direction}, pieces) {
+        const piecePointingAt = cells.get(position).getPositionInDirection(direction);
+        return !!pieces.find(piece => areCoordsEqual(piece.position, piecePointingAt))
     }
 };
 

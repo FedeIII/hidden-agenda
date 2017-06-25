@@ -19,7 +19,7 @@ function inBoard ([r, c]) {
 }
 
 function createGetPositionInDirection (r, c) {
-    return function getPositionInDirection ([v, h]) {
+    return function getPositionInDirection ([v, h] = []) {
         let hDiff = (h === 0) ? 1 : -1;
         if (r < 3) {
             if (v > 0) {
@@ -53,6 +53,12 @@ function createGetPositionsInDirections (r, c) {
         return directions.map(
             direction => nextPosition = nextPosition && API.get(nextPosition).getPositionInDirection(direction)
         );
+    }
+}
+
+function createGetPositionAfterDirections (r, c) {
+    return function getPositionAfterDirections (...directions) {
+        return this.getPositionsInDirections(...directions).slice(-1)[0];
     }
 }
 
@@ -95,7 +101,8 @@ cellsByRow.forEach((numberOfCells) => {
             // adjacentCells: getAdjacentCells(r, c),
             position: [r, c],
             getPositionInDirection: createGetPositionInDirection(r, c),
-            getPositionsInDirections: createGetPositionsInDirections(r, c)
+            getPositionsInDirections: createGetPositionsInDirections(r, c),
+            getPositionAfterDirections: createGetPositionAfterDirections(r, c)
         });
 
         allCells.push([r, c]);
