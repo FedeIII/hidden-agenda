@@ -15,12 +15,13 @@ function getHighlightedCells (showMoveCells, pieces) {
     }
 }
 
-function mapStateToProps ({pieces, followMouse, showMoveCells}) {
+function mapStateToProps ({pieces, followMouse, showMoveCells, pieceState}) {
     return {
         pieces: pieces,
         selectedPiece: piecesHelper.getSelectedPiece(pieces),
         highlightedCells: getHighlightedCells(showMoveCells, pieces),
-        followMouse: followMouse
+        followMouse: followMouse,
+        pieceState: pieceState
     };
 }
 
@@ -42,7 +43,7 @@ function mergeProps (stateProps, {dispatch}, ownProps) {
 
             onMouseEnter: (r, c) => {
                 if (!stateProps.highlightedCells.length && stateProps.selectedPiece) {
-                    const possibleDirections = piecesHelper.getPossibleDirections(stateProps.selectedPiece, stateProps.pieces);
+                    const possibleDirections = piecesHelper.getPossibleDirections(stateProps.selectedPiece, stateProps.pieces, stateProps.pieceState);
                     const intendedDirection = cells.getDirection(stateProps.selectedPiece.position, [r, c]);
                     if (areCoordsInList(intendedDirection, possibleDirections)) {
                         dispatch(directPiece(intendedDirection));

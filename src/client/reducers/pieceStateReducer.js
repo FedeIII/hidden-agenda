@@ -1,12 +1,8 @@
 import {TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE} from 'client/actions';
 import piecesHelper from 'shared/pieces';
-
-const SELECTION = 'selection';
-const DESELECTION = 'deselection';
-const PLACEMENT = 'placement';
-const MOVEMENT = 'movement';
-const DIRECTION = 'direction';
-const COLLOCATION = 'collocation';
+import {
+    SELECTION, DESELECTION, PLACEMENT, MOVEMENT, DIRECTION, COLLOCATION
+} from 'client/pieceStates';
 
 function toggledPieceState (pieceId, {pieces, followMouse}) {
     const {selected} = piecesHelper.getPieceById(pieceId, pieces);

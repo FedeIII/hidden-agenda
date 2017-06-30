@@ -1,6 +1,7 @@
 import cells from 'shared/cells';
 import {areCoordsEqual} from 'shared/utils';
 import {areCoordsInList, directions} from 'shared/utils';
+import {SELECTION} from 'client/pieceStates';
 
 // direction:
 //  [0] vertical:
@@ -33,16 +34,17 @@ function getAgentInitialLocationCells () {
     return cells.getAllAvailableCells();
 }
 
+function isPieceBlocked ({position, direction}, pieces) {
+    const piecePointingAt = cells.get(position).getPositionInDirection(direction);
+    return !!pieces.find(piece => areCoordsEqual(piece.position, piecePointingAt))
+}
+
 function getAgentCells (agent, pieces) {
     if (!agent.position) {
         return getAgentInitialLocationCells();
     }
 
-    const positions = cells.get(agent.position)
-        .getPositionsInDirections(agent.direction, agent.direction);
-    const isPieceBlocked = !!pieces.find(piece => areCoordsEqual(piece.position, positions[0]))
-
-    if (!API.isPieceBlocked(agent, pieces)) {
+    if (!isPieceBlocked(agent, pieces)) {
         const position = cells.get(agent.position)
             .getPositionAfterDirections(agent.direction, agent.direction);
         if (position) {
@@ -65,13 +67,12 @@ function getThreeFrontDirections (direction) {
     ];
 }
 
-function getAgentDirections (agent, pieces) {
+function getAgentDirections (agent, pieces, pieceState) {
     if (!agent.direction) {
         return directions.getAll();
     }
 
-    const highlightedCells = API.getHighlightedCells(pieces);
-    if (highlightedCells.length) {
+    if (pieceState !== SELECTION) {
         return getThreeFrontDirections(agent.direction);
     }
 
@@ -188,12 +189,12 @@ const API = {
         });
     },
 
-    getPossibleDirections(piece, pieces) {
+    getPossibleDirections(piece, pieces, pieceState) {
         const pieceType = getType(piece);
 
         switch (pieceType) {
             case 'A':
-                return getAgentDirections(piece, pieces);
+                return getAgentDirections(piece, pieces, pieceState);
             default:
                 return [];
         }
@@ -211,11 +212,6 @@ const API = {
 
     getPieceById(id, pieces) {
         return pieces.find(piece => piece.id === id);
-    },
-
-    isPieceBlocked({position, direction}, pieces) {
-        const piecePointingAt = cells.get(position).getPositionInDirection(direction);
-        return !!pieces.find(piece => areCoordsEqual(piece.position, piecePointingAt))
     }
 };
 
