@@ -5,6 +5,7 @@ import phaseReducer from 'reducers/phaseReducer';
 import playersReducer from 'reducers/playersReducer';
 import hasTurnEndedReducer from 'reducers/hasTurnEndedReducer';
 import piecesReducer from 'reducers/piecesReducer';
+import pieceStateReducer from 'reducers/pieceStateReducer';
 import followMouseReducer from 'reducers/followMouseReducer';
 import showMoveCellsReducer from 'reducers/showMoveCellsReducer';
 
@@ -13,6 +14,7 @@ const initialState = {
     players: [],
     hasTurnEnded: undefined,
     pieces: pieces.init(),
+    pieceState: undefined,
     followMouse: false,
     showMoveCells: false
 };
@@ -23,6 +25,7 @@ export default function gameReducer (state = initialState, action = {}) {
         players: playersReducer(state, action),
         hasTurnEnded: hasTurnEndedReducer(state, action),
         pieces: piecesReducer(state, action),
+        pieceState: pieceStateReducer(state, action),
         followMouse: followMouseReducer(state, action),
         showMoveCells: showMoveCellsReducer(state, action)
     };

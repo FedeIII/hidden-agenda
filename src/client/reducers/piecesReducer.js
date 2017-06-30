@@ -20,9 +20,7 @@ function movedPieceState (statePieces, {pieceId, coords}) {
     return pieces.move(statePieces, pieceId, coords);
 }
 
-function directedPieceState (statePieces, cell) {
-    const selectedPiece = pieces.getSelectedPiece(statePieces);
-    const direction = cells.getDirection(selectedPiece.position, cell);
+function directedPieceState (statePieces, direction) {
     return pieces.changeSelectedPieceDirection(statePieces, direction);
 }
 

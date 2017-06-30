@@ -1,6 +1,7 @@
 import {connect} from 'react-redux';
 
 import piecesHelper from 'shared/pieces';
+import cells from 'shared/cells';
 import {areCoordsInList} from 'shared/utils';
 
 import Board from 'components/board';
@@ -41,7 +42,11 @@ function mergeProps (stateProps, {dispatch}, ownProps) {
 
             onMouseEnter: (r, c) => {
                 if (!stateProps.highlightedCells.length && stateProps.selectedPiece) {
-                    dispatch(directPiece([r, c]));
+                    const possibleDirections = piecesHelper.getPossibleDirections(stateProps.selectedPiece, stateProps.pieces);
+                    const intendedDirection = cells.getDirection(stateProps.selectedPiece.position, [r, c]);
+                    if (areCoordsInList(intendedDirection, possibleDirections)) {
+                        dispatch(directPiece(intendedDirection));
+                    }
                 }
             }
         }

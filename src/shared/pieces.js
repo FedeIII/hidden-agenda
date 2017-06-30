@@ -130,17 +130,6 @@ function getType (piece) {
     return piece && piece.id.charAt(2);
 }
 
-function getPossibleDirections (piece, pieces) {
-    const pieceType = getType(piece);
-
-    switch (pieceType) {
-        case 'A':
-            return getAgentDirections(piece, pieces);
-        default:
-            return [];
-    }
-}
-
 function togglePiece (piece) {
     if (piece.selected) {
         piece.selected = false;
@@ -192,14 +181,22 @@ const API = {
         const selectedPiece = API.getSelectedPiece(pieces);
         return pieces.map(piece => {
             if (piece.id === selectedPiece.id) {
-                const possibleDirections = getPossibleDirections(piece, pieces);
-                if (areCoordsInList(direction, possibleDirections)) {
-                    piece.selectedDirection = direction;
-                }
+                piece.selectedDirection = direction;
             }
 
             return piece;
         });
+    },
+
+    getPossibleDirections(piece, pieces) {
+        const pieceType = getType(piece);
+
+        switch (pieceType) {
+            case 'A':
+                return getAgentDirections(piece, pieces);
+            default:
+                return [];
+        }
     },
 
     getTeamPieces(pieces, team) {
@@ -210,6 +207,10 @@ const API = {
 
     getTeam(id) {
         return id.charAt(0);
+    },
+
+    getPieceById(id, pieces) {
+        return pieces.find(piece => piece.id === id);
     },
 
     isPieceBlocked({position, direction}, pieces) {

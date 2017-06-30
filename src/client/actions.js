@@ -30,9 +30,9 @@ export function movePiece (pieceId, coords) {
 };
 
 export const DIRECT_PIECE = 'DIRECT_PIECE';
-export function directPiece (cell) {
+export function directPiece (direction) {
     return {
         type: DIRECT_PIECE,
-        payload: cell
+        payload: direction
     };
 };
