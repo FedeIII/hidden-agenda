@@ -2,10 +2,12 @@ import React from 'react';
 import BoardContainer from 'containers/boardContainer';
 import HqContainer from 'containers/hqContainer';
 
-function PlayPhase ({players, nextPlayerTurn}) {
+function PlayPhase ({players, hasTurnEnded, nextPlayerTurn}) {
     function renderTurn () {
         return `Player's turn: ${players.find(player => player.turn).name}`;
     }
+
+    const nextTurnButtonClass = 'btn' + (hasTurnEnded ? ' btn--active' : '');
 
     return (
         <div className="play-phase">
@@ -26,7 +28,7 @@ function PlayPhase ({players, nextPlayerTurn}) {
                 </div>
             </div>
             <div className="play-phase__buttons">
-                <button className="btn" onClick={nextPlayerTurn}>NEXT TURN</button>
+                <button className={nextTurnButtonClass} onClick={nextPlayerTurn}>NEXT TURN</button>
             </div>
         </div>
     );
