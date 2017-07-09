@@ -32,6 +32,14 @@ yarn go
 
 ### Changelog
 
+* v0.3
+
+  * Included Start Menu
+
+  * Added player turns
+
+  * Fixed blocked agents direction
+
 * v0.2
 
   * Finished regular Agents' movement, direction, capture, slide and blocking

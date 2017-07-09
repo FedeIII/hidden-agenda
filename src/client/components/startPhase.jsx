@@ -16,16 +16,16 @@ function NumberPlayersOption ({n, numberPlayers, onChange}) {
     );
 }
 
-function PlayerOptions ({n, names}) {
+function PlayerOptions ({n, names, onChange}) {
     return (
         <div key={`player${n}`} className="start-phase__player">
             <div className="start-phase__title">PLAYER {n}</div>
             <input
                 type="text"
                 id={`player-name${n}`}
-                name="player1"
+                name={`player${n}`}
                 className="start-phase__player-name"
-                ref={(input) => names[`input${n}`] = input}
+                onBlur={onChange}
             />
         </div>
     );
@@ -37,29 +37,47 @@ class StartPhase extends React.Component {
     //     onStart
     // })
 
-    constructor (props) {
+    constructor(props) {
         super(props);
-        this.nameInputs = {};
         this.state = {
-            numberPlayers: 2
+            numberPlayers: 2,
+            names: {}
         };
     }
 
-    onNumberPlayersChange (event) {
+    onNumberPlayersChange(event) {
         this.setState({
-            numberPlayers: parseInt(event.target.value)
+            numberPlayers: parseInt(event.target.value),
+            names: Object.entries(this.state.names)
+                    .slice(0, event.target.value)
+                    .reduce((acc, [input, name]) => Object.assign(acc, {[input]: name}), {})
         });
     }
 
-    onStartClick () {
-        const names = Object.keys(this.nameInputs)
-            .map(key => this.nameInputs[key] && this.nameInputs[key].value)
-            .filter(Boolean);
+    selectOptions({target}) {
+        this.setState({
+            names: Object.assign(
+                this.state.names,
+                {
+                    [target.name]: target.value
+                }
+            )
+        });
+    }
 
-        this.props.onStart(names);
+    onStartClick() {
+        if (this.areAllPlayersReady) {
+            this.props.onStart(Object.values(this.state.names));
+        }
+    }
+
+    getStartButtonClass() {
+        return 'btn' + (this.areAllPlayersReady ? ' btn--active' : '');
     }
 
     render () {
+        this.areAllPlayersReady = Object.keys(this.state.names).length === this.state.numberPlayers;
+
         return (
             <div className="start-phase">
                 <div className="start-phase__options">
@@ -87,13 +105,14 @@ class StartPhase extends React.Component {
                                 key={i + 1}
                                 n={i + 1}
                                 names={this.nameInputs}
+                                onChange={(e) => this.selectOptions(e)}
                             />
                         )}
                     </div>
                 </div>
 
                 <div className="start-phase__buttons">
-                    <button className="btn" onClick={() => this.onStartClick()}>START</button>
+                    <button className={this.getStartButtonClass()} onClick={() => this.onStartClick()}>START</button>
                 </div>
             </div>
         );

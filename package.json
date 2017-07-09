@@ -1,8 +1,7 @@
 {
   "name": "game",
-  "version": "0.0.0",
+  "version": "0.3",
   "main": "index.js",
-  "license": "MIT",
   "scripts": {
     "go": "gulp",
     "do": "gulp main"
@@ -47,5 +46,5 @@
     "redux": "^3.6.0",
     "redux-actions": "^1.1.0"
   },
-  "author": "Federico Perez <federico.perez@rumbo.com>"
+  "author": "Federico Perez <fedelll@gmail.com>"
 }
