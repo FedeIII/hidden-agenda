@@ -2,6 +2,7 @@ import cells from 'shared/cells';
 import {areCoordsEqual} from 'shared/utils';
 import {areCoordsInList, directions} from 'shared/utils';
 import {SELECTION} from 'client/pieceStates';
+import {AGENT, CEO} from 'shared/pieceTypes';
 
 // direction:
 //  [0] vertical:
@@ -13,10 +14,17 @@ import {SELECTION} from 'client/pieceStates';
 //      0: right
 
 const pieceIds = [
-    '0-A1', '0-A2', '0-A3', '0-A4', '0-A5',
-    '1-A1', '1-A2', '1-A3', '1-A4', '1-A5',
-    '2-A1', '2-A2', '2-A3', '2-A4', '2-A5',
-    '3-A1', '3-A2', '3-A3', '3-A4', '3-A5'
+    `0-${AGENT}1`, `0-${AGENT}2`, `0-${AGENT}3`, `0-${AGENT}4`, `0-${AGENT}5`,
+    `0-${CEO}`,
+
+    `1-${AGENT}1`, `1-${AGENT}2`, `1-${AGENT}3`, `1-${AGENT}4`, `1-${AGENT}5`,
+    `1-${CEO}`,
+
+    `2-${AGENT}1`, `2-${AGENT}2`, `2-${AGENT}3`, `2-${AGENT}4`, `2-${AGENT}5`,
+    `2-${CEO}`,
+
+    `3-${AGENT}1`, `3-${AGENT}2`, `3-${AGENT}3`, `3-${AGENT}4`, `3-${AGENT}5`,
+    `3-${CEO}`
 ];
 
 function createPiece (id) {
@@ -31,6 +39,10 @@ function createPiece (id) {
 }
 
 function getAgentInitialLocationCells () {
+    return cells.getAllAvailableCells();
+}
+
+function getCeoInitialLocationCells () {
     return cells.getAllAvailableCells();
 }
 
@@ -52,6 +64,20 @@ function getAgentCells (agent, pieces) {
         }
 
         return getAgentInitialLocationCells();
+    }
+
+    return [];
+}
+
+function getCeoCells (ceo, pieces) {
+    if (!ceo.position) {
+        return getCeoInitialLocationCells();
+    }
+
+    if (!isPieceBlocked(ceo, pieces)) {
+        return directions.getAll().reduce((acc, direction) => {
+            return acc.concat(cells.get(ceo.position).getPositionsInDirection(direction))
+        }, []);
     }
 
     return [];
@@ -167,8 +193,10 @@ const API = {
         const pieceType = getType(selectedPiece);
 
         switch (pieceType) {
-            case 'A':
+            case AGENT:
                 return getAgentCells(selectedPiece, pieces);
+            case CEO:
+                return getCeoCells(selectedPiece, pieces);
             default:
                 return [];
         }
@@ -193,7 +221,7 @@ const API = {
         const pieceType = getType(piece);
 
         switch (pieceType) {
-            case 'A':
+            case AGENT:
                 return getAgentDirections(piece, pieces, pieceState);
             default:
                 return [];
@@ -208,6 +236,14 @@ const API = {
 
     getTeam(id) {
         return id.charAt(0);
+    },
+
+    getType(id) {
+        return id.charAt(2);
+    },
+
+    getNumber(id) {
+        return id.charAt(3) || '';
     },
 
     getPieceById(id, pieces) {

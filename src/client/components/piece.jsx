@@ -28,7 +28,7 @@ function Piece ({
             const horizontalClass = directionClassMap.horizontal[selectedDirection[1]];
             className += ` piece--direction${verticalClass}${horizontalClass}`;
         } else {
-            className += ` piece--hq piece--hq--${id.slice(2)}`;
+            className += ` piece--hq piece--hq--${type}${pieceNumber}`;
         }
 
         className += selected ? ' piece--selected' : '';
@@ -37,9 +37,11 @@ function Piece ({
         return className;
     }
 
-    const className = getClassName();
     const team = pieces.getTeam(id);
-    const image = `img/agent-${team}.png`;
+    const type = pieces.getType(id);
+    const pieceNumber = pieces.getNumber(id);
+    const image = `img/${team}-${type}.png`;
+    const className = getClassName();
 
     return (
         <img

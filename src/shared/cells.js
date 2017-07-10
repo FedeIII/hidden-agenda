@@ -10,7 +10,7 @@
 const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
 const cells = [];
 
-function inBoard ([r, c]) {
+function inBoard ([r, c] = [-1, -1]) {
     if (r >= 0 && r < 7) {
         if (c >= 0 && c < cellsByRow[r]) {
             return true;
@@ -62,6 +62,18 @@ function createGetPositionAfterDirections (r, c) {
     }
 }
 
+function createGetPositionsInDirection (r, c) {
+    return function getPositionsInDirection ([v, h] = [], positions = []) {
+        const currentPosition = positions[positions.length - 1] || [r, c];
+        const nextPosition = API.get(currentPosition).getPositionInDirection([v, h]);
+        if (!inBoard(nextPosition)) {
+            return positions;
+        }
+
+        return this.getPositionsInDirection([v, h], positions.concat([nextPosition]));
+    }
+}
+
 function getVerticalDirection (from, to) {
     if (from[0] > to[0]) {return 1;}
 
@@ -102,7 +114,8 @@ cellsByRow.forEach((numberOfCells) => {
             position: [r, c],
             getPositionInDirection: createGetPositionInDirection(r, c),
             getPositionsInDirections: createGetPositionsInDirections(r, c),
-            getPositionAfterDirections: createGetPositionAfterDirections(r, c)
+            getPositionAfterDirections: createGetPositionAfterDirections(r, c),
+            getPositionsInDirection: createGetPositionsInDirection(r, c)
         });
 
         allCells.push([r, c]);

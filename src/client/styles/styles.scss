@@ -394,29 +394,38 @@ body {
     }
 
     &--hq {
-        transform: rotate(-90deg);
         width: 18%;
         margin: 0;
 
         &--A1 {
+            transform: rotate(-90deg);
             top: 42%;
             left: 4%;
         }
         &--A2 {
+            transform: rotate(-90deg);
             top: 23.5%;
             left: 22.5%;
         }
         &--A3 {
+            transform: rotate(-90deg);
             top: 5%;
             left: 41%;
         }
         &--A4 {
+            transform: rotate(-90deg);
             top: 23.5%;
             left: 59%;
         }
         &--A5 {
+            transform: rotate(-90deg);
             top: 42%;
             left: 77.5%;
+        }
+        &--C {
+            transform: rotate(-30deg);
+            top: 43%;
+            left: 41%;
         }
     }
 
