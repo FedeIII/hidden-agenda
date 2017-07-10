@@ -82,12 +82,50 @@ function getVerticalDirection (from, to) {
     if (from[0] < to[0]) {return -1}
 }
 
-function getHorizontalDirection (from, to) {
-    if (from[1] > to[1]) {return 1;}
+function getHorizontalDirection (from, to, v) {
+    if (v === 0) {
+        return goingLeftDecreasesHorizontal(from, to);
+    }
 
-    if (from[1] === to[1]) {return 0;}
+    if (from[0] < 3) {
+        return getUpperHalfDirection(from, to, v);
+    }
 
-    if (from[1] < to[1]) {return 0;}
+    if (from[0] === 3) {
+        return goingLeftDecreasesHorizontal(from, to);
+    }
+
+    if (from[0] > 3) {
+        return getLowerHalfDirection(from, to, v);
+    }
+}
+
+function getUpperHalfDirection (from, to, v) {
+    if (v === 1) {
+        return goingLeftDecreasesHorizontal(from, to);
+    }
+
+    if (v === -1) {
+        return goingRightIncreasesHorizontal(from, to);
+    }
+}
+
+function getLowerHalfDirection (from, to, v) {
+    if (v === 1) {
+        return goingRightIncreasesHorizontal(from, to);
+    }
+
+    if (v === -1) {
+        return goingLeftDecreasesHorizontal(from, to);
+    }
+}
+
+function goingLeftDecreasesHorizontal (from, to) {
+    return +(from[1] > to[1]);
+}
+
+function goingRightIncreasesHorizontal (from, to) {
+    return +(from[1] >= to[1]);
 }
 
 // function getAdjacentCells (r, c) {
@@ -137,7 +175,7 @@ const API = {
 
     getDirection(from, to) {
         const v = getVerticalDirection(from, to);
-        const h = getHorizontalDirection(from, to);
+        const h = getHorizontalDirection(from, to, v);
 
         return [v, h];
     }
