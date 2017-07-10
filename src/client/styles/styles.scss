@@ -359,10 +359,10 @@ body {
 
 .piece {
     position: absolute;
-    width: 80%;
-    top: -50%;
+    width: 92%;
+    top: -43%;
     bottom: 0;
-    left: 0;
+    left: -6%;
     right: 0;
     margin-left: 10%;
     margin-top: 13%;
@@ -371,61 +371,55 @@ body {
     &--direction {
         &-up {
             &-right {
-                transform: rotate(-60deg);
+                transform: rotate(30deg);
             }
             &-left {
-                transform: rotate(-120deg);
+                transform: rotate(-30deg);
             }
         }
         &-down {
             &-right {
-                transform: rotate(60deg);
+                transform: rotate(150deg);
             }
             &-left {
-                transform: rotate(120deg);
+                transform: rotate(-150deg);
             }
         }
         &-right {
-            transform: rotate(0deg);
+            transform: rotate(90deg);
         }
         &-left {
-            transform: rotate(180deg);
+            transform: rotate(-90deg);
         }
     }
 
     &--hq {
-        width: 18%;
+        width: 20%;
         margin: 0;
 
         &--A1 {
-            transform: rotate(-90deg);
-            top: 42%;
-            left: 4%;
+            top: 44%;
+            left: 3%;
         }
         &--A2 {
-            transform: rotate(-90deg);
-            top: 23.5%;
-            left: 22.5%;
+            top: 24.5%;
+            left: 21.5%;
         }
         &--A3 {
-            transform: rotate(-90deg);
-            top: 5%;
-            left: 41%;
+            top: 6%;
+            left: 40%;
         }
         &--A4 {
-            transform: rotate(-90deg);
-            top: 23.5%;
-            left: 59%;
+            top: 24.5%;
+            left: 58%;
         }
         &--A5 {
-            transform: rotate(-90deg);
-            top: 42%;
-            left: 77.5%;
+            top: 44%;
+            left: 76.5%;
         }
         &--C {
-            transform: rotate(-30deg);
-            top: 43%;
-            left: 41%;
+            top: 44%;
+            left: 40%;
         }
     }
 

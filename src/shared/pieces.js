@@ -105,6 +105,14 @@ function getAgentDirections (agent, pieces, pieceState) {
     return [];
 }
 
+function getCeoDirections (ceo, pieces, pieceState) {
+    if (!ceo.direction) {
+        return directions.getAll();
+    }
+
+    return [ceo.direction];
+}
+
 function isDifferentPiece (piece1, piece2) {
     return piece1.id !== piece2.id;
 }
@@ -119,14 +127,37 @@ function isSamePosition (piece1, piece2) {
 function movePieces (pieces, id, cell) {
     return pieces.map(piece => {
         if (piece.id === id) {
-            if (!piece.position) {
-                piece.selectedDirection = [1, 0];
+            switch (API.getType(id)) {
+                case AGENT:
+                    return moveAgent(piece, cell);
+                case CEO:
+                    return moveCeo(piece, cell);
+                default:
+                    return;
             }
-
-            piece.position = cell;
         }
 
         return piece;
+    });
+}
+
+function moveAgent (agent, cell) {
+    const agentDirection = agent.position ? agent.selectedDirection : [1, 0];
+
+    return Object.assign({}, agent, {
+        position: cell,
+        selectedDirection: agentDirection
+    });
+}
+
+function moveCeo (ceo, cell) {
+    const ceoDirection = ceo.position ? cells.getDirection(ceo.position, cell) : undefined;
+    const ceoSelectedDirection = ceo.position ? ceoDirection : [1, 0];
+
+    return Object.assign({}, ceo, {
+        position: cell,
+        selectedDirection: ceoSelectedDirection,
+        direction: ceoDirection
     });
 }
 
@@ -151,10 +182,6 @@ function killPieces (pieces, movedId) {
     });
 
     return killedPieces;
-}
-
-function getType (piece) {
-    return piece && piece.id.charAt(2);
 }
 
 function togglePiece (piece) {
@@ -189,10 +216,9 @@ const API = {
     },
 
     getHighlightedCells(pieces) {
-        const selectedPiece = API.getSelectedPiece(pieces);
-        const pieceType = getType(selectedPiece);
+        const selectedPiece = API.getSelectedPiece(pieces) || {id: ''};
 
-        switch (pieceType) {
+        switch (API.getType(selectedPiece.id)) {
             case AGENT:
                 return getAgentCells(selectedPiece, pieces);
             case CEO:
@@ -218,11 +244,11 @@ const API = {
     },
 
     getPossibleDirections(piece, pieces, pieceState) {
-        const pieceType = getType(piece);
-
-        switch (pieceType) {
+        switch (API.getType(piece.id)) {
             case AGENT:
                 return getAgentDirections(piece, pieces, pieceState);
+            case CEO:
+                return getCeoDirections(piece, pieces, pieceState);
             default:
                 return [];
         }
