@@ -1,6 +1,5 @@
 import cells from 'shared/cells';
-import {areCoordsEqual} from 'shared/utils';
-import {areCoordsInList, directions} from 'shared/utils';
+import {areCoordsEqual, areCoordsInList, directions} from 'shared/utils';
 import {SELECTION} from 'client/pieceStates';
 import {AGENT, CEO} from 'shared/pieceTypes';
 
@@ -76,11 +75,33 @@ function getCeoCells (ceo, pieces) {
 
     if (!isPieceBlocked(ceo, pieces)) {
         return directions.getAll().reduce((acc, direction) => {
-            return acc.concat(cells.get(ceo.position).getPositionsInDirection(direction))
+            return acc.concat(
+                truncatePositions(
+                    cells.get(ceo.position).getPositionsInDirection(direction),
+                    pieces
+                )
+            );
         }, []);
     }
 
     return [];
+}
+
+function truncatePositions (positions, pieces) {
+    if (positions.length && !isPieceInPosition(positions[0], pieces)) {
+        return [positions[0]].concat(
+            truncatePositions(positions.slice(1), pieces)
+        );
+    }
+
+    return [];
+}
+
+function isPieceInPosition (position, pieces) {
+    return areCoordsInList(position, pieces.reduce(
+        (acc, {position}) => position ? acc.concat([position]) : acc,
+        []
+    ));
 }
 
 function getThreeFrontDirections (direction) {
