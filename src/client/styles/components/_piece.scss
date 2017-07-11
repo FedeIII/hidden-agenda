@@ -1,0 +1,70 @@
+.piece {
+    position: absolute;
+    width: 92%;
+    top: -43%;
+    bottom: 0;
+    left: -6%;
+    right: 0;
+    margin-left: 10%;
+    margin-top: 13%;
+    z-index: 2;
+
+    &--direction {
+        &-up {
+            &-right {
+                transform: rotate(30deg);
+            }
+            &-left {
+                transform: rotate(-30deg);
+            }
+        }
+        &-down {
+            &-right {
+                transform: rotate(150deg);
+            }
+            &-left {
+                transform: rotate(-150deg);
+            }
+        }
+        &-right {
+            transform: rotate(90deg);
+        }
+        &-left {
+            transform: rotate(-90deg);
+        }
+    }
+
+    &--hq {
+        width: 20%;
+        margin: 0;
+
+        &--A1 {
+            top: 44%;
+            left: 3%;
+        }
+        &--A2 {
+            top: 24.5%;
+            left: 21.5%;
+        }
+        &--A3 {
+            top: 6%;
+            left: 40%;
+        }
+        &--A4 {
+            top: 24.5%;
+            left: 58%;
+        }
+        &--A5 {
+            top: 44%;
+            left: 76.5%;
+        }
+        &--C {
+            top: 44%;
+            left: 40%;
+        }
+    }
+
+    &--selected {
+        filter: brightness(2);
+    }
+}

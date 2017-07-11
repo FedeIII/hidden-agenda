@@ -36,8 +36,8 @@ yarn go
 
 ## Roadmap
 * Agent direction after sliding
-* CEO blocked
-* Styles in components
+* ~~CEO path block~~
+* ~~Styles in components~~
 * New pieces:
   * Spy
   * Sniper
@@ -49,3 +49,4 @@ yarn go
 * Reveal mechanics
 * Accuse mechanics
 * Claim control mechanics
+* Port to electron
