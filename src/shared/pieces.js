@@ -73,18 +73,13 @@ function getCeoCells (ceo, pieces) {
         return getCeoInitialLocationCells();
     }
 
-    if (!isPieceBlocked(ceo, pieces)) {
-        return directions.getAll().reduce((acc, direction) => {
-            return acc.concat(
-                truncatePositions(
-                    cells.get(ceo.position).getPositionsInDirection(direction),
-                    pieces
-                )
-            );
-        }, []);
-    }
-
-    return [];
+    return directions.getAll().reduce(
+        (acc, direction) => acc.concat(truncatePositions(
+            cells.get(ceo.position).getPositionsInDirection(direction),
+            pieces
+        )),
+        []
+    );
 }
 
 function truncatePositions (positions, pieces) {
