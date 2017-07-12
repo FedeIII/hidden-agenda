@@ -143,7 +143,7 @@ function isSamePosition (piece1, piece2) {
 function movePieces (pieces, id, cell) {
     return pieces.map(piece => {
         if (piece.id === id) {
-            switch (API.getType(id)) {
+            switch (getType(id)) {
                 case AGENT:
                     return moveAgent(piece, cell);
                 case CEO:
@@ -158,12 +158,18 @@ function movePieces (pieces, id, cell) {
 }
 
 function moveAgent (agent, cell) {
-    const agentDirection = agent.position ? agent.selectedDirection : [1, 0];
+    const agentSelectedDirection = agent.position ? agent.selectedDirection : [1, 0];
+    const agentDirection = willAgentSlide(agent) ? agent.direction : undefined;
 
     return Object.assign({}, agent, {
         position: cell,
-        selectedDirection: agentDirection
+        direction: agentDirection,
+        selectedDirection: agentSelectedDirection
     });
+}
+
+function willAgentSlide ({position, direction}) {
+    return cells.inBoard(cells.get(position).getPositionAfterDirections(direction, direction));
 }
 
 function moveCeo (ceo, cell) {
@@ -209,88 +215,99 @@ function togglePiece (piece) {
     }
 }
 
-const API = {
-    init() {
-        return pieceIds.map(id => createPiece(id));
-    },
+function init () {
+    return pieceIds.map(id => createPiece(id));
+}
 
-    toggle(pieces, id) {
-        return pieces.map(piece => {
-            if (piece.id === id) {
-                togglePiece(piece);
-            }
-
-            return piece;
-        });
-    },
-
-    move(pieces, id, cell) {
-        let movedPieces = movePieces(pieces, id, cell);
-        movedPieces = killPieces(movedPieces, id);
-
-        return movedPieces;
-    },
-
-    getHighlightedCells(pieces) {
-        const selectedPiece = API.getSelectedPiece(pieces) || {id: ''};
-
-        switch (API.getType(selectedPiece.id)) {
-            case AGENT:
-                return getAgentCells(selectedPiece, pieces);
-            case CEO:
-                return getCeoCells(selectedPiece, pieces);
-            default:
-                return [];
+function toggle (pieces, id) {
+    return pieces.map(piece => {
+        if (piece.id === id) {
+            togglePiece(piece);
         }
-    },
 
-    getSelectedPiece(pieces) {
-        return pieces.find(piece => piece.selected);
-    },
+        return piece;
+    });
+}
 
-    changeSelectedPieceDirection(pieces, direction) {
-        const selectedPiece = API.getSelectedPiece(pieces);
-        return pieces.map(piece => {
-            if (piece.id === selectedPiece.id) {
-                piece.selectedDirection = direction;
-            }
+function move (pieces, id, cell) {
+    let movedPieces = movePieces(pieces, id, cell);
+    movedPieces = killPieces(movedPieces, id);
 
-            return piece;
-        });
-    },
+    return movedPieces;
+}
 
-    getPossibleDirections(piece, pieces, pieceState) {
-        switch (API.getType(piece.id)) {
-            case AGENT:
-                return getAgentDirections(piece, pieces, pieceState);
-            case CEO:
-                return getCeoDirections(piece, pieces, pieceState);
-            default:
-                return [];
-        }
-    },
+function getHighlightedCells (pieces) {
+    const selectedPiece = getSelectedPiece(pieces) || {id: ''};
 
-    getTeamPieces(pieces, team) {
-        return pieces.filter(piece =>
-            piece.id.charAt(0) === team && !piece.position
-        );
-    },
-
-    getTeam(id) {
-        return id.charAt(0);
-    },
-
-    getType(id) {
-        return id.charAt(2);
-    },
-
-    getNumber(id) {
-        return id.charAt(3) || '';
-    },
-
-    getPieceById(id, pieces) {
-        return pieces.find(piece => piece.id === id);
+    switch (getType(selectedPiece.id)) {
+        case AGENT:
+            return getAgentCells(selectedPiece, pieces);
+        case CEO:
+            return getCeoCells(selectedPiece, pieces);
+        default:
+            return [];
     }
-};
+}
 
-export default API;
+function getSelectedPiece (pieces) {
+    return pieces.find(piece => piece.selected);
+}
+
+function changeSelectedPieceDirection (pieces, direction) {
+    const selectedPiece = getSelectedPiece(pieces);
+    return pieces.map(piece => {
+        if (piece.id === selectedPiece.id) {
+            piece.selectedDirection = direction;
+        }
+
+        return piece;
+    });
+}
+
+function getPossibleDirections (piece, pieces, pieceState) {
+    switch (getType(piece.id)) {
+        case AGENT:
+            return getAgentDirections(piece, pieces, pieceState);
+        case CEO:
+            return getCeoDirections(piece, pieces, pieceState);
+        default:
+            return [];
+    }
+}
+
+function getTeamPieces (pieces, team) {
+    return pieces.filter(piece =>
+        piece.id.charAt(0) === team && !piece.position
+    );
+}
+
+function getTeam (id) {
+    return id.charAt(0);
+}
+
+function getType (id) {
+    return id.charAt(2);
+}
+
+function getNumber (id) {
+    return id.charAt(3) || '';
+}
+
+function getPieceById (id, pieces) {
+    return pieces.find(piece => piece.id === id);
+}
+
+export default {
+    init,
+    toggle,
+    move,
+    getHighlightedCells,
+    getSelectedPiece,
+    changeSelectedPieceDirection,
+    getPossibleDirections,
+    getTeamPieces,
+    getTeam,
+    getType,
+    getNumber,
+    getPieceById
+};

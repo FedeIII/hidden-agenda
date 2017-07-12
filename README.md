@@ -35,7 +35,7 @@ yarn go
 * Initial mechanics of Agents' movement, direction and capture
 
 ## Roadmap
-* Agent direction after sliding
+* ~~Agent direction after sliding~~
 * ~~CEO path block~~
 * ~~Styles in components~~
 * New pieces:

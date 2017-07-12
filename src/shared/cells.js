@@ -9,14 +9,7 @@
 
 const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
 const cells = [];
-
-function inBoard ([r, c] = [-1, -1]) {
-    if (r >= 0 && r < 7) {
-        if (c >= 0 && c < cellsByRow[r]) {
-            return true;
-        }
-    }
-}
+const outPosition = [-1, -1];
 
 function createGetPositionInDirection (r, c) {
     return function getPositionInDirection ([v, h] = []) {
@@ -51,7 +44,7 @@ function createGetPositionsInDirections (r, c) {
     return function getPositionsInDirections (...directions) {
         let nextPosition = [r, c];
         return directions.map(
-            direction => nextPosition = nextPosition && API.get(nextPosition).getPositionInDirection(direction)
+            direction => nextPosition = nextPosition && get(nextPosition).getPositionInDirection(direction)
         );
     }
 }
@@ -65,7 +58,7 @@ function createGetPositionAfterDirections (r, c) {
 function createGetPositionsInDirection (r, c) {
     return function getPositionsInDirection ([v, h] = [], positions = []) {
         const currentPosition = positions[positions.length - 1] || [r, c];
-        const nextPosition = API.get(currentPosition).getPositionInDirection([v, h]);
+        const nextPosition = get(currentPosition).getPositionInDirection([v, h]);
         if (!inBoard(nextPosition)) {
             return positions;
         }
@@ -162,23 +155,42 @@ cellsByRow.forEach((numberOfCells) => {
     cells.push(row);
 });
 
-const API = {
-    get([r, c] = [-1, -1]) {
-        if (inBoard([r, c])) {
-            return cells[r][c];
-        }
-    },
-
-    getAllAvailableCells() {
-        return allCells;
-    },
-
-    getDirection(from, to) {
-        const v = getVerticalDirection(from, to);
-        const h = getHorizontalDirection(from, to, v);
-
-        return [v, h];
+function get ([r, c] = outPosition) {
+    if (inBoard([r, c])) {
+        return cells[r][c];
     }
-};
 
-export default API;
+    return {
+        position: outPosition,
+        getPositionInDirection: () => outPosition,
+        getPositionsInDirections: () => [outPosition],
+        getPositionAfterDirections: () => outPosition,
+        getPositionsInDirection: () => [outPosition]
+    };
+}
+
+function getAllAvailableCells () {
+    return allCells;
+}
+
+function getDirection (from, to) {
+    const v = getVerticalDirection(from, to);
+    const h = getHorizontalDirection(from, to, v);
+
+    return [v, h];
+}
+
+function inBoard ([r, c] = outPosition) {
+    if (r >= 0 && r < 7) {
+        if (c >= 0 && c < cellsByRow[r]) {
+            return true;
+        }
+    }
+}
+
+export default {
+    get,
+    getAllAvailableCells,
+    getDirection,
+    inBoard
+};
