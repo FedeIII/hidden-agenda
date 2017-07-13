@@ -1,7 +1,7 @@
 import cells from 'shared/cells';
 import {areCoordsEqual, areCoordsInList, directions} from 'shared/utils';
 import {SELECTION} from 'client/pieceStates';
-import {AGENT, CEO} from 'shared/pieceTypes';
+import {AGENT, CEO, SPY} from 'shared/pieceTypes';
 
 // direction:
 //  [0] vertical:
@@ -14,16 +14,16 @@ import {AGENT, CEO} from 'shared/pieceTypes';
 
 const pieceIds = [
     `0-${AGENT}1`, `0-${AGENT}2`, `0-${AGENT}3`, `0-${AGENT}4`, `0-${AGENT}5`,
-    `0-${CEO}`,
+    `0-${CEO}`, `0-${SPY}`,
 
     `1-${AGENT}1`, `1-${AGENT}2`, `1-${AGENT}3`, `1-${AGENT}4`, `1-${AGENT}5`,
-    `1-${CEO}`,
+    `1-${CEO}`, `1-${SPY}`,
 
     `2-${AGENT}1`, `2-${AGENT}2`, `2-${AGENT}3`, `2-${AGENT}4`, `2-${AGENT}5`,
-    `2-${CEO}`,
+    `2-${CEO}`, `2-${SPY}`,
 
     `3-${AGENT}1`, `3-${AGENT}2`, `3-${AGENT}3`, `3-${AGENT}4`, `3-${AGENT}5`,
-    `3-${CEO}`
+    `3-${CEO}`, `3-${SPY}`
 ];
 
 function createPiece (id) {
@@ -42,6 +42,10 @@ function getAgentInitialLocationCells () {
 }
 
 function getCeoInitialLocationCells () {
+    return cells.getAllAvailableCells();
+}
+
+function getSpyInitialLocationCells () {
     return cells.getAllAvailableCells();
 }
 
@@ -80,6 +84,14 @@ function getCeoCells (ceo, pieces) {
         )),
         []
     );
+}
+
+function getSpyCells (spy, pieces) {
+    if (!spy.position) {
+        return getSpyInitialLocationCells();
+    }
+
+    return directions.getAll().map(direction => cells.get(spy.position).getPositionInDirection(direction));
 }
 
 function truncatePositions (positions, pieces) {
@@ -129,6 +141,14 @@ function getCeoDirections (ceo, pieces, pieceState) {
     return [ceo.direction];
 }
 
+function getSpyDirections (spy, pieces, pieceState) {
+    if (!spy.direction) {
+        return directions.getAll();
+    }
+
+    return [spy.direction];
+}
+
 function isDifferentPiece (piece1, piece2) {
     return piece1.id !== piece2.id;
 }
@@ -148,6 +168,8 @@ function movePieces (pieces, id, cell) {
                     return moveAgent(piece, cell);
                 case CEO:
                     return moveCeo(piece, cell);
+                case SPY:
+                    return moveSpy(piece, cell);
                 default:
                     return;
             }
@@ -168,19 +190,30 @@ function moveAgent (agent, cell) {
     });
 }
 
-function willAgentSlide ({position, direction}) {
-    return cells.inBoard(cells.get(position).getPositionAfterDirections(direction, direction));
-}
-
 function moveCeo (ceo, cell) {
     const ceoDirection = ceo.position ? cells.getDirection(ceo.position, cell) : undefined;
     const ceoSelectedDirection = ceo.position ? ceoDirection : [1, 0];
 
     return Object.assign({}, ceo, {
         position: cell,
-        selectedDirection: ceoSelectedDirection,
-        direction: ceoDirection
+        direction: ceoDirection,
+        selectedDirection: ceoSelectedDirection
     });
+}
+
+function moveSpy (spy, cell) {
+    const spyDirection = spy.position ? cells.getDirection(spy.position, cell) : undefined;
+    const spySelectedDirection = spy.position ? spyDirection : [1, 0];
+
+    return Object.assign({}, spy, {
+        position: cell,
+        direction: spyDirection,
+        selectedDirection: spySelectedDirection
+    });
+}
+
+function willAgentSlide ({position, direction}) {
+    return cells.inBoard(cells.get(position).getPositionAfterDirections(direction, direction));
 }
 
 function killPiece (piece) {
@@ -244,6 +277,8 @@ function getHighlightedCells (pieces) {
             return getAgentCells(selectedPiece, pieces);
         case CEO:
             return getCeoCells(selectedPiece, pieces);
+        case SPY:
+            return getSpyCells(selectedPiece, pieces);
         default:
             return [];
     }
@@ -270,6 +305,8 @@ function getPossibleDirections (piece, pieces, pieceState) {
             return getAgentDirections(piece, pieces, pieceState);
         case CEO:
             return getCeoDirections(piece, pieces, pieceState);
+        case SPY:
+            return getSpyDirections(piece, pieces, pieceState);
         default:
             return [];
     }

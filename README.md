@@ -39,8 +39,9 @@ yarn go
 * ~~CEO path block~~
 * ~~Styles in components~~
 * New pieces:
-  * Spy
+  * ~~Spy~~
   * Sniper
+* Spy kill mechanics
 * CEO buffs
 * Remote multiplayer
 * Alignment cards
