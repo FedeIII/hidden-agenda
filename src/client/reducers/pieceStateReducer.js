@@ -26,7 +26,7 @@ function movedPieceState (pieceId, {pieces, pieceState}) {
 
     switch (piecesHelper.getType(movedPiece.id)) {
         case SPY:
-            return pieceState === MOVEMENT ? MOVEMENT : MOVEMENT2;
+            return pieceState === MOVEMENT ? MOVEMENT2 : MOVEMENT;
         default:
             return MOVEMENT;
     }
