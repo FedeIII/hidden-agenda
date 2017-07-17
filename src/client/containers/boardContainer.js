@@ -7,19 +7,11 @@ import {areCoordsInList} from 'shared/utils';
 import Board from 'components/board';
 import {togglePiece, movePiece, directPiece} from 'client/actions';
 
-function getHighlightedCells (pieces) {
-    if (pieces.find(piece => piece.showMoveCells)) {
-        return piecesHelper.getHighlightedCells(pieces);
-    } else {
-        return [];
-    }
-}
-
 function mapStateToProps ({pieces, followMouse, pieceState}) {
     return {
         pieces: pieces,
         selectedPiece: piecesHelper.getSelectedPiece(pieces),
-        highlightedCells: getHighlightedCells(pieces),
+        highlightedCells: piecesHelper.getHighlightedCells(pieces),
         followMouse: followMouse,
         pieceState: pieceState
     };
