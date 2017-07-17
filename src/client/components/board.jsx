@@ -3,20 +3,6 @@ import {areCoordsEqual} from 'shared/utils';
 import cells from 'shared/cells';
 import Hexagon from 'components/hexagon';
 
-// function getHighlightedCells (selectedPiece) {
-//     const highlightedCells = [];
-//
-//     if (selectedPiece) {
-//         const selectedPieceCell = cells.get(selectedPiece.position);
-//
-//         highlightedCells.push(
-//             selectedPieceCell.getPositionInDirection(selectedPiece.direction)
-//         );
-//     }
-//
-//     return highlightedCells;
-// }
-
 const rowNumbers = [0, 1, 2, 3, 4, 5, 6];
 const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
 

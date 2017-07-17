@@ -1,7 +1,7 @@
 import piecesHelper from 'shared/pieces';
 import {MOVE_PIECE, DIRECT_PIECE} from 'client/actions';
 import {AGENT, CEO, SPY} from 'shared/pieceTypes';
-import {MOVEMENT} from 'client/pieceStates';
+import {MOVEMENT, COLLOCATION} from 'client/pieceStates';
 
 function movedPieceState ({pieces, followMouse, pieceState}) {
     const selectedPiece = piecesHelper.getSelectedPiece(pieces);
@@ -10,7 +10,7 @@ function movedPieceState ({pieces, followMouse, pieceState}) {
         case AGENT:
             return true;
         case CEO:
-            return true;
+            return pieceState === COLLOCATION;
         case SPY:
             return pieceState === MOVEMENT;
         default:

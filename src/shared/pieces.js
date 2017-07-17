@@ -33,7 +33,8 @@ function createPiece (id) {
         direction: undefined,
         selectedDirection: undefined,
         selected: false,
-        killed: false
+        killed: false,
+        showMoveCells: false
     }
 }
 
@@ -52,56 +53,6 @@ function getSpyInitialLocationCells () {
 function isPieceBlocked ({position, direction}, pieces) {
     const piecePointingAt = cells.get(position).getPositionInDirection(direction);
     return !!pieces.find(piece => areCoordsEqual(piece.position, piecePointingAt))
-}
-
-function getAgentCells (agent, pieces) {
-    if (!agent.position) {
-        return getAgentInitialLocationCells();
-    }
-
-    if (!isPieceBlocked(agent, pieces)) {
-        const position = cells.get(agent.position)
-            .getPositionAfterDirections(agent.direction, agent.direction);
-        if (position) {
-            return [position];
-        }
-
-        return getAgentInitialLocationCells();
-    }
-
-    return [];
-}
-
-function getCeoCells (ceo, pieces) {
-    if (!ceo.position) {
-        return getCeoInitialLocationCells();
-    }
-
-    return directions.getAll().reduce(
-        (acc, direction) => acc.concat(truncatePositions(
-            cells.get(ceo.position).getPositionsInDirection(direction),
-            pieces
-        )),
-        []
-    );
-}
-
-function getSpyCells (spy, pieces) {
-    if (!spy.position) {
-        return getSpyInitialLocationCells();
-    }
-
-    return directions.getAll().map(direction => cells.get(spy.position).getPositionInDirection(direction));
-}
-
-function truncatePositions (positions, pieces) {
-    if (positions.length && !isPieceInPosition(positions[0], pieces)) {
-        return [positions[0]].concat(
-            truncatePositions(positions.slice(1), pieces)
-        );
-    }
-
-    return [];
 }
 
 function isPieceInPosition (position, pieces) {
@@ -160,6 +111,13 @@ function isSamePosition (piece1, piece2) {
     }
 }
 
+function move (pieces, id, cell) {
+    let movedPieces = movePieces(pieces, id, cell);
+    movedPieces = killPieces(movedPieces, id);
+
+    return movedPieces;
+}
+
 function movePieces (pieces, id, cell) {
     return pieces.map(piece => {
         if (piece.id === id) {
@@ -186,7 +144,8 @@ function moveAgent (agent, cell) {
     return Object.assign({}, agent, {
         position: cell,
         direction: agentDirection,
-        selectedDirection: agentSelectedDirection
+        selectedDirection: agentSelectedDirection,
+        showMoveCells: false
     });
 }
 
@@ -197,7 +156,8 @@ function moveCeo (ceo, cell) {
     return Object.assign({}, ceo, {
         position: cell,
         direction: ceoDirection,
-        selectedDirection: ceoSelectedDirection
+        selectedDirection: ceoSelectedDirection,
+        showMoveCells: false
     });
 }
 
@@ -208,17 +168,10 @@ function moveSpy (spy, cell) {
     return Object.assign({}, spy, {
         position: cell,
         direction: spyDirection,
-        selectedDirection: spySelectedDirection
+        selectedDirection: spySelectedDirection,
+        showMoveCells: spy.moving ? true : false,
+        moving: !spy.moving
     });
-}
-
-function willAgentSlide ({position, direction}) {
-    return cells.inBoard(cells.get(position).getPositionAfterDirections(direction, direction));
-}
-
-function killPiece (piece) {
-    piece.killed = true;
-    piece.position = [-1, -1];
 }
 
 function killPieces (pieces, movedId) {
@@ -239,12 +192,23 @@ function killPieces (pieces, movedId) {
     return killedPieces;
 }
 
+function willAgentSlide ({position, direction}) {
+    return cells.inBoard(cells.get(position).getPositionAfterDirections(direction, direction));
+}
+
+function killPiece (piece) {
+    piece.killed = true;
+    piece.position = [-1, -1];
+}
+
 function togglePiece (piece) {
     if (piece.selected) {
         piece.selected = false;
+        piece.showMoveCells = false;
         piece.direction = piece.selectedDirection;
     } else {
         piece.selected = true;
+        piece.showMoveCells = true;
     }
 }
 
@@ -262,26 +226,76 @@ function toggle (pieces, id) {
     });
 }
 
-function move (pieces, id, cell) {
-    let movedPieces = movePieces(pieces, id, cell);
-    movedPieces = killPieces(movedPieces, id);
-
-    return movedPieces;
+function getHighlightedCells (pieces) {
+    return pieces.reduce((acc, piece) =>
+        piece.showMoveCells ? acc.concat(getHighlightedCellsFor(piece, pieces)) : acc,
+        []
+    );
 }
 
-function getHighlightedCells (pieces) {
-    const selectedPiece = getSelectedPiece(pieces) || {id: ''};
-
-    switch (getType(selectedPiece.id)) {
+function getHighlightedCellsFor (piece, pieces) {
+    switch (getType(piece.id)) {
         case AGENT:
-            return getAgentCells(selectedPiece, pieces);
+            return getAgentCells(piece, pieces);
         case CEO:
-            return getCeoCells(selectedPiece, pieces);
+            return getCeoCells(piece, pieces);
         case SPY:
-            return getSpyCells(selectedPiece, pieces);
+            return getSpyCells(piece, pieces);
         default:
             return [];
     }
+}
+
+function getAgentCells (agent, pieces) {
+    if (!agent.position) {
+        return getAgentInitialLocationCells();
+    }
+
+    if (!isPieceBlocked(agent, pieces)) {
+        const position = cells.get(agent.position)
+            .getPositionAfterDirections(agent.direction, agent.direction);
+        if (position) {
+            return [position];
+        }
+
+        return getAgentInitialLocationCells();
+    }
+
+    return [];
+}
+
+function getCeoCells (ceo, pieces) {
+    if (!ceo.position) {
+        return getCeoInitialLocationCells();
+    }
+
+    return directions.getAll().reduce(
+        (acc, direction) => acc.concat(truncatePositions(
+            cells.get(ceo.position).getPositionsInDirection(direction),
+            pieces
+        )),
+        []
+    );
+}
+
+function getSpyCells (spy, pieces) {
+    if (!spy.position) {
+        return getSpyInitialLocationCells();
+    }
+
+    return directions.getAll()
+        .map(direction => cells.get(spy.position).getPositionInDirection(direction))
+        .filter(cell => cells.inBoard(cell));
+}
+
+function truncatePositions (positions, pieces) {
+    if (positions.length && !isPieceInPosition(positions[0], pieces)) {
+        return [positions[0]].concat(
+            truncatePositions(positions.slice(1), pieces)
+        );
+    }
+
+    return [];
 }
 
 function getSelectedPiece (pieces) {

@@ -1,7 +1,8 @@
-import {TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE} from 'client/actions';
 import piecesHelper from 'shared/pieces';
+import {AGENT, CEO, SPY} from 'shared/pieceTypes';
+import {TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE} from 'client/actions';
 import {
-    SELECTION, DESELECTION, PLACEMENT, MOVEMENT, COLLOCATION
+    SELECTION, DESELECTION, PLACEMENT, MOVEMENT, MOVEMENT2, COLLOCATION
 } from 'client/pieceStates';
 
 function toggledPieceState (pieceId, {pieces, followMouse}) {
@@ -17,13 +18,18 @@ function toggledPieceState (pieceId, {pieces, followMouse}) {
     return DESELECTION;
 }
 
-function movedPieceState (pieceId, statePieces) {
-    const {direction} = piecesHelper.getPieceById(pieceId, statePieces);
-    if (!direction) {
+function movedPieceState (pieceId, {pieces, pieceState}) {
+    const movedPiece = piecesHelper.getPieceById(pieceId, pieces);
+    if (!movedPiece.direction) {
         return PLACEMENT;
     }
 
-    return MOVEMENT;
+    switch (piecesHelper.getType(movedPiece.id)) {
+        case SPY:
+            return pieceState === MOVEMENT ? MOVEMENT : MOVEMENT2;
+        default:
+            return MOVEMENT;
+    }
 }
 
 export default function pieceStateReducer (state, action) {
@@ -32,7 +38,7 @@ export default function pieceStateReducer (state, action) {
             case TOGGLE_PIECE:
                 return toggledPieceState(action.payload.pieceId, state);
             case MOVE_PIECE:
-                return movedPieceState(action.payload.pieceId, state.pieces);
+                return movedPieceState(action.payload.pieceId, state);
             default:
                 return state.pieceState;
         }
