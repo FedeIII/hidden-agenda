@@ -50,9 +50,21 @@ function getSpyInitialLocationCells () {
     return cells.getAllAvailableCells();
 }
 
-function isPieceBlocked ({position, direction}, pieces) {
-    const piecePointingAt = cells.get(position).getPositionInDirection(direction);
-    return !!pieces.find(piece => areCoordsEqual(piece.position, piecePointingAt))
+function isPieceBlocked (selectedPiece, pieces, position1CellAhead, position2CellsAhead) {
+    return pieces.filter(piece =>
+        isPieceAtPosistion(piece, position1CellAhead)
+        ||
+        isFriendlyAtPosition(piece, position2CellsAhead, selectedPiece)
+    ).length !== 0;
+}
+
+function isPieceAtPosistion (piece, position1CellAhead) {
+    return areCoordsEqual(piece.position, position1CellAhead);
+}
+
+function isFriendlyAtPosition (piece, position2CellsAhead, selectedPiece) {
+    return areCoordsEqual(piece.position, position2CellsAhead)
+        && (getTeam(piece.id) === getTeam(selectedPiece.id));
 }
 
 function isPieceInPosition (position, pieces) {
@@ -251,11 +263,14 @@ function getAgentCells (agent, pieces) {
         return getAgentInitialLocationCells();
     }
 
-    if (!isPieceBlocked(agent, pieces)) {
-        const position = cells.get(agent.position)
-            .getPositionAfterDirections(agent.direction, agent.direction);
-        if (position) {
-            return [position];
+    const position2CellsAhead = cells.get(agent.position)
+        .getPositionAfterDirections(agent.direction, agent.direction);
+    const position1CellAhead = cells.get(agent.position)
+        .getPositionInDirection(agent.direction);
+
+    if (!isPieceBlocked(agent, pieces, position1CellAhead, position2CellsAhead)) {
+        if (position2CellsAhead) {
+            return [position2CellsAhead];
         }
 
         return getAgentInitialLocationCells();

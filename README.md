@@ -41,6 +41,11 @@ yarn go
 * New pieces:
   * ~~Spy~~
   * Sniper
+* pieces capture only other teams' pieces
+  * ~~Agent~~
+  * CEO
+  * Spy
+  * Sniper
 * Spy kill mechanics
 * CEO buffs
 * Remote multiplayer
