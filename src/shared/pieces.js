@@ -300,7 +300,38 @@ function getSpyCells (spy, pieces) {
 
     return directions.getAll()
         .map(direction => cells.get(spy.position).getPositionInDirection(direction))
-        .filter(cell => cells.inBoard(cell));
+        .filter(cell => cells.inBoard(cell))
+        .filter(cell =>
+            !hasPiece(cell, pieces)
+            ||
+            hasPieceBackwards(cell, pieces, spy.position)
+        );
+}
+
+function hasPiece (cell, pieces) {
+    return !!pieces.find(piece => areCoordsEqual(piece.position, cell));
+}
+
+function hasPieceBackwards (cell, pieces, spyPosition) {
+    return !!(
+        hasPiece(cell, pieces)
+        &&
+        pieces.find(piece => isPieceBackwards(piece, spyPosition))
+    );
+}
+
+function isPieceBackwards (piece, from) {
+    return areCoordsInList(from, getThreeBackPositions(piece));
+}
+
+function getThreeBackPositions (piece) {
+    return getThreeFrontDirections(
+        directions.getOpposite(
+            directions.findIndex(piece.direction)
+        )
+    ).map(
+        direction => cells.get(piece.position).getPositionInDirection(direction)
+    );
 }
 
 function truncatePositions (positions, pieces) {

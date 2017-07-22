@@ -50,5 +50,9 @@ export const directions = {
         }
 
         return [].concat(possibleDirections[i]);
+    },
+
+    getOpposite(index) {
+        return directions.get(index < 3 ? index + 3 : index - 3);
     }
 }

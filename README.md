@@ -35,7 +35,6 @@ yarn go
 * Initial mechanics of Agents' movement, direction and capture
 
 ## Roadmap
-* ~~Agent direction after sliding~~
 * ~~CEO path block~~
 * ~~Styles in components~~
 * New pieces:
@@ -56,3 +55,9 @@ yarn go
 * Accuse mechanics
 * Claim control mechanics
 * Port to electron
+
+## Known Bugs
+* ~~Agent direction after sliding~~
+* Switch selected agent allows to direct it without moving it first
+* Pieces are not allowed to spawn over other pieces
+* End turn on spy movement
