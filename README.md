@@ -42,10 +42,9 @@ yarn go
   * Sniper
 * pieces capture only other teams' pieces
   * ~~Agent~~
-  * CEO
-  * Spy
+  * ~~Spy~~
   * Sniper
-* Spy kill mechanics
+* ~~Spy kill mechanics~~
 * CEO buffs
 * Remote multiplayer
 * Alignment cards

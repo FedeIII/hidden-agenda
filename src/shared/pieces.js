@@ -63,7 +63,8 @@ function isPieceAtPosistion (piece, position1CellAhead) {
 }
 
 function isFriendlyAtPosition (piece, position2CellsAhead, selectedPiece) {
-    return areCoordsEqual(piece.position, position2CellsAhead)
+    return piece
+        && areCoordsEqual(piece.position, position2CellsAhead)
         && (getTeam(piece.id) === getTeam(selectedPiece.id));
 }
 
@@ -302,14 +303,20 @@ function getSpyCells (spy, pieces) {
         .map(direction => cells.get(spy.position).getPositionInDirection(direction))
         .filter(cell => cells.inBoard(cell))
         .filter(cell =>
+            !isFriendlyAtPosition(getPieceInPosition(cell, pieces), cell, spy)
+        ).filter(cell =>
             !hasPiece(cell, pieces)
             ||
             hasPieceBackwards(cell, pieces, spy.position)
         );
 }
 
+function getPieceInPosition (position, pieces) {
+    return pieces.find(piece => areCoordsEqual(piece.position, position));
+}
+
 function hasPiece (cell, pieces) {
-    return !!pieces.find(piece => areCoordsEqual(piece.position, cell));
+    return !!getPieceInPosition(cell, pieces);
 }
 
 function hasPieceBackwards (cell, pieces, spyPosition) {
