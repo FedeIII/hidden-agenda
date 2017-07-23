@@ -59,5 +59,5 @@ yarn go
 ## Known Bugs
 * ~~Agent direction after sliding~~
 * Switch selected agent allows to direct it without moving it first
-* Pieces are not allowed to spawn over other pieces
+* ~~Pieces are not allowed to spawn over other pieces~~
 * End turn on spy movement

@@ -38,20 +38,9 @@ function createPiece (id) {
     }
 }
 
-function getAgentInitialLocationCells () {
-    return cells.getAllAvailableCells();
-}
-
-function getCeoInitialLocationCells () {
-    return cells.getAllAvailableCells();
-}
-
-function getSpyInitialLocationCells () {
-    return cells.getAllAvailableCells();
-}
-
-function getSniperInitialLocationCells () {
-    return cells.getAllAvailableCells();
+function getInitialLocationCells (pieces) {
+    return cells.getAllAvailableCells()
+        .filter(cell => !hasPiece(cell, pieces));
 }
 
 function isPieceBlocked (selectedPiece, pieces, position1CellAhead, position2CellsAhead) {
@@ -277,7 +266,7 @@ function getHighlightedCellsFor (piece, pieces) {
         case SPY:
             return getSpyCells(piece, pieces);
         case SNIPER:
-            return getSniperCells(piece);
+            return getSniperCells(piece, pieces);
         default:
             return [];
     }
@@ -285,7 +274,7 @@ function getHighlightedCellsFor (piece, pieces) {
 
 function getAgentCells (agent, pieces) {
     if (!agent.position) {
-        return getAgentInitialLocationCells();
+        return getInitialLocationCells(pieces);
     }
 
     const position2CellsAhead = cells.get(agent.position)
@@ -306,7 +295,7 @@ function getAgentCells (agent, pieces) {
 
 function getCeoCells (ceo, pieces) {
     if (!ceo.position) {
-        return getCeoInitialLocationCells();
+        return getInitialLocationCells(pieces);
     }
 
     return directions.getAll().reduce(
@@ -320,7 +309,7 @@ function getCeoCells (ceo, pieces) {
 
 function getSpyCells (spy, pieces) {
     if (!spy.position) {
-        return getSpyInitialLocationCells();
+        return getInitialLocationCells(pieces);
     }
 
     return directions.getAll()
@@ -335,9 +324,9 @@ function getSpyCells (spy, pieces) {
         );
 }
 
-function getSniperCells (spy) {
+function getSniperCells (spy, pieces) {
     if (!spy.position) {
-        return getSniperInitialLocationCells();
+        return getInitialLocationCells(pieces);
     }
 
     return [];
