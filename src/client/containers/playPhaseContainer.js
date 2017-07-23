@@ -1,6 +1,6 @@
 import PlayPhase from 'components/playPhase';
 import {connect} from 'react-redux';
-import {nextTurn} from 'client/actions';
+import {nextTurn, snipe} from 'client/actions';
 
 function mapStateToProps ({players, hasTurnEnded}) {
     return {
@@ -13,10 +13,14 @@ function mergeProps (stateProps, {dispatch}) {
     return Object.assign(
         stateProps,
         {
-            nextPlayerTurn() {
+            onNextTurn() {
                 if (stateProps.hasTurnEnded) {
                     dispatch(nextTurn());
                 }
+            },
+
+            onSnipe() {
+                dispatch(snipe());
             }
         }
     );

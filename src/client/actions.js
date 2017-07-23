@@ -36,3 +36,10 @@ export function directPiece (direction) {
         payload: direction
     };
 };
+
+export const SNIPE = 'SNIPE';
+export function snipe () {
+    return {
+        type: SNIPE
+    };
+};

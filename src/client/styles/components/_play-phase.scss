@@ -62,7 +62,8 @@
     }
 
     &__buttons {
-        text-align: center;
+        display: flex;
+        justify-content: space-evenly;
         padding: 20px;
     }
 }

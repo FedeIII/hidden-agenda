@@ -2,7 +2,13 @@ import React from 'react';
 import BoardContainer from 'containers/boardContainer';
 import HqContainer from 'containers/hqContainer';
 
-function PlayPhase ({players, hasTurnEnded, nextPlayerTurn}) {
+function PlayPhase ({
+    players,
+    hasTurnEnded,
+    onNextTurn,
+    onSnipe
+}) {
+
     function renderTurn () {
         return `Player's turn: ${players.find(player => player.turn).name}`;
     }
@@ -28,7 +34,8 @@ function PlayPhase ({players, hasTurnEnded, nextPlayerTurn}) {
                 </div>
             </div>
             <div className="play-phase__buttons">
-                <button className={nextTurnButtonClass} onClick={nextPlayerTurn}>NEXT TURN</button>
+                <button className="btn btn--active btn--small" onClick={onSnipe}>SNIPE!</button>
+                <button className={nextTurnButtonClass} onClick={onNextTurn}>NEXT TURN</button>
             </div>
         </div>
     );

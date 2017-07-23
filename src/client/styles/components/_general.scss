@@ -15,7 +15,7 @@ body {
 
 .btn {
     font-family: monospace;
-    font-size: 15px;
+    font-size: 17px;
     color: white;
     letter-spacing: 5px;
     background-color: lightgray;
@@ -48,5 +48,9 @@ body {
                         0 1px 18px 0 rgba(0,0,0,0.12),
                         0 3px 5px -1px rgba(0,0,0,0.3);
         }
+    }
+
+    &--small {
+        font-size: 13px;
     }
 }

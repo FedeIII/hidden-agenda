@@ -7,6 +7,7 @@ import hasTurnEndedReducer from 'reducers/hasTurnEndedReducer';
 import piecesReducer from 'reducers/piecesReducer';
 import pieceStateReducer from 'reducers/pieceStateReducer';
 import followMouseReducer from 'reducers/followMouseReducer';
+import snipeReducer from 'reducers/snipeReducer';
 
 const initialState = {
     phase: 'start',
@@ -14,7 +15,8 @@ const initialState = {
     hasTurnEnded: undefined,
     pieces: pieces.init(),
     pieceState: undefined,
-    followMouse: false
+    followMouse: false,
+    snipe: false
 };
 
 export default function gameReducer (state = initialState, action = {}) {
@@ -24,6 +26,7 @@ export default function gameReducer (state = initialState, action = {}) {
         hasTurnEnded: hasTurnEndedReducer(state, action),
         pieces: piecesReducer(state, action),
         pieceState: pieceStateReducer(state, action),
-        followMouse: followMouseReducer(state, action)
+        followMouse: followMouseReducer(state, action),
+        snipe: snipeReducer(state, action)
     };
 }
