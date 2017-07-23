@@ -1,5 +1,5 @@
 import piecesHelper from 'shared/pieces';
-import {AGENT, CEO, SPY} from 'shared/pieceTypes';
+import {AGENT, CEO, SPY, SNIPER} from 'shared/pieceTypes';
 import {TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE} from 'client/actions';
 import {
     SELECTION, DESELECTION, PLACEMENT, MOVEMENT, MOVEMENT2, COLLOCATION

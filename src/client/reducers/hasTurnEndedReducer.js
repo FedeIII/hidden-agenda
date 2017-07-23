@@ -1,6 +1,6 @@
 import {START_GAME, NEXT_TURN, TOGGLE_PIECE} from 'client/actions';
-import {AGENT, CEO, SPY} from 'shared/pieceTypes';
-import {MOVEMENT, MOVEMENT2, PLACEMENT} from 'client/pieceStates';
+import {AGENT, CEO, SPY, SNIPER} from 'shared/pieceTypes';
+import {MOVEMENT, MOVEMENT2, PLACEMENT, SELECTION} from 'client/pieceStates';
 import piecesHelper from 'shared/pieces';
 
 function hasPieceEndedTurn (pieces, pieceState) {
@@ -14,6 +14,8 @@ function hasPieceEndedTurn (pieces, pieceState) {
                 return pieceState === PLACEMENT || pieceState === MOVEMENT;
             case SPY:
                 return pieceState === PLACEMENT || pieceState === MOVEMENT2;
+            case SNIPER:
+                return pieceState === PLACEMENT || pieceState === SELECTION;
             default:
                 return false;
         }

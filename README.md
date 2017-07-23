@@ -39,12 +39,13 @@ yarn go
 * ~~Styles in components~~
 * New pieces:
   * ~~Spy~~
-  * Sniper
+  * ~~Sniper~~
 * pieces capture only other teams' pieces
   * ~~Agent~~
   * ~~Spy~~
   * Sniper
 * ~~Spy kill mechanics~~
+* Sniper kill mechanics
 * CEO buffs
 * Remote multiplayer
 * Alignment cards

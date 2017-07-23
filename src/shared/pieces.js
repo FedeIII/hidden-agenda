@@ -1,7 +1,7 @@
 import cells from 'shared/cells';
 import {areCoordsEqual, areCoordsInList, directions} from 'shared/utils';
 import {SELECTION} from 'client/pieceStates';
-import {AGENT, CEO, SPY} from 'shared/pieceTypes';
+import {AGENT, CEO, SPY, SNIPER} from 'shared/pieceTypes';
 
 // direction:
 //  [0] vertical:
@@ -14,16 +14,16 @@ import {AGENT, CEO, SPY} from 'shared/pieceTypes';
 
 const pieceIds = [
     `0-${AGENT}1`, `0-${AGENT}2`, `0-${AGENT}3`, `0-${AGENT}4`, `0-${AGENT}5`,
-    `0-${CEO}`, `0-${SPY}`,
+    `0-${CEO}`, `0-${SPY}`, `0-${SNIPER}`,
 
     `1-${AGENT}1`, `1-${AGENT}2`, `1-${AGENT}3`, `1-${AGENT}4`, `1-${AGENT}5`,
-    `1-${CEO}`, `1-${SPY}`,
+    `1-${CEO}`, `1-${SPY}`, `1-${SNIPER}`,
 
     `2-${AGENT}1`, `2-${AGENT}2`, `2-${AGENT}3`, `2-${AGENT}4`, `2-${AGENT}5`,
-    `2-${CEO}`, `2-${SPY}`,
+    `2-${CEO}`, `2-${SPY}`, `2-${SNIPER}`,
 
     `3-${AGENT}1`, `3-${AGENT}2`, `3-${AGENT}3`, `3-${AGENT}4`, `3-${AGENT}5`,
-    `3-${CEO}`, `3-${SPY}`
+    `3-${CEO}`, `3-${SPY}`, `3-${SNIPER}`
 ];
 
 function createPiece (id) {
@@ -47,6 +47,10 @@ function getCeoInitialLocationCells () {
 }
 
 function getSpyInitialLocationCells () {
+    return cells.getAllAvailableCells();
+}
+
+function getSniperInitialLocationCells () {
     return cells.getAllAvailableCells();
 }
 
@@ -97,7 +101,7 @@ function getAgentDirections (agent, pieces, pieceState) {
     return [];
 }
 
-function getCeoDirections (ceo, pieces, pieceState) {
+function getCeoDirections (ceo, pieces) {
     if (!ceo.direction) {
         return directions.getAll();
     }
@@ -105,12 +109,16 @@ function getCeoDirections (ceo, pieces, pieceState) {
     return [ceo.direction];
 }
 
-function getSpyDirections (spy, pieces, pieceState) {
+function getSpyDirections (spy, pieces) {
     if (!spy.direction) {
         return directions.getAll();
     }
 
     return [spy.direction];
+}
+
+function getSniperDirections (sniper, pieces) {
+    return directions.getAll();
 }
 
 function isDifferentPiece (piece1, piece2) {
@@ -141,6 +149,8 @@ function movePieces (pieces, id, cell) {
                     return moveCeo(piece, cell);
                 case SPY:
                     return moveSpy(piece, cell);
+                case SNIPER:
+                    return moveSniper(piece, cell);
                 default:
                     return;
             }
@@ -184,6 +194,18 @@ function moveSpy (spy, cell) {
         selectedDirection: spySelectedDirection,
         showMoveCells: spy.moving ? true : false,
         moving: !spy.moving
+    });
+}
+
+function moveSniper (sniper, cell) {
+    const sniperDirection = sniper.position ? cells.getDirection(sniper.position, cell) : undefined;
+    const sniperSelectedDirection = sniper.position ? sniperDirection : [1, 0];
+
+    return Object.assign({}, sniper, {
+        position: cell,
+        direction: sniperDirection,
+        selectedDirection: sniperSelectedDirection,
+        showMoveCells: false
     });
 }
 
@@ -254,6 +276,8 @@ function getHighlightedCellsFor (piece, pieces) {
             return getCeoCells(piece, pieces);
         case SPY:
             return getSpyCells(piece, pieces);
+        case SNIPER:
+            return getSniperCells(piece);
         default:
             return [];
     }
@@ -309,6 +333,14 @@ function getSpyCells (spy, pieces) {
             ||
             hasPieceBackwards(cell, pieces, spy.position)
         );
+}
+
+function getSniperCells (spy) {
+    if (!spy.position) {
+        return getSniperInitialLocationCells();
+    }
+
+    return [];
 }
 
 function getPieceInPosition (position, pieces) {
@@ -371,9 +403,11 @@ function getPossibleDirections (piece, pieces, pieceState) {
         case AGENT:
             return getAgentDirections(piece, pieces, pieceState);
         case CEO:
-            return getCeoDirections(piece, pieces, pieceState);
+            return getCeoDirections(piece, pieces);
         case SPY:
-            return getSpyDirections(piece, pieces, pieceState);
+            return getSpyDirections(piece, pieces);
+        case SNIPER:
+            return getSniperDirections(piece, pieces);
         default:
             return [];
     }
