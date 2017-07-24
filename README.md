@@ -45,7 +45,8 @@ yarn go
   * ~~Spy~~
   * Sniper
 * ~~Spy kill mechanics~~
-* Sniper kill mechanics
+* ~~Sniper kill mechanics~~
+* Sniper kill mechanics: sniping after moving a piece
 * CEO buffs
 * Remote multiplayer
 * Alignment cards

@@ -1,3 +1,4 @@
+import {areCoordsEqual} from 'shared/utils';
 
 //           0,0  0,1  0,2  0,3
 //        1,0  1,1  1,2  1,3  1,4
@@ -188,9 +189,24 @@ function inBoard ([r, c] = outPosition) {
     }
 }
 
+function getMovementCells (from, to) {
+    if (from && from.length) {
+        return (function concatCell (acc, cell) {
+            if (areCoordsEqual(cell, to)) {
+                return acc.concat([cell]);
+            }
+
+            return concatCell(acc.concat([cell]), get(cell).getPositionInDirection(getDirection(cell, to)));
+        })([from], get(from).getPositionInDirection(getDirection(from, to)));
+    }
+
+    return [to];
+}
+
 export default {
     get,
     getAllAvailableCells,
     getDirection,
-    inBoard
+    inBoard,
+    getMovementCells
 };

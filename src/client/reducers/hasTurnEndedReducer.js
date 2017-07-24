@@ -1,7 +1,9 @@
-import {START_GAME, NEXT_TURN, TOGGLE_PIECE} from 'client/actions';
+import {START_GAME, NEXT_TURN, TOGGLE_PIECE, MOVE_PIECE} from 'client/actions';
 import {AGENT, CEO, SPY, SNIPER} from 'shared/pieceTypes';
 import {MOVEMENT, MOVEMENT2, PLACEMENT, SELECTION} from 'client/pieceStates';
 import piecesHelper from 'shared/pieces';
+import cells from 'shared/cells';
+import {areCoordsInList} from 'shared/utils';
 
 function hasPieceEndedTurn (pieces, pieceState) {
     const selectedPiece = piecesHelper.getSelectedPiece(pieces);
@@ -26,6 +28,14 @@ function isPieceBeingDropped ({hasTurnEnded, pieces, pieceState}) {
     return hasTurnEnded || hasPieceEndedTurn(pieces, pieceState);
 }
 
+function isPieceSniped ({pieces}, {pieceId, coords}) {
+    return piecesHelper.isPieceThroughSniperLine(
+        piecesHelper.getPieceById(pieceId, pieces),
+        coords,
+        pieces
+    );
+}
+
 export default function hasTurnEndedReducer (state, action) {
     switch (action.type) {
         case NEXT_TURN:
@@ -34,6 +44,8 @@ export default function hasTurnEndedReducer (state, action) {
             return false;
         case TOGGLE_PIECE:
             return isPieceBeingDropped(state);
+        case MOVE_PIECE:
+            return isPieceSniped(state, action.payload);
         default:
             return state.hasTurnEnded;
     }

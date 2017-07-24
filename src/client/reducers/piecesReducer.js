@@ -16,8 +16,8 @@ function toggledPieceState (statePieces, pieceId) {
     }
 }
 
-function movedPieceState (statePieces, {pieceId, coords}) {
-    return pieces.move(statePieces, pieceId, coords);
+function movedPieceState (state, {pieceId, coords}) {
+    return pieces.move(state.pieces, pieceId, coords, state.snipe);
 }
 
 function directedPieceState (statePieces, direction) {
@@ -33,7 +33,7 @@ export default function piecesReducer (state, action) {
                 );
             case MOVE_PIECE:
                 return [].concat(
-                    movedPieceState(state.pieces, action.payload)
+                    movedPieceState(state, action.payload)
                 );
             case DIRECT_PIECE:
                 return [].concat(
