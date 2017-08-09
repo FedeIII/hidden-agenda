@@ -139,26 +139,37 @@ function move (pieces, id, cell, snipe) {
 function movePieces (pieces, id, cell, snipe) {
     return pieces.map(piece => {
         if (piece.id === id) {
-            if (snipe && isPieceThroughSniperLine(piece, cell, pieces)) {
-                return getSnipedPiece(piece);
-            }
-
-            switch (getType(id)) {
-                case AGENT:
-                    return moveAgent(piece, cell, snipe);
-                case CEO:
-                    return moveCeo(piece, cell);
-                case SPY:
-                    return moveSpy(piece, cell);
-                case SNIPER:
-                    return moveSniper(piece, cell);
-                default:
-                    return;
-            }
+            return getMovedPiece(piece, cell, snipe);
         }
 
-        return piece;
+        return getNotMovedPiece(piece);
     });
+}
+
+function getMovedPiece (piece, cell, snipe) {
+    piece.moved = true;
+
+    if (snipe && isPieceThroughSniperLine(piece, cell, pieces)) {
+        return getSnipedPiece(piece);
+    }
+
+    switch (getType(piece.id)) {
+        case AGENT:
+            return moveAgent(piece, cell, snipe);
+        case CEO:
+            return moveCeo(piece, cell);
+        case SPY:
+            return moveSpy(piece, cell);
+        case SNIPER:
+            return moveSniper(piece, cell);
+        default:
+            return;
+    }
+}
+
+function getNotMovedPiece (piece) {
+    piece.moved = false;
+    return piece;
 }
 
 function moveAgent (agent, cell, snipe) {

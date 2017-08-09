@@ -45,8 +45,11 @@ yarn go
   * ~~Spy~~
   * Sniper
 * ~~Spy kill mechanics~~
-* ~~Sniper kill mechanics~~
-* Sniper kill mechanics: sniping after moving a piece
+* Sniper kill mechanics
+  * ~~kill before move~~
+  * allow to snipe if any sniper is placed
+  * select sniper after clicking on snipe
+  * kill after move
 * CEO buffs
 * Remote multiplayer
 * Alignment cards
