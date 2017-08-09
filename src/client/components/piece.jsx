@@ -1,5 +1,5 @@
 import React, {PropTypes} from 'react';
-import pz from 'shared/pieces';
+import pz from 'shared/pz';
 
 const directionClassMap = {
     vertical: {

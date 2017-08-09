@@ -1,5 +1,5 @@
 import {combineReducers} from 'redux';
-import pz from 'shared/pieces';
+import pz from 'shared/pz';
 import {TOGGLE_PIECE, MOVE_PIECE} from 'client/actions';
 import phaseReducer from 'reducers/phaseReducer';
 import playersReducer from 'reducers/playersReducer';

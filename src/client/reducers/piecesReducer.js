@@ -1,5 +1,5 @@
 import cells from 'shared/cells';
-import pz from 'shared/pieces';
+import pz from 'shared/pz';
 import {TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE} from 'client/actions';
 
 function hasToToggle (selectedPiece, pieceId) {

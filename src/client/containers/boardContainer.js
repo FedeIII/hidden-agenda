@@ -1,6 +1,6 @@
 import {connect} from 'react-redux';
 
-import pz from 'shared/pieces';
+import pz from 'shared/pz';
 import cells from 'shared/cells';
 import {areCoordsInList} from 'shared/utils';
 

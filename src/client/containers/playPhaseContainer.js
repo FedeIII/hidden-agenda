@@ -1,7 +1,7 @@
 import PlayPhase from 'components/playPhase';
 import {connect} from 'react-redux';
 import {nextTurn, snipe} from 'client/actions';
-import pz from 'shared/pieces';
+import pz from 'shared/pz';
 
 function mapStateToProps ({pieces, players, hasTurnEnded}) {
     return {

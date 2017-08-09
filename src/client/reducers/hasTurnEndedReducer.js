@@ -1,7 +1,7 @@
 import {START_GAME, NEXT_TURN, TOGGLE_PIECE, MOVE_PIECE} from 'client/actions';
 import {AGENT, CEO, SPY, SNIPER} from 'shared/pieceTypes';
 import {MOVEMENT, MOVEMENT2, PLACEMENT, SELECTION} from 'client/pieceStates';
-import pz from 'shared/pieces';
+import pz from 'shared/pz';
 import cells from 'shared/cells';
 import {areCoordsInList} from 'shared/utils';
 

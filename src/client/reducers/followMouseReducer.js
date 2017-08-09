@@ -1,4 +1,4 @@
-import pz from 'shared/pieces';
+import pz from 'shared/pz';
 import {MOVE_PIECE, DIRECT_PIECE} from 'client/actions';
 import {AGENT, CEO, SPY, SNIPER} from 'shared/pieceTypes';
 import {MOVEMENT, COLLOCATION} from 'client/pieceStates';
