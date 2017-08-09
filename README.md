@@ -47,7 +47,7 @@ yarn go
 * ~~Spy kill mechanics~~
 * Sniper kill mechanics
   * ~~kill before move~~
-  * allow to snipe if any sniper is placed
+  * ~~allow to snipe if any sniper is placed~~
   * select sniper after clicking on snipe
   * kill after move
 * CEO buffs

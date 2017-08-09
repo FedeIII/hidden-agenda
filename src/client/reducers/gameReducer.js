@@ -1,5 +1,5 @@
 import {combineReducers} from 'redux';
-import pieces from 'shared/pieces';
+import pz from 'shared/pieces';
 import {TOGGLE_PIECE, MOVE_PIECE} from 'client/actions';
 import phaseReducer from 'reducers/phaseReducer';
 import playersReducer from 'reducers/playersReducer';
@@ -13,7 +13,7 @@ const initialState = {
     phase: 'start',
     players: [],
     hasTurnEnded: undefined,
-    pieces: pieces.init(),
+    pieces: pz.init(),
     pieceState: undefined,
     followMouse: false,
     snipe: false

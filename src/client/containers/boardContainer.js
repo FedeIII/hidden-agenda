@@ -1,6 +1,6 @@
 import {connect} from 'react-redux';
 
-import piecesHelper from 'shared/pieces';
+import pz from 'shared/pieces';
 import cells from 'shared/cells';
 import {areCoordsInList} from 'shared/utils';
 
@@ -10,8 +10,8 @@ import {togglePiece, movePiece, directPiece} from 'client/actions';
 function mapStateToProps ({pieces, followMouse, pieceState}) {
     return {
         pieces: pieces,
-        selectedPiece: piecesHelper.getSelectedPiece(pieces),
-        highlightedCells: piecesHelper.getHighlightedCells(pieces),
+        selectedPiece: pz.getSelectedPiece(pieces),
+        highlightedCells: pz.getHighlightedCells(pieces),
         followMouse: followMouse,
         pieceState: pieceState
     };
@@ -24,7 +24,7 @@ function mergeProps (stateProps, {dispatch}, ownProps) {
         {
             onHexagonClick: coords => {
                 if (stateProps.followMouse) {
-                    const selectedPiece = piecesHelper.getSelectedPiece(stateProps.pieces);
+                    const selectedPiece = pz.getSelectedPiece(stateProps.pieces);
                     if (selectedPiece) {
                         dispatch(togglePiece(selectedPiece.id));
                     }
@@ -35,7 +35,7 @@ function mergeProps (stateProps, {dispatch}, ownProps) {
 
             onMouseEnter: (r, c) => {
                 if (!stateProps.highlightedCells.length && stateProps.selectedPiece) {
-                    const possibleDirections = piecesHelper.getPossibleDirections(stateProps.selectedPiece, stateProps.pieces, stateProps.pieceState);
+                    const possibleDirections = pz.getPossibleDirections(stateProps.selectedPiece, stateProps.pieces, stateProps.pieceState);
                     const intendedDirection = cells.getDirection(stateProps.selectedPiece.position, [r, c]);
                     if (areCoordsInList(intendedDirection, possibleDirections)) {
                         dispatch(directPiece(intendedDirection));

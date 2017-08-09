@@ -139,14 +139,14 @@ function move (pieces, id, cell, snipe) {
 function movePieces (pieces, id, cell, snipe) {
     return pieces.map(piece => {
         if (piece.id === id) {
-            return getMovedPiece(piece, cell, snipe);
+            return getMovedPiece(pieces, piece, cell, snipe);
         }
 
         return getNotMovedPiece(piece);
     });
 }
 
-function getMovedPiece (piece, cell, snipe) {
+function getMovedPiece (pieces, piece, cell, snipe) {
     piece.moved = true;
 
     if (snipe && isPieceThroughSniperLine(piece, cell, pieces)) {
@@ -333,7 +333,7 @@ function getAgentCells (agent, pieces) {
             return [position2CellsAhead];
         }
 
-        return getAgentInitialLocationCells();
+        return getInitialLocationCells(pieces);
     }
 
     return [];
@@ -470,6 +470,14 @@ function getPieceById (id, pieces) {
     return pieces.find(piece => piece.id === id);
 }
 
+function isSniperOnBoard (pieces) {
+    return !!pieces.find(piece =>
+        getType(piece.id) === SNIPER
+        &&
+        cells.inBoard(piece.position)
+    );
+}
+
 export default {
     init,
     toggle,
@@ -483,5 +491,6 @@ export default {
     getType,
     getNumber,
     getPieceById,
-    isPieceThroughSniperLine
+    isPieceThroughSniperLine,
+    isSniperOnBoard
 };

@@ -1,11 +1,13 @@
 import PlayPhase from 'components/playPhase';
 import {connect} from 'react-redux';
 import {nextTurn, snipe} from 'client/actions';
+import pz from 'shared/pieces';
 
-function mapStateToProps ({players, hasTurnEnded}) {
+function mapStateToProps ({pieces, players, hasTurnEnded}) {
     return {
         players,
-        hasTurnEnded
+        hasTurnEnded,
+        isSniperOnBoard: pz.isSniperOnBoard(pieces)
     }
 }
 
@@ -20,7 +22,9 @@ function mergeProps (stateProps, {dispatch}) {
             },
 
             onSnipe() {
-                dispatch(snipe());
+                if (stateProps.isSniperOnBoard) {
+                    dispatch(snipe());
+                }
             }
         }
     );

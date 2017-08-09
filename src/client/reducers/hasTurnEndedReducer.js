@@ -1,15 +1,15 @@
 import {START_GAME, NEXT_TURN, TOGGLE_PIECE, MOVE_PIECE} from 'client/actions';
 import {AGENT, CEO, SPY, SNIPER} from 'shared/pieceTypes';
 import {MOVEMENT, MOVEMENT2, PLACEMENT, SELECTION} from 'client/pieceStates';
-import piecesHelper from 'shared/pieces';
+import pz from 'shared/pieces';
 import cells from 'shared/cells';
 import {areCoordsInList} from 'shared/utils';
 
 function hasPieceEndedTurn (pieces, pieceState) {
-    const selectedPiece = piecesHelper.getSelectedPiece(pieces);
+    const selectedPiece = pz.getSelectedPiece(pieces);
 
     if (selectedPiece) {
-        switch (piecesHelper.getType(selectedPiece.id)) {
+        switch (pz.getType(selectedPiece.id)) {
             case AGENT:
                 return pieceState === PLACEMENT || pieceState === MOVEMENT;
             case CEO:
@@ -29,8 +29,8 @@ function isPieceBeingDropped ({hasTurnEnded, pieces, pieceState}) {
 }
 
 function isPieceSniped ({pieces}, {pieceId, coords}) {
-    return piecesHelper.isPieceThroughSniperLine(
-        piecesHelper.getPieceById(pieceId, pieces),
+    return pz.isPieceThroughSniperLine(
+        pz.getPieceById(pieceId, pieces),
         coords,
         pieces
     );

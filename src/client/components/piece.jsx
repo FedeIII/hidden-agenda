@@ -1,5 +1,5 @@
 import React, {PropTypes} from 'react';
-import pieces from 'shared/pieces';
+import pz from 'shared/pieces';
 
 const directionClassMap = {
     vertical: {
@@ -37,9 +37,9 @@ function Piece ({
         return className;
     }
 
-    const team = pieces.getTeam(id);
-    const type = pieces.getType(id);
-    const pieceNumber = pieces.getNumber(id);
+    const team = pz.getTeam(id);
+    const type = pz.getType(id);
+    const pieceNumber = pz.getNumber(id);
     const image = `img/${team}-${type}.png`;
     const className = getClassName();
 

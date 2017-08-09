@@ -1,5 +1,5 @@
 import cells from 'shared/cells';
-import pieces from 'shared/pieces';
+import pz from 'shared/pieces';
 import {TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE} from 'client/actions';
 
 function hasToToggle (selectedPiece, pieceId) {
@@ -7,21 +7,21 @@ function hasToToggle (selectedPiece, pieceId) {
             (selectedPiece && selectedPiece.id === pieceId);
 }
 
-function toggledPieceState (statePieces, pieceId) {
-    const selectedPiece = pieces.getSelectedPiece(statePieces);
+function toggledPieceState (pieces, pieceId) {
+    const selectedPiece = pz.getSelectedPiece(pieces);
     if (hasToToggle(selectedPiece, pieceId)) {
-        return pieces.toggle(statePieces, pieceId);
+        return pz.toggle(pieces, pieceId);
     } else {
-        return statePieces;
+        return pieces;
     }
 }
 
 function movedPieceState (state, {pieceId, coords}) {
-    return pieces.move(state.pieces, pieceId, coords, state.snipe);
+    return pz.move(state.pieces, pieceId, coords, state.snipe);
 }
 
-function directedPieceState (statePieces, direction) {
-    return pieces.changeSelectedPieceDirection(statePieces, direction);
+function directedPieceState (pieces, direction) {
+    return pz.changeSelectedPieceDirection(pieces, direction);
 }
 
 export default function piecesReducer (state, action) {

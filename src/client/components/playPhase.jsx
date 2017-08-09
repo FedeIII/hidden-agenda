@@ -5,6 +5,7 @@ import HqContainer from 'containers/hqContainer';
 function PlayPhase ({
     players,
     hasTurnEnded,
+    isSniperOnBoard,
     onNextTurn,
     onSnipe
 }) {
@@ -13,7 +14,8 @@ function PlayPhase ({
         return `Player's turn: ${players.find(player => player.turn).name}`;
     }
 
-    const nextTurnButtonClass = 'btn' + (hasTurnEnded ? ' btn--active' : '');
+    const nextTurnBtnClass = 'btn' + (hasTurnEnded ? ' btn--active' : '');
+    const snipeBtnClass = 'btn btn--small' + (isSniperOnBoard ? ' btn--active' : '');
 
     return (
         <div className="play-phase">
@@ -34,8 +36,8 @@ function PlayPhase ({
                 </div>
             </div>
             <div className="play-phase__buttons">
-                <button className="btn btn--active btn--small" onClick={onSnipe}>SNIPE!</button>
-                <button className={nextTurnButtonClass} onClick={onNextTurn}>NEXT TURN</button>
+                <button className={snipeBtnClass} onClick={onSnipe}>SNIPE!</button>
+                <button className={nextTurnBtnClass} onClick={onNextTurn}>NEXT TURN</button>
             </div>
         </div>
     );
