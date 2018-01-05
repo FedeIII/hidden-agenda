@@ -5,7 +5,7 @@ import HqContainer from 'containers/hqContainer';
 function PlayPhase ({
     players,
     hasTurnEnded,
-    isSniperOnBoard,
+    isSnipeOn,
     onNextTurn,
     onSnipe
 }) {
@@ -15,7 +15,7 @@ function PlayPhase ({
     }
 
     const nextTurnBtnClass = 'btn' + (hasTurnEnded ? ' btn--active' : '');
-    const snipeBtnClass = 'btn btn--small' + (isSniperOnBoard ? ' btn--active' : '');
+    const snipeBtnClass = 'btn btn--small' + (isSnipeOn ? ' btn--active' : '');
 
     return (
         <div className="play-phase">

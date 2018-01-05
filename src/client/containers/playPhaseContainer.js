@@ -3,11 +3,11 @@ import {connect} from 'react-redux';
 import {nextTurn, snipe} from 'client/actions';
 import pz from 'shared/pz';
 
-function mapStateToProps ({pieces, players, hasTurnEnded}) {
+function mapStateToProps ({pieces, players, hasTurnEnded, isSniping}) {
     return {
         players,
         hasTurnEnded,
-        isSniperOnBoard: pz.isSniperOnBoard(pieces)
+        isSnipeOn: pz.isSniperOnBoard(pieces) && !isSniping
     }
 }
 
@@ -22,7 +22,7 @@ function mergeProps (stateProps, {dispatch}) {
             },
 
             onSnipe() {
-                if (stateProps.isSniperOnBoard) {
+                if (stateProps.isSnipeOn) {
                     dispatch(snipe());
                 }
             }

@@ -1,6 +1,6 @@
 import cells from 'shared/cells';
 import pz from 'shared/pz';
-import {TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE} from 'client/actions';
+import {TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE, HIGHLIGHT_SNIPER, DEHIGHLIGHT_SNIPERS} from 'client/actions';
 
 function hasToToggle (selectedPiece, pieceId) {
     return !selectedPiece ||
@@ -17,11 +17,33 @@ function toggledPieceState (pieces, pieceId) {
 }
 
 function movedPieceState (state, {pieceId, coords}) {
-    return pz.move(state.pieces, pieceId, coords, state.snipe);
+    return pz.move(state.pieces, pieceId, coords, state.isSniping);
 }
 
 function directedPieceState (pieces, direction) {
     return pz.changeSelectedPieceDirection(pieces, direction);
+}
+
+function highlightedSniperState (pieces, sniperId) {
+    return pieces.map(piece => {
+        if (piece.id === sniperId) {
+            piece.highlighted = true;
+            return piece;
+        }
+
+        return piece;
+    });
+}
+
+function dehighlightedSnipersState (pieces) {
+    return pieces.map(piece => {
+        if (pz.isSniper(piece.id)) {
+            piece.highlighted = false;
+            return piece;
+        }
+
+        return piece;
+    });
 }
 
 export default function piecesReducer (state, action) {
@@ -38,6 +60,14 @@ export default function piecesReducer (state, action) {
             case DIRECT_PIECE:
                 return [].concat(
                     directedPieceState(state.pieces, action.payload)
+                );
+            case HIGHLIGHT_SNIPER:
+                return [].concat(
+                    highlightedSniperState(state.pieces, action.payload)
+                );
+            case DEHIGHLIGHT_SNIPERS:
+                return [].concat(
+                    dehighlightedSnipersState(state.pieces)
                 );
             default:
                 return [].concat(state.pieces);

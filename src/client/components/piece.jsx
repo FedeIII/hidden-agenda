@@ -17,7 +17,9 @@ function Piece ({
     id,
     selectedDirection,
     selected,
-    onClick
+    highlighted,
+    onClick,
+    onHover
 }) {
 
     function getClassName () {
@@ -31,7 +33,7 @@ function Piece ({
             className += ` piece--hq piece--hq--${type}${pieceNumber}`;
         }
 
-        className += selected ? ' piece--selected' : '';
+        className += selected || highlighted ? ' piece--selected' : '';
 
 
         return className;
@@ -48,6 +50,7 @@ function Piece ({
             src={image}
             className={className}
             onClick={() => onClick(id)}
+            onMouseOver={() => onHover(id)}
         />
     );
 }

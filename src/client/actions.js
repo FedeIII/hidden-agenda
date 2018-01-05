@@ -43,3 +43,18 @@ export function snipe () {
         type: SNIPE
     };
 };
+
+export const HIGHLIGHT_SNIPER = 'HIGHLIGHT_SNIPER';
+export function highlightSniper (pieceId) {
+    return {
+        type: HIGHLIGHT_SNIPER,
+        payload: pieceId
+    };
+};
+
+export const DEHIGHLIGHT_SNIPERS = 'DEHIGHLIGHT_SNIPERS';
+export function dehighlightSnipers () {
+    return {
+        type: DEHIGHLIGHT_SNIPERS
+    };
+};

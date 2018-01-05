@@ -7,7 +7,7 @@ import hasTurnEndedReducer from 'reducers/hasTurnEndedReducer';
 import piecesReducer from 'reducers/piecesReducer';
 import pieceStateReducer from 'reducers/pieceStateReducer';
 import followMouseReducer from 'reducers/followMouseReducer';
-import snipeReducer from 'reducers/snipeReducer';
+import isSnipingReducer from 'reducers/isSnipingReducer';
 
 const initialState = {
     phase: 'start',
@@ -16,7 +16,7 @@ const initialState = {
     pieces: pz.init(),
     pieceState: undefined,
     followMouse: false,
-    snipe: false
+    isSniping: false
 };
 
 export default function gameReducer (state = initialState, action = {}) {
@@ -27,6 +27,6 @@ export default function gameReducer (state = initialState, action = {}) {
         pieces: piecesReducer(state, action),
         pieceState: pieceStateReducer(state, action),
         followMouse: followMouseReducer(state, action),
-        snipe: snipeReducer(state, action)
+        isSniping: isSnipingReducer(state, action)
     };
 }

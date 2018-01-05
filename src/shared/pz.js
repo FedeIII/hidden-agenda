@@ -129,33 +129,33 @@ function isSamePosition (piece1, piece2) {
     }
 }
 
-function move (pieces, id, cell, snipe) {
-    let movedPieces = movePieces(pieces, id, cell, snipe);
+function move (pieces, id, cell, isSniping) {
+    let movedPieces = movePieces(pieces, id, cell, isSniping);
     movedPieces = killPieces(movedPieces, id);
 
     return movedPieces;
 }
 
-function movePieces (pieces, id, cell, snipe) {
+function movePieces (pieces, id, cell, isSniping) {
     return pieces.map(piece => {
         if (piece.id === id) {
-            return getMovedPiece(pieces, piece, cell, snipe);
+            return getMovedPiece(pieces, piece, cell, isSniping);
         }
 
         return getNotMovedPiece(piece);
     });
 }
 
-function getMovedPiece (pieces, piece, cell, snipe) {
+function getMovedPiece (pieces, piece, cell, isSniping) {
     piece.moved = true;
 
-    if (snipe && isPieceThroughSniperLine(piece, cell, pieces)) {
+    if (isSniping && isPieceThroughSniperLine(piece, cell, pieces)) {
         return getSnipedPiece(piece);
     }
 
     switch (getType(piece.id)) {
         case AGENT:
-            return moveAgent(piece, cell, snipe);
+            return moveAgent(piece, cell);
         case CEO:
             return moveCeo(piece, cell);
         case SPY:
@@ -172,7 +172,7 @@ function getNotMovedPiece (piece) {
     return piece;
 }
 
-function moveAgent (agent, cell, snipe) {
+function moveAgent (agent, cell) {
     const agentSelectedDirection = agent.position ? agent.selectedDirection : [1, 0];
     const agentDirection = willAgentSlide(agent) ? agent.direction : undefined;
 
@@ -261,7 +261,7 @@ function isPieceThroughSniperLine (piece, cellTo, pieces) {
 
 function getSnipedCells (pieces) {
     return pieces
-        .filter(piece => getType(piece.id) === SNIPER)
+        .filter(piece => piece.selected && (getType(piece.id) === SNIPER))
         .map(sniper => getSnipedCellsBy(sniper))
         .reduce((acc, snipedCells) => acc.concat(snipedCells), [])
         .filter(cell => !areCoordsEqual(cell, [-1, -1]));
@@ -271,7 +271,7 @@ function getSnipedCellsBy (piece) {
     return cells.get(piece.position).getPositionsInDirection(piece.direction);
 }
 
-function togglePiece (piece) {
+function setToggledPiece (piece) {
     if (piece.selected) {
         piece.selected = false;
         piece.showMoveCells = false;
@@ -289,7 +289,7 @@ function init () {
 function toggle (pieces, id) {
     return pieces.map(piece => {
         if (piece.id === id) {
-            togglePiece(piece);
+            setToggledPiece(piece);
         }
 
         return piece;
@@ -478,6 +478,22 @@ function isSniperOnBoard (pieces) {
     );
 }
 
+function isAgent (id) {
+    return getType(id) === AGENT;
+}
+
+function isCeo (id) {
+    return getType(id) === CEO;
+}
+
+function isSpy (id) {
+    return getType(id) === SPY;
+}
+
+function isSniper (id) {
+    return getType(id) === SNIPER;
+}
+
 export default {
     init,
     toggle,
@@ -492,5 +508,9 @@ export default {
     getNumber,
     getPieceById,
     isPieceThroughSniperLine,
-    isSniperOnBoard
+    isSniperOnBoard,
+    isAgent,
+    isCeo,
+    isSpy,
+    isSniper
 };

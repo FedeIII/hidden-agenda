@@ -5,15 +5,16 @@ import cells from 'shared/cells';
 import {areCoordsInList} from 'shared/utils';
 
 import Board from 'components/board';
-import {togglePiece, movePiece, directPiece} from 'client/actions';
+import {togglePiece, movePiece, directPiece, dehighlightSnipers} from 'client/actions';
 
-function mapStateToProps ({pieces, followMouse, pieceState}) {
+function mapStateToProps ({pieces, followMouse, pieceState, isSniping}) {
     return {
-        pieces: pieces,
+        pieces,
         selectedPiece: pz.getSelectedPiece(pieces),
         highlightedCells: pz.getHighlightedCells(pieces),
-        followMouse: followMouse,
-        pieceState: pieceState
+        followMouse,
+        pieceState,
+        isSniping
     };
 }
 
@@ -40,6 +41,10 @@ function mergeProps (stateProps, {dispatch}, ownProps) {
                     if (areCoordsInList(intendedDirection, possibleDirections)) {
                         dispatch(directPiece(intendedDirection));
                     }
+                }
+
+                if (stateProps.isSniping) {
+                    dispatch(dehighlightSnipers());
                 }
             }
         }
