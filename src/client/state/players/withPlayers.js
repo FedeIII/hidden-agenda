@@ -1,6 +1,6 @@
 import React, { useReducer } from 'react';
 import playersReducer from './playersReducer';
-import PlayersState from './playersState';
+import { Players, PlayersDispatch } from './playersProviders';
 import getWrapperName from '../getWrapperName';
 
 function withPlayersState(WrappedComponent) {
@@ -8,9 +8,11 @@ function withPlayersState(WrappedComponent) {
     const [players, dispatch] = useReducer(playersReducer, []);
 
     return (
-      <PlayersState.Provider value={[players, dispatch]}>
-        <WrappedComponent {...props} />
-      </PlayersState.Provider>
+      <Players.Provider value={players}>
+        <PlayersDispatch.Provider value={dispatch}>
+          <WrappedComponent {...props} />
+        </PlayersDispatch.Provider>
+      </Players.Provider>
     );
   }
 

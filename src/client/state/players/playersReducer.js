@@ -1,3 +1,5 @@
+import { START_GAME, NEXT_TURN } from 'Client/actions';
+
 function startGamePlayers(playerNames) {
   return playerNames.map((name, i) => ({
     name,
@@ -16,12 +18,12 @@ function nextTurnPlayers(players) {
 
 function playersReducer(state, action) {
   switch (action.type) {
-    case 'create players':
+    case START_GAME:
       return startGamePlayers(action.payload);
-    case 'next turn':
+    case NEXT_TURN:
       return nextTurnPlayers(state);
     default:
-      throw state;
+      return state;
   }
 }
 

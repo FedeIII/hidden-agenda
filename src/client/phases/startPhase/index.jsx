@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useContext } from 'react';
 import { Redirect } from 'react-router-dom';
-import PlayersState from 'State/players/playersState';
+import { startGame } from 'Client/actions';
+import State from 'State';
 import {
   StartPhaseStyled,
   Options,
@@ -57,14 +58,11 @@ function PlayerOptions({ n, onChange }) {
 
 function useReadyToStart(players) {
   const [readyToStart, setReadyToStart] = useState(false);
-  const [playersState, playersDispatch] = useContext(PlayersState);
+  const dispatch = useContext(State);
 
   const onStart = useCallback(() => {
     setReadyToStart(true);
-    playersDispatch({
-      type: 'create players',
-      payload: Object.values(players),
-    });
+    dispatch(startGame(Object.values(players)));
   }, [players]);
 
   return [readyToStart, onStart];

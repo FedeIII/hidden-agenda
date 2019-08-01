@@ -26,8 +26,9 @@ import React from 'react';
 import { BrowserRouter as Router, Route } from 'react-router-dom';
 
 import GlobalStyle from './globalStyle';
-import StartPhase from 'Phases/startPhase';
 import withState from './state/withState';
+import StartPhase from 'Phases/startPhase';
+import PlayPhase from 'Phases/playPhase';
 // import PlayPhaseContainer from 'containers/playPhaseContainer';
 
 export default withState(() => (
@@ -35,8 +36,7 @@ export default withState(() => (
     <GlobalStyle />
     <Router>
       <Route exact path="/" component={StartPhase} />
-      <Route exact path="/play" component={() => {}} />
-      {/* <Route component={PlayPhaseContainer} path="/play" /> */}
+      <Route exact path="/play" component={PlayPhase} />
     </Router>
   </>
 ));

@@ -1,28 +1,5 @@
 .play-phase {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    padding: 40px 40px 60px;
 
-    &__turn {
-        padding: 20px;
-        text-align: center;
-    }
-
-    &__board {
-        position: relative;
-        display: flex;
-        flex-direction: row;
-        margin-bottom: 20px;
-    }
-
-    &__hqs {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-around;
-        width: 28%;
-    }
 
     &__hq {
         $hq-padding: 8px;
@@ -59,11 +36,5 @@
         background-image: url('img/hexgrid.png');
         background-size: 100% 100%;
         background-repeat: no-repeat;
-    }
-
-    &__buttons {
-        display: flex;
-        justify-content: space-evenly;
-        padding: 20px;
     }
 }
