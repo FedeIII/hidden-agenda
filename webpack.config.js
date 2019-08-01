@@ -3,14 +3,17 @@ var HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   entry: './src/client/index.js',
+  devtool: 'source-map',
   resolve: {
     extensions: ['.js', '.jsx'],
     alias: {
       node_modules: path.resolve(__dirname, '../../../node_modules'),
-      src: path.resolve(__dirname, './src'),
-      client: path.resolve(__dirname, './src/client'),
-      components: path.resolve(__dirname, './src/client/components'),
-      shared: path.resolve(__dirname, './src/shared'),
+      Src: path.resolve(__dirname, './src'),
+      Client: path.resolve(__dirname, './src/client'),
+      Components: path.resolve(__dirname, './src/client/components'),
+      Phases: path.resolve(__dirname, './src/client/phases'),
+      State: path.resolve(__dirname, './src/client/state'),
+      Shared: path.resolve(__dirname, './src/shared'),
       react: path.resolve('./node_modules/react'),
       'react-dom': path.resolve('./node_modules/react-dom'),
       'prop-types': path.resolve('./node_modules/prop-types'),

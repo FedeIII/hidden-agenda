@@ -24,12 +24,19 @@
 
 import React from 'react';
 import { BrowserRouter as Router, Route } from 'react-router-dom';
-import StartPhase from 'components/startPhase';
+
+import GlobalStyle from './globalStyle';
+import StartPhase from 'Phases/startPhase';
+import withState from './state/withState';
 // import PlayPhaseContainer from 'containers/playPhaseContainer';
 
-export default () => (
-  <Router>
-    <Route exact path="/" component={StartPhase} />
-    {/* <Route component={PlayPhaseContainer} path="/play" /> */}
-  </Router>
-);
+export default withState(() => (
+  <>
+    <GlobalStyle />
+    <Router>
+      <Route exact path="/" component={StartPhase} />
+      <Route exact path="/play" component={() => {}} />
+      {/* <Route component={PlayPhaseContainer} path="/play" /> */}
+    </Router>
+  </>
+));
