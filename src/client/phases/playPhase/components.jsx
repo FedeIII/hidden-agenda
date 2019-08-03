@@ -40,3 +40,11 @@ export const TableBoardStyled = styled.div`
   flex-direction: column;
   padding: 0 20px;
 `;
+
+export const BoardRow = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  margin-top: 4.7%;
+  justify-content: center;
+`;

@@ -5,7 +5,7 @@ module.exports = {
   entry: './src/client/index.js',
   devtool: 'source-map',
   resolve: {
-    extensions: ['.js', '.jsx'],
+    extensions: ['.js', '.jsx', '.scss'],
     alias: {
       node_modules: path.resolve(__dirname, '../../../node_modules'),
       Src: path.resolve(__dirname, './src'),
