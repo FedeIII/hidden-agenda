@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useContext } from 'react';
 import { Redirect } from 'react-router-dom';
 import { startGame } from 'Client/actions';
-import State from 'State';
+import { StateContext } from 'State';
 import {
   StartPhaseStyled,
   Options,
@@ -58,7 +58,7 @@ function PlayerOptions({ n, onChange }) {
 
 function useReadyToStart(players) {
   const [readyToStart, setReadyToStart] = useState(false);
-  const dispatch = useContext(State);
+  const [state, dispatch] = useContext(StateContext);
 
   const onStart = useCallback(() => {
     setReadyToStart(true);

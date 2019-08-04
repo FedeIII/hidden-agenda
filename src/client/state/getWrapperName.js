@@ -1,5 +1,5 @@
-export default function getWrapperName(WrappedComponent) {
-  return `WithPlayersState(${WrappedComponent.displayName ||
+export default function getWrapperName(HocName, WrappedComponent) {
+  return `${HocName}(${WrappedComponent.displayName ||
     WrappedComponent.name ||
     'Component'})`;
 }

@@ -1,12 +1,11 @@
 import React, { useContext, useCallback } from 'react';
-import { Players } from 'State/players/playersProviders';
-import { HasTurnEnded } from 'State/hasTurnEnded/hasTurnEndedProviders';
+import { StateContext } from 'State';
 import { PlayPhaseStyled, Turn, Board, Buttons, HQs } from './components';
 import HQ from './hq';
 import TableBoard from './tableBoard';
 
 function useRenderTurn() {
-  const players = useContext(Players);
+  const [{ players }] = useContext(StateContext);
 
   return useCallback(
     () => `Player's turn: ${players.find(player => player.turn).name}`,
@@ -16,7 +15,7 @@ function useRenderTurn() {
 
 function PlayPhase() {
   const renderTurn = useRenderTurn();
-  const hasTurnEnded = useContext(HasTurnEnded);
+  const [{hasTurnEnded}] = useContext(StateContext);
 
   const nextTurnBtnClass = 'btn' + (hasTurnEnded ? ' btn--active' : '');
   // const snipeBtnClass =

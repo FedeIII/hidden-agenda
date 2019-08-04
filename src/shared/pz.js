@@ -1,7 +1,7 @@
-import cells from 'shared/cells';
-import {areCoordsEqual, areCoordsInList, directions} from 'shared/utils';
-import {SELECTION} from 'client/pieceStates';
-import {AGENT, CEO, SPY, SNIPER} from 'shared/pieceTypes';
+import cells from 'Shared/cells';
+import {areCoordsEqual, areCoordsInList, directions} from 'Shared/utils';
+import {SELECTION} from 'Client/pieceStates';
+import {AGENT, CEO, SPY, SNIPER} from 'Shared/pieceTypes';
 
 // direction:
 //  [0] vertical:
