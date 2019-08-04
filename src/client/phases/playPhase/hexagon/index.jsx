@@ -4,6 +4,7 @@ import { StateContext } from 'State';
 import pz from 'Shared/pz';
 import { areCoordsInList } from 'Shared/utils';
 import { togglePiece, movePiece, directPiece } from 'Client/actions';
+import Piece from '../piece/index';
 
 import HexagonStyled from './styled';
 
@@ -32,16 +33,8 @@ function useOnCellClick(coords) {
   );
 }
 
-function Hexagon({ row, cell, piece, highlighted }) {
+function Hexagon({ row, cell, piece, highlighted, onMouseEnter }) {
   const onCellClick = useOnCellClick([row, cell]);
-
-  // function renderPiece() {
-  //   if (piece) {
-  //     return <PieceContainer {...piece} />;
-  //   }
-  // }
-
-  // const PieceComponent = renderPiece();
 
   return (
     <HexagonStyled
@@ -49,9 +42,9 @@ function Hexagon({ row, cell, piece, highlighted }) {
       row={row}
       cell={cell}
       onClick={onCellClick}
-      // onMouseEnter={onMouseEnter}
+      onMouseEnter={onMouseEnter}
     >
-      {/* {PieceComponent} */}
+      {piece && <Piece {...piece} />}
     </HexagonStyled>
   );
 }

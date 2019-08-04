@@ -1,5 +1,8 @@
 import React, { useContext, useCallback } from 'react';
 import { StateContext } from 'State';
+import Button from 'Client/components/button';
+import pz from 'Shared/pz';
+import { nextTurn, snipe } from 'Client/actions';
 import { PlayPhaseStyled, Turn, Board, Buttons, HQs } from './components';
 import HQ from './hq';
 import TableBoard from './tableBoard';
@@ -15,11 +18,21 @@ function useRenderTurn() {
 
 function PlayPhase() {
   const renderTurn = useRenderTurn();
-  const [{ hasTurnEnded }] = useContext(StateContext);
+  const [{ hasTurnEnded, pieces }, dispatch] = useContext(StateContext);
 
-  const nextTurnBtnClass = 'btn' + (hasTurnEnded ? ' btn--active' : '');
-  // const snipeBtnClass =
-  //   'btn btn--small' + (isSniperOnBoard ? ' btn--active' : '');
+  const isSniperOnBoard = pz.isSniperOnBoard(pieces);
+
+  const onSnipe = useCallback(() => {
+    if (isSniperOnBoard) {
+      dispatch(snipe());
+    }
+  }, [dispatch, pieces]);
+
+  const onNextTurn = useCallback(() => {
+    if (hasTurnEnded) {
+      dispatch(nextTurn());
+    }
+  }, [dispatch, hasTurnEnded]);
 
   return (
     <PlayPhaseStyled>
@@ -36,10 +49,12 @@ function PlayPhase() {
         </HQs>
       </Board>
       <Buttons>
-        {/* <button className={snipeBtnClass} onClick={onSnipe}>
+        <Button small active={isSniperOnBoard} onClick={onSnipe}>
           SNIPE!
-        </button> */}
-        <button className={nextTurnBtnClass}>NEXT TURN</button>
+        </Button>
+        <Button active={hasTurnEnded} onClick={onNextTurn}>
+          NEXT TURN
+        </Button>
       </Buttons>
     </PlayPhaseStyled>
   );

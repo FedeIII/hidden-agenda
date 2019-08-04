@@ -33,6 +33,10 @@ export const Buttons = styled.div`
   padding: 20px;
 `;
 
+export const Button = styled.button`
+
+`;
+
 export const TableBoardStyled = styled.div`
   position: relative;
   width: 50%;

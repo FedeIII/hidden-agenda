@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useContext } from 'react';
 import { Redirect } from 'react-router-dom';
 import { startGame } from 'Client/actions';
 import { StateContext } from 'State';
+import Button from 'Client/components/button';
 import {
   StartPhaseStyled,
   Options,
@@ -161,15 +162,12 @@ function StartPhase() {
       </Options>
 
       <Buttons>
-        <button
-          className={
-            'btn' +
-            (arePlayersReady(numberOfPlayers, players) ? ' btn--active' : '')
-          }
+        <Button
+          active={arePlayersReady(numberOfPlayers, players)}
           onClick={onStart}
         >
           START
-        </button>
+        </Button>
       </Buttons>
     </StartPhaseStyled>
   );
