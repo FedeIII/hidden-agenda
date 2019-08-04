@@ -1,15 +1,15 @@
 import React from 'react';
+import { HqStyled } from './components';
 
 function HQ({ team }) {
   // const pieces = useContext(Context.Pieces);
 
-  const className = `play-phase__hq play-phase__hq-${team}`;
   // const Pieces = renderPieces(pieces);
 
   return (
-    <div key={`team${team}`} className={className}>
+    <HqStyled key={`team${team}`} team={team}>
       <div className="play-phase__hq-store">{/* {Pieces} */}</div>
-    </div>
+    </HqStyled>
   );
 }
 

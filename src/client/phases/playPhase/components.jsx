@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 
 export const PlayPhaseStyled = styled.div`
   position: relative;
@@ -47,4 +47,37 @@ export const BoardRow = styled.div`
   flex-direction: row;
   margin-top: 4.7%;
   justify-content: center;
+`;
+
+const hqColor = ({ team }) => {
+  switch (team) {
+    default:
+    case '0':
+      return css`
+        background-color: white;
+      `;
+    case '1':
+      return css`
+        background-color: red;
+      `;
+    case '2':
+      return css`
+        background-color: black;
+        filter: brightness(3);
+      `;
+    case '3':
+      return css`
+        background-color: yellow;
+      `;
+  }
+};
+
+export const HqStyled = styled.div`
+  position: relative;
+  height: 33%;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid gray;
+  padding: 8px;
+  ${hqColor}
 `;
