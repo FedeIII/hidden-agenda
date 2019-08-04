@@ -13,13 +13,17 @@ const reducers = {
 };
 
 function gameReducer(state, action) {
-  return Object.entries(reducers).reduce(
+  const newState = Object.entries(reducers).reduce(
     (newState, [stateVar, reducer]) => ({
       ...newState,
-      [stateVar]: reducer(state[stateVar], action),
+      [stateVar]: reducer(state, action),
     }),
     {},
   );
+
+  console.log(action, '=>', newState);
+
+  return newState;
 }
 
 const initialState = {

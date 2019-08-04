@@ -16,14 +16,14 @@ function nextTurnPlayers(players) {
   }));
 }
 
-function playersReducer(state, action) {
+function playersReducer({players}, action) {
   switch (action.type) {
     case START_GAME:
       return startGamePlayers(action.payload);
     case NEXT_TURN:
-      return nextTurnPlayers(state);
+      return nextTurnPlayers(players);
     default:
-      return state;
+      return players;
   }
 }
 

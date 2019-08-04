@@ -5,7 +5,7 @@ import HexagonStyled from './styled';
 
 // import PieceContainer from 'containers/pieceContainer';
 
-function Hexagon({ row, cell }) {
+function Hexagon({ row, cell, piece, highlighted }) {
   // function onCellClick(e) {
   //   e.preventDefault();
   //   e.stopPropagation();
@@ -18,12 +18,11 @@ function Hexagon({ row, cell }) {
   //   }
   // }
 
-  // const className = highlighted ? ' hexagon--highlighted' : '';
   // const PieceComponent = renderPiece();
 
   return (
     <HexagonStyled
-      // className={className}
+      highlighted={highlighted}
       row={row}
       cell={cell}
       // onClick={onCellClick}

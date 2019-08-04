@@ -28,7 +28,7 @@ const directionTransformMap = {
   },
 };
 
-const directionStyles = ({ selectedDirection }) => {
+const withDirection = ({ selectedDirection }) => {
   if (selectedDirection) {
     const [verticalDirection, horizontalDirection] = selectedDirection;
 
@@ -36,7 +36,7 @@ const directionStyles = ({ selectedDirection }) => {
   }
 };
 
-const hqStyles = ({ selectedDirection }) => {
+const inHQ = ({ selectedDirection }) => {
   if (!selectedDirection) {
     return css`
       width: 20%;
@@ -45,7 +45,7 @@ const hqStyles = ({ selectedDirection }) => {
   }
 };
 
-const piecePositionInHqStyles = ({ selectedDirection, pieceId }) => {
+const positionInHQ = ({ selectedDirection, pieceId }) => {
   if (!selectedDirection) {
     const type = pz.getType(pieceId);
     const pieceNumber = pz.getNumber(pieceId);
@@ -95,6 +95,14 @@ const piecePositionInHqStyles = ({ selectedDirection, pieceId }) => {
   }
 };
 
+const onSelected = ({ selected }) => {
+  if (selected) {
+    return css`
+      filter: brightness(2);
+    `;
+  }
+};
+
 const PieceStyled = styled.img`
   position: absolute;
   width: 92%;
@@ -106,10 +114,10 @@ const PieceStyled = styled.img`
   margin-top: 13%;
   z-index: 2;
 
-  ${directionStyles}
-
-  ${hqStyles}
-  ${piecePositionInHqStyles}
+  ${withDirection}
+  ${inHQ}
+  ${positionInHQ}
+  ${onSelected}
 `;
 
 export default PieceStyled;
