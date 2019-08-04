@@ -81,3 +81,12 @@ export const HqStyled = styled.div`
   padding: 8px;
   ${hqColor}
 `;
+
+export const HqStore = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-image: url('img/hexgrid.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+`;

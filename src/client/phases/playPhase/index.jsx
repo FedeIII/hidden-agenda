@@ -15,7 +15,7 @@ function useRenderTurn() {
 
 function PlayPhase() {
   const renderTurn = useRenderTurn();
-  const [{hasTurnEnded}] = useContext(StateContext);
+  const [{ hasTurnEnded }] = useContext(StateContext);
 
   const nextTurnBtnClass = 'btn' + (hasTurnEnded ? ' btn--active' : '');
   // const snipeBtnClass =

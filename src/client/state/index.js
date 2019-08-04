@@ -1,22 +1,22 @@
 import React, { createContext, useReducer } from 'react';
-// import pz from 'Shared/pz';
+import pz from 'Shared/pz';
 import getWrapperName from './getWrapperName';
 
 import players from './reducers/playersReducer';
 import hasTurnEnded from './reducers/hasTurnEndedReducer';
-// import pieces from './reducers/piecesReducer';
+import pieces from './reducers/piecesReducer';
 
 const reducers = {
   players,
   hasTurnEnded,
-  // pieces,
+  pieces,
 };
 
 function gameReducer(state, action) {
   return Object.entries(reducers).reduce(
     (newState, [stateVar, reducer]) => ({
       ...newState,
-      [stateVar]: reducer(state, action),
+      [stateVar]: reducer(state[stateVar], action),
     }),
     {},
   );
@@ -25,8 +25,7 @@ function gameReducer(state, action) {
 const initialState = {
   players: [],
   hasTurnEnded: false,
-  // Pieces: [],
-  // Pieces: pz.init(),
+  pieces: pz.init(),
 };
 
 export const StateContext = createContext(null);
