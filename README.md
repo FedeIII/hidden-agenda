@@ -37,7 +37,7 @@ yarn go
 ## Roadmap
 * ~~CEO path block~~
 * ~~Styles in components~~
-* New pieces:
+* ~~New pieces:~~
   * ~~Spy~~
   * ~~Sniper~~
 * pieces capture only other teams' pieces
@@ -48,6 +48,7 @@ yarn go
 * Sniper kill mechanics
   * ~~kill before move~~
   * ~~allow to snipe if any sniper is placed~~
+  * block sniper-related spawns
   * select sniper after clicking on snipe
   * kill after move
 * CEO buffs
@@ -62,6 +63,7 @@ yarn go
 
 ## Known Bugs
 * ~~Agent direction after sliding~~
-* Switch selected agent allows to direct it without moving it first
+* ~~Switch selected agent allows to direct it without moving it first~~
 * ~~Pieces are not allowed to spawn over other pieces~~
-* End turn on spy movement
+* ~~End turn on spy movement~~
+* ~~Spy ends turn on selection=>deselection from HQ~~
