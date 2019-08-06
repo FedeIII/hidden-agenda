@@ -50,7 +50,7 @@ yarn go
   * ~~allow to snipe if any sniper is placed~~
   * block sniper-related spawns:
     * ~~block sniper directions on position~~
-    * block pieces position in snipers lines of sight
+    * ~~block pieces position in snipers lines of sight~~
     * block sniper position if no available line of sight in any direction
   * select sniper after clicking on snipe
   * kill after move

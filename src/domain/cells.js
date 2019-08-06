@@ -181,7 +181,7 @@ function get([r, c] = outPosition) {
   };
 }
 
-function getAllAvailableCells() {
+function getAllAvailablePositions() {
   return allCells;
 }
 
@@ -200,16 +200,16 @@ function inBoard([r, c] = outPosition) {
   }
 }
 
-function getMovementCells(from, to) {
+function getMovementPositions(from, to) {
   if (from && from.length) {
-    return (function concatCell(acc, cell) {
-      if (areCoordsEqual(cell, to)) {
-        return acc.concat([cell]);
+    return (function concatPosition(acc, position) {
+      if (areCoordsEqual(position, to)) {
+        return acc.concat([position]);
       }
 
-      return concatCell(
-        acc.concat([cell]),
-        get(cell).getPositionInDirection(getDirection(cell, to)),
+      return concatPosition(
+        acc.concat([position]),
+        get(position).getPositionInDirection(getDirection(position, to)),
       );
     })([from], get(from).getPositionInDirection(getDirection(from, to)));
   }
@@ -219,8 +219,8 @@ function getMovementCells(from, to) {
 
 export default {
   get,
-  getAllAvailableCells,
+  getAllAvailablePositions,
   getDirection,
   inBoard,
-  getMovementCells,
+  getMovementPositions,
 };
