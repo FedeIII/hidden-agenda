@@ -1,6 +1,6 @@
 import cells from 'Domain/cells';
 import { areCoordsEqual, areCoordsInList, directions } from 'Domain/utils';
-import { SELECTION } from 'Client/pieceStates';
+import { SELECTION, MOVEMENT } from 'Client/pieceStates';
 import { AGENT, CEO, SPY, SNIPER } from 'Domain/pieceTypes';
 
 // direction:
@@ -90,14 +90,14 @@ function isPieceBlocked(
   );
 }
 
-function isPieceAtPosistion(piece, position1CellAhead) {
-  return areCoordsEqual(piece.position, position1CellAhead);
+function isPieceAtPosistion(piece, position) {
+  return areCoordsEqual(piece.position, position);
 }
 
-function isFriendlyAtPosition(piece, position2CellsAhead, selectedPiece) {
+function isFriendlyAtPosition(piece, position, selectedPiece) {
   return (
     piece &&
-    areCoordsEqual(piece.position, position2CellsAhead) &&
+    areCoordsEqual(piece.position, position) &&
     getTeam(piece.id) === getTeam(selectedPiece.id)
   );
 }
@@ -150,8 +150,49 @@ function getSpyDirections(spy, pieces) {
   return [spy.direction];
 }
 
-function getSniperDirections(sniper, pieces) {
-  return directions.getAll();
+function isPieceInList(piece = {}, pieceList) {
+  return Boolean(
+    piece.id && pieceList.find(pieceItem => pieceItem.id === piece.id),
+  );
+}
+
+function isPieceInDirection(position, direction, pieces, exceptionPieces) {
+  return cells
+    .get(position)
+    .getPositionsInDirection(direction)
+    .reduce((isPieceInPastPositions, nextPosition) => {
+      return (
+        isPieceInPastPositions ||
+        (isPieceInPosition(nextPosition, pieces) &&
+          !isPieceInList(
+            getPieceInPosition(nextPosition, pieces),
+            exceptionPieces,
+          ))
+      );
+    }, false);
+}
+
+function isSameTeam(piece1, piece2) {
+  return getTeam(piece1.id) === getTeam(piece2.id);
+}
+
+function getEnemyPieces(piece, pieces) {
+  return pieces.filter(eachPiece => !isSameTeam(eachPiece, piece));
+}
+
+function getSameTeamPieces(piece, pieces) {
+  return pieces.filter(eachPiece => isSameTeam(eachPiece, piece));
+}
+
+function getSniperDirections(sniper, pieces, pieceState) {
+  const allDirections = directions.getAll();
+  const teamPieces = getSameTeamPieces(sniper, pieces);
+
+  return allDirections.filter(
+    direction =>
+      !isPieceInDirection(sniper.position, direction, pieces, teamPieces, pieceState) ||
+      pieceState === MOVEMENT,
+  );
 }
 
 function isDifferentPiece(piece1, piece2) {
@@ -419,15 +460,19 @@ function getSpyCells(spy, pieces) {
   return directions
     .getAll()
     .map(direction => cells.get(spy.position).getPositionInDirection(direction))
-    .filter(cell => cells.inBoard(cell))
+    .filter(position => cells.inBoard(position))
     .filter(
-      cell =>
-        !isFriendlyAtPosition(getPieceInPosition(cell, pieces), cell, spy),
+      position =>
+        !isFriendlyAtPosition(
+          getPieceInPosition(position, pieces),
+          position,
+          spy,
+        ),
     )
     .filter(
-      cell =>
-        !hasPiece(cell, pieces) ||
-        hasPieceBackwards(cell, pieces, spy.position),
+      position =>
+        !hasPiece(position, pieces) ||
+        hasPieceBackwards(position, pieces, spy.position),
     );
 }
 
@@ -498,14 +543,14 @@ function getPossibleDirections(piece, pieces, pieceState) {
     case SPY:
       return getSpyDirections(piece, pieces);
     case SNIPER:
-      return getSniperDirections(piece, pieces);
+      return getSniperDirections(piece, pieces, pieceState);
     default:
       return [];
   }
 }
 
-function getTeamPieces(pieces, team) {
-  return pieces.filter(piece => piece.id.charAt(0) === team && !piece.position);
+function getAllTeamPieces(team, pieces) {
+  return pieces.filter(piece => getTeam(piece.id) === team);
 }
 
 function getTeam(id) {
@@ -554,7 +599,7 @@ export default {
   getSelectedPiece,
   changeSelectedPieceDirection,
   getPossibleDirections,
-  getTeamPieces,
+  getAllTeamPieces,
   getTeam,
   getType,
   getNumber,

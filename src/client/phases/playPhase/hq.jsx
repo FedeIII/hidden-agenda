@@ -1,10 +1,11 @@
 import React, { useContext } from 'react';
 import { StateContext } from 'State';
+import pz from 'Domain/pz';
 import { HqStyled, HqStore } from './components';
 import Piece from './piece/index';
 
-function getTeamPieces(pieces, team) {
-  return pieces.filter(piece => piece.id.charAt(0) === team && !piece.position);
+function getNotStartedTeamPieces(pieces, team) {
+  return pz.getAllTeamPieces(team, pieces).filter(piece => !piece.position);
 }
 
 function HQ({ team }) {
@@ -13,7 +14,7 @@ function HQ({ team }) {
   return (
     <HqStyled key={`team${team}`} team={team}>
       <HqStore>
-        {getTeamPieces(pieces, team).map(piece => (
+        {getNotStartedTeamPieces(pieces, team).map(piece => (
           <Piece key={piece.id} {...piece} />
         ))}
       </HqStore>

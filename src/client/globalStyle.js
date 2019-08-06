@@ -1,6 +1,10 @@
 import { createGlobalStyle } from 'styled-components';
 
 const GlobalStyle = createGlobalStyle`
+  html {
+    background-color: #445873;
+  }
+
   body {
     font-family: monospace;
     font-size: 14px;
