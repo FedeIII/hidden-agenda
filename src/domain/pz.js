@@ -507,12 +507,38 @@ function getSpyCells(spy, pieces) {
     );
 }
 
-function getSniperCells(spy, pieces) {
-  if (!spy.position) {
-    return getInitialLocationCells(pieces);
+function getSniperCells(sniper, pieces) {
+  if (!sniper.position) {
+    return getInitialLocationCells(pieces).filter(position =>
+      hasAvailableDirectionsForSniper(position, sniper, pieces),
+    );
   }
 
   return [];
+}
+
+function isDirectionAvailableForSniper(position, direction, sniper, pieces) {
+  return cells
+    .get(position)
+    .getPositionsInDirection(direction)
+    .reduce((noPiecesInAnyPosition, position) => {
+      const pieceInPosition = getPieceInPosition(position, pieces);
+      return (
+        noPiecesInAnyPosition &&
+        (!pieceInPosition || isSameTeam(pieceInPosition, sniper))
+      );
+    }, true);
+}
+
+function hasAvailableDirectionsForSniper(position, sniper, pieces) {
+  return directions
+    .getAll()
+    .reduce(
+      (hasAvailableDirections, direction) =>
+        hasAvailableDirections ||
+        isDirectionAvailableForSniper(position, direction, sniper, pieces),
+      false,
+    );
 }
 
 function getPieceInPosition(position, pieces) {

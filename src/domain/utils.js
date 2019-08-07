@@ -26,11 +26,11 @@ export const directions = {
   },
 
   get(index) {
-    return [].concat(possibleDirections[index]);
+    return possibleDirections[index];
   },
 
   getAll() {
-    return [].concat(possibleDirections);
+    return [...possibleDirections];
   },
 
   getPrevious(index) {
@@ -39,7 +39,7 @@ export const directions = {
       i = possibleDirections.length + i;
     }
 
-    return [].concat(possibleDirections[i]);
+    return possibleDirections[i];
   },
 
   getFollowing(index) {
@@ -48,7 +48,7 @@ export const directions = {
       i = i - possibleDirections.length;
     }
 
-    return [].concat(possibleDirections[i]);
+    return possibleDirections[i];
   },
 
   getOpposite(index) {
