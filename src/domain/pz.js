@@ -82,7 +82,7 @@ function isPositionInEnemySniperLine(position, pieces) {
     .reduce((isInSniperLine, sniper) => {
       return (
         isInSniperLine ||
-        areCoordsInList(position, getSnipedPositionsBy(sniper))
+        areCoordsInList(position, getSnipedPositionsBy(sniper, pieces))
       );
     }, false);
 }
@@ -406,13 +406,22 @@ function getSnipedPositions(pieces, piece) {
     .filter(
       eachPiece => isSniper(eachPiece.id) && !isSameTeam(piece, eachPiece),
     )
-    .map(sniper => getSnipedPositionsBy(sniper))
-    .reduce((acc, snipedPositions) => acc.concat(snipedPositions), [])
-    .filter(cell => !areCoordsEqual(cell, [-1, -1]));
+    .map(sniper => getSnipedPositionsBy(sniper, pieces))
+    .reduce(
+      (allSnipedPositions, snipedPositions) => [
+        ...allSnipedPositions,
+        snipedPositions,
+      ],
+      [],
+    )
+    .filter(position => !areCoordsEqual(position, [-1, -1]));
 }
 
-function getSnipedPositionsBy(piece) {
-  return cells.get(piece.position).getPositionsInDirection(piece.direction);
+function getSnipedPositionsBy(sniper, pieces) {
+  return truncatePositions(
+    cells.get(sniper.position).getPositionsInDirection(sniper.direction),
+    pieces,
+  );
 }
 
 function togglePiece(piece) {

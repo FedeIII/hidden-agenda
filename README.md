@@ -55,6 +55,9 @@ yarn go
   * ~~select sniper after clicking on snipe~~
   * ~~kill after move~~
 * CEO buffs
+  * Agent
+  * Spy
+  * Sniper
 * Remote multiplayer
 * Alignment cards
 * Game ending
@@ -70,5 +73,6 @@ yarn go
 * ~~Pieces are not allowed to spawn over other pieces~~
 * ~~End turn on spy movement~~
 * ~~Spy ends turn on selection=>deselection from HQ~~
-* If snipe is pressed at the end of the turn, end of turn conditions get messed up (agent ends turn before collocation)
-* "Next Turn" becomes available before collocating the agent
+* ~~If snipe is pressed at the end of the turn, end of turn conditions get messed up (agent ends turn before collocation)~~
+* ~~"Next Turn" becomes available before collocating the agent~~
+* Sniper sight doesn't get blocked by other pieces

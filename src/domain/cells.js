@@ -66,10 +66,7 @@ function createGetPositionsInDirection(r, c) {
       return positions;
     }
 
-    return this.getPositionsInDirection(
-      [v, h],
-      positions.concat([nextPosition]),
-    );
+    return this.getPositionsInDirection([v, h], [...positions, nextPosition]);
   };
 }
 
@@ -202,13 +199,17 @@ function inBoard([r, c] = outPosition) {
 
 function getMovementPositions(from, to) {
   if (from && from.length) {
-    return (function concatPosition(acc, position) {
+    return (function concatPosition(movementPositions, position) {
+      if (!position) {
+        return [...movementPositions, to];
+      }
+
       if (areCoordsEqual(position, to)) {
-        return acc.concat([position]);
+        return [...movementPositions, position];
       }
 
       return concatPosition(
-        acc.concat([position]),
+        [...movementPositions, position],
         get(position).getPositionInDirection(getDirection(position, to)),
       );
     })([from], get(from).getPositionInDirection(getDirection(from, to)));
