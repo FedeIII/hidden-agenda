@@ -40,12 +40,12 @@ yarn go
 * ~~New pieces:~~
   * ~~Spy~~
   * ~~Sniper~~
-* pieces capture only other teams' pieces
+* ~~pieces capture only other teams' pieces~~
   * ~~Agent~~
   * ~~Spy~~
-  * Sniper
+  * ~~Sniper~~
 * ~~Spy kill mechanics~~
-* Sniper kill mechanics
+* ~~Sniper kill mechanics~~
   * ~~kill before move~~
   * ~~allow to snipe if any sniper is placed~~
   * ~~block sniper-related spawns:~~
@@ -53,7 +53,7 @@ yarn go
     * ~~block pieces position in snipers lines of sight~~
     * ~~block sniper position if no available line of sight in any direction~~
   * ~~select sniper after clicking on snipe~~
-  * kill after move
+  * ~~kill after move~~
 * CEO buffs
 * Remote multiplayer
 * Alignment cards

@@ -373,7 +373,7 @@ function killPiece(piece) {
 
 function isPieceThroughSniperLine(piece, toPosition, pieces) {
   if (piece.position) {
-    const snipedPositions = getSnipedPositions(pieces);
+    const snipedPositions = getSnipedPositions(pieces, piece);
     const movementPositions = cells.getMovementPositions(
       piece.position,
       toPosition,
@@ -402,9 +402,11 @@ function killSnipedPiece(pieces) {
   });
 }
 
-function getSnipedPositions(pieces) {
+function getSnipedPositions(pieces, piece) {
   return pieces
-    .filter(piece => getType(piece.id) === SNIPER)
+    .filter(
+      eachPiece => isSniper(eachPiece.id) && !isSameTeam(piece, eachPiece),
+    )
     .map(sniper => getSnipedPositionsBy(sniper))
     .reduce((acc, snipedPositions) => acc.concat(snipedPositions), [])
     .filter(cell => !areCoordsEqual(cell, [-1, -1]));
@@ -603,11 +605,26 @@ function getSelectedPiece(pieces) {
   return pieces.find(piece => piece.selected);
 }
 
+function getDirectedPiece(piece, direction, pieces) {
+  const isThroughSniperLine = isPieceThroughSniperLine(
+    piece,
+    piece.position,
+    pieces,
+  );
+
+  return {
+    ...piece,
+    selectedDirection: direction,
+    isThroughSniperLine,
+  };
+}
+
 function changeSelectedPieceDirection(pieces, direction) {
   const selectedPiece = getSelectedPiece(pieces);
+
   return pieces.map(piece => {
     if (piece.id === selectedPiece.id) {
-      piece.selectedDirection = direction;
+      return getDirectedPiece(piece, direction, pieces);
     }
 
     return piece;
