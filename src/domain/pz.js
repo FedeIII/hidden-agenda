@@ -364,11 +364,10 @@ function willAgentSlide({ position, direction }) {
 }
 
 function killPiece(piece) {
-  return {
-    ...piece,
-    killed: true,
-    position: [-1, -1],
-  };
+  piece.killed = true;
+  piece.position = [-1, -1];
+
+  return piece;
 }
 
 function isPieceThroughSniperLine(piece, toPosition, pieces) {
