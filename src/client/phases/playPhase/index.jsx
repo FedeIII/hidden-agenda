@@ -44,13 +44,13 @@ function PlayPhase() {
     if (isSniperOnBoard) {
       dispatch(snipe());
     }
-  }, [dispatch, pieces]);
+  }, [isSniperOnBoard]);
 
   const onNextTurn = useCallback(() => {
     if (hasTurnEnded) {
       dispatch(nextTurn());
     }
-  }, [dispatch, hasTurnEnded]);
+  }, [hasTurnEnded]);
 
   return (
     <PlayPhaseStyled>

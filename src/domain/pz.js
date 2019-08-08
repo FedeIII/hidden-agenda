@@ -229,39 +229,41 @@ function isSamePosition(piece1, piece2) {
   }
 }
 
-function move(pieces, id, toPosition, snipe) {
-  let movedPieces = movePieces(pieces, id, toPosition, snipe);
+function move(pieces, id, toPosition) {
+  let movedPieces = movePieces(pieces, id, toPosition);
   movedPieces = killPieces(movedPieces, id);
 
   return movedPieces;
 }
 
-function movePieces(pieces, id, toPosition, snipe) {
+function movePieces(pieces, id, toPosition) {
   return pieces.map(piece => {
     if (piece.id === id) {
-      return getMovedPiece(pieces, piece, toPosition, snipe);
+      return getMovedPiece(pieces, piece, toPosition);
     }
 
     return getNotMovedPiece(piece);
   });
 }
 
-function getMovedPiece(pieces, piece, toPosition, snipe) {
+function getMovedPiece(pieces, piece, toPosition) {
   piece.moved = true;
 
-  if (snipe && isPieceThroughSniperLine(piece, toPosition, pieces)) {
-    return getSnipedPiece(piece);
-  }
+  const isThroughSniperLine = isPieceThroughSniperLine(
+    piece,
+    toPosition,
+    pieces,
+  );
 
   switch (getType(piece.id)) {
     case AGENT:
-      return moveAgent(piece, toPosition, snipe);
+      return moveAgent(piece, toPosition, isThroughSniperLine);
     case CEO:
-      return moveCeo(piece, toPosition);
+      return moveCeo(piece, toPosition, isThroughSniperLine);
     case SPY:
-      return moveSpy(piece, toPosition);
+      return moveSpy(piece, toPosition, isThroughSniperLine);
     case SNIPER:
-      return moveSniper(piece, toPosition);
+      return moveSniper(piece, toPosition, isThroughSniperLine);
     default:
       return;
   }
@@ -272,7 +274,7 @@ function getNotMovedPiece(piece) {
   return piece;
 }
 
-function moveAgent(agent, toPosition, snipe) {
+function moveAgent(agent, toPosition, isThroughSniperLine) {
   const agentSelectedDirection = agent.position
     ? agent.selectedDirection
     : [1, 0];
@@ -284,10 +286,11 @@ function moveAgent(agent, toPosition, snipe) {
     direction: agentDirection,
     selectedDirection: agentSelectedDirection,
     showMoveCells: false,
+    isThroughSniperLine,
   };
 }
 
-function moveCeo(ceo, toPosition) {
+function moveCeo(ceo, toPosition, isThroughSniperLine) {
   const ceoDirection = ceo.position
     ? cells.getDirection(ceo.position, toPosition)
     : undefined;
@@ -299,10 +302,11 @@ function moveCeo(ceo, toPosition) {
     direction: ceoDirection,
     selectedDirection: ceoSelectedDirection,
     showMoveCells: false,
+    isThroughSniperLine,
   };
 }
 
-function moveSpy(spy, toPosition) {
+function moveSpy(spy, toPosition, isThroughSniperLine) {
   const spyDirection = spy.position
     ? cells.getDirection(spy.position, toPosition)
     : undefined;
@@ -315,10 +319,11 @@ function moveSpy(spy, toPosition) {
     selectedDirection: spySelectedDirection,
     showMoveCells: spy.moving ? true : false,
     moving: !spy.moving,
+    isThroughSniperLine,
   };
 }
 
-function moveSniper(sniper, toPosition) {
+function moveSniper(sniper, toPosition, isThroughSniperLine) {
   const sniperDirection = sniper.position
     ? cells.getDirection(sniper.position, toPosition)
     : undefined;
@@ -330,6 +335,7 @@ function moveSniper(sniper, toPosition) {
     direction: sniperDirection,
     selectedDirection: sniperSelectedDirection,
     showMoveCells: false,
+    isThroughSniperLine,
   };
 }
 
@@ -358,8 +364,11 @@ function willAgentSlide({ position, direction }) {
 }
 
 function killPiece(piece) {
-  piece.killed = true;
-  piece.position = [-1, -1];
+  return {
+    ...piece,
+    killed: true,
+    position: [-1, -1],
+  };
 }
 
 function isPieceThroughSniperLine(piece, toPosition, pieces) {
@@ -377,6 +386,20 @@ function isPieceThroughSniperLine(piece, toPosition, pieces) {
   }
 
   return false;
+}
+
+function removeIsThroughSniperLine(pieces) {
+  return pieces.map(piece => ({ ...piece, isThroughSniperLine: false }));
+}
+
+function killSnipedPiece(pieces) {
+  return pieces.map(piece => {
+    if (piece.isThroughSniperLine) {
+      return killPiece(piece);
+    }
+
+    return piece;
+  });
 }
 
 function getSnipedPositions(pieces) {
@@ -662,6 +685,8 @@ export default {
   getNumber,
   getPieceById,
   isPieceThroughSniperLine,
+  removeIsThroughSniperLine,
+  killSnipedPiece,
   isAgent,
   isSpy,
   isCeo,

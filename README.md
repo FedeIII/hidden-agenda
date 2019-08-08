@@ -52,7 +52,7 @@ yarn go
     * ~~block sniper directions on position~~
     * ~~block pieces position in snipers lines of sight~~
     * ~~block sniper position if no available line of sight in any direction~~
-  * select sniper after clicking on snipe
+  * ~~select sniper after clicking on snipe~~
   * kill after move
 * CEO buffs
 * Remote multiplayer
@@ -71,3 +71,4 @@ yarn go
 * ~~End turn on spy movement~~
 * ~~Spy ends turn on selection=>deselection from HQ~~
 * If snipe is pressed at the end of the turn, end of turn conditions get messed up (agent ends turn before collocation)
+* "Next Turn" becomes available before collocating the agent

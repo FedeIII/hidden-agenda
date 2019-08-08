@@ -48,7 +48,7 @@ function hasTurnEndedReducer(state, action) {
     case TOGGLE_PIECE:
       return isPieceBeingDropped(state);
     case MOVE_PIECE:
-      return isPieceSniped(state, action.payload);
+      return false;
     default:
       return state.hasTurnEnded;
   }

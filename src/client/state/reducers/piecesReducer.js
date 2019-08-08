@@ -1,42 +1,61 @@
 import pz from 'Domain/pz';
-import { TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE } from 'Client/actions';
+import {
+  TOGGLE_PIECE,
+  MOVE_PIECE,
+  DIRECT_PIECE,
+  NEXT_TURN,
+  SNIPE,
+} from 'Client/actions';
 
 function hasToToggle(selectedPiece, pieceId) {
   return !selectedPiece || (selectedPiece && selectedPiece.id === pieceId);
 }
 
-function toggledPieceState(pieces, pieceId) {
-  const selectedPiece = pz.getSelectedPiece(pieces);
-  if (hasToToggle(selectedPiece, pieceId)) {
-    return pz.toggle(pieces, pieceId);
-  } else {
+function toggledPieceState({ pieces, hasTurnEnded }, pieceId) {
+  if (hasTurnEnded) {
     return pieces;
   }
+
+  const selectedPiece = pz.getSelectedPiece(pieces);
+
+  if (hasToToggle(selectedPiece, pieceId)) {
+    return pz.toggle(pieces, pieceId);
+  }
+
+  return pieces;
 }
 
 function movedPieceState(state, { pieceId, coords }) {
-  return pz.move(state.pieces, pieceId, coords, state.snipe);
+  return pz.move(state.pieces, pieceId, coords);
 }
 
 function directedPieceState(pieces, direction) {
   return pz.changeSelectedPieceDirection(pieces, direction);
 }
 
-function piecesReducer(state, action) {
-  if (!state.hasTurnEnded) {
-    switch (action.type) {
-      case TOGGLE_PIECE:
-        return [...toggledPieceState(state.pieces, action.payload.pieceId)];
-      case MOVE_PIECE:
-        return [...movedPieceState(state, action.payload)];
-      case DIRECT_PIECE:
-        return [...directedPieceState(state.pieces, action.payload)];
-      default:
-        return [...state.pieces];
-    }
-  }
+function nextTurnState(pieces) {
+  return pz.removeIsThroughSniperLine(pieces);
+}
 
-  return [...state.pieces];
+function snipeState(pieces) {
+  return pz.killSnipedPiece(pieces);
+}
+
+function piecesReducer(state, action) {
+  switch (action.type) {
+    case TOGGLE_PIECE:
+      return [...toggledPieceState(state, action.payload.pieceId)];
+    case MOVE_PIECE:
+      return [...movedPieceState(state, action.payload)];
+    case DIRECT_PIECE:
+      return [...directedPieceState(state.pieces, action.payload)];
+    case NEXT_TURN:
+      return [...nextTurnState(state.pieces)];
+    case SNIPE:
+      return [...snipeState(state.pieces)];
+    default:
+      return [...state.pieces];
+  }
 }
 
 export default piecesReducer;
