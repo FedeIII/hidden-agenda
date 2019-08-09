@@ -12,7 +12,7 @@ function movedPieceState({ pieces, followMouse, pieceState }) {
     case CEO:
       return pieceState === COLLOCATION;
     case SPY:
-      return pieceState === MOVEMENT;
+      return false;
     case SNIPER:
       return true;
     default:

@@ -7,6 +7,7 @@ import {
   PLACEMENT,
   MOVEMENT,
   MOVEMENT2,
+  MOVEMENT3,
   COLLOCATION,
 } from 'Client/pieceStates';
 
@@ -34,6 +35,18 @@ function toggledPieceState(pieceId, { pieces, followMouse, pieceState }) {
   return DESELECTION;
 }
 
+function getMovedSpyState(spy, pieceState) {
+  if (spy.buffed) {
+    return pieceState === MOVEMENT
+      ? MOVEMENT2
+      : pieceState === MOVEMENT2
+      ? MOVEMENT3
+      : MOVEMENT;
+  }
+
+  return pieceState === MOVEMENT ? MOVEMENT2 : MOVEMENT;
+}
+
 function movedPieceState(pieceId, { pieces, pieceState }) {
   const movedPiece = pz.getPieceById(pieceId, pieces);
   if (!movedPiece.direction) {
@@ -42,7 +55,7 @@ function movedPieceState(pieceId, { pieces, pieceState }) {
 
   switch (pz.getType(movedPiece.id)) {
     case SPY:
-      return pieceState === MOVEMENT ? MOVEMENT2 : MOVEMENT;
+      return getMovedSpyState(movedPiece, pieceState);
     default:
       return MOVEMENT;
   }
@@ -58,6 +71,7 @@ function movedPieceState(pieceId, { pieces, pieceState }) {
  * SPY: SELECTION => DESELECTION
  *                => PLACEMENT => COLLOCATION
  *                => MOVEMENT => MOVEMENT2 => COLLOCATION
+ *                                (buffed) => MOVEMENT3 => COLLOCATION
  *
  * CEO: SELECTION => DESELECTION
  *                => PLACEMENT => COLLOCATION

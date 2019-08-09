@@ -14,14 +14,14 @@ function renderHexagon({ row, cell }) {
   const [{ pieces, followMouse, pieceState }, dispatch] = useContext(
     StateContext,
   );
-  const highlightedCells = pz.getHighlightedCells(pieces);
+  const highlightedPositions = pz.getHighlightedPositions(pieces);
   const selectedPiece = pz.getSelectedPiece(pieces);
 
   const piece = pieces.find(
     ({ position }) => position && position[0] === row && position[1] === cell,
   );
 
-  const highlighted = !!highlightedCells.find(coords =>
+  const highlighted = !!highlightedPositions.find(coords =>
     areCoordsEqual(coords, [row, cell]),
   );
 
@@ -31,13 +31,13 @@ function renderHexagon({ row, cell }) {
       if (selectedPiece) {
         dispatch(togglePiece(selectedPiece.id));
       }
-    } else if (areCoordsInList([row, cell], highlightedCells)) {
+    } else if (areCoordsInList([row, cell], highlightedPositions)) {
       dispatch(movePiece(selectedPiece.id, [row, cell]));
     }
   }, [dispatch, pieces, followMouse, row, cell]);
 
   const onMouseEnter = useCallback(() => {
-    if (!highlightedCells.length && selectedPiece) {
+    if (!highlightedPositions.length && selectedPiece) {
       const possibleDirections = pz.getPossibleDirections(
         selectedPiece,
         pieces,

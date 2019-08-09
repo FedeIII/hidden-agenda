@@ -59,16 +59,8 @@ function createPiece(id) {
     selected: false,
     killed: false,
     showMoveCells: false,
-  };
-}
-
-function getSnipedPiece(piece) {
-  return {
-    ...piece,
-    position: [-1, -1],
-    selected: false,
-    killed: true,
-    showMoveCells: false,
+    isThroughSniperLine: false,
+    buffed: false,
   };
 }
 
@@ -117,11 +109,11 @@ function isFriendlyAtPosition(piece, position, selectedPiece) {
   return (
     piece &&
     areCoordsEqual(piece.position, position) &&
-    getTeam(piece.id) === getTeam(selectedPiece.id)
+    isSameTeam(piece, selectedPiece)
   );
 }
 
-function isPieceInPosition(position, pieces) {
+function isPieceAtPosition(position, pieces) {
   return areCoordsInList(
     position,
     pieces.reduce(
@@ -182,9 +174,9 @@ function isPieceInDirection(position, direction, pieces, exceptionPieces) {
     .reduce((isPieceInPastPositions, nextPosition) => {
       return (
         isPieceInPastPositions ||
-        (isPieceInPosition(nextPosition, pieces) &&
+        (isPieceAtPosition(nextPosition, pieces) &&
           !isPieceInList(
-            getPieceInPosition(nextPosition, pieces),
+            getPieceAtPosition(nextPosition, pieces),
             exceptionPieces,
           ))
       );
@@ -229,24 +221,49 @@ function isSamePosition(piece1, piece2) {
   }
 }
 
-function move(pieces, id, toPosition) {
-  let movedPieces = movePieces(pieces, id, toPosition);
+function isCeoInPosition(position, pieces) {
+  const pieceAtPosition = getPieceAtPosition(position, pieces);
+
+  if (pieceAtPosition) {
+    return isCeo(pieceAtPosition.id);
+  }
+
+  return false;
+}
+
+function isNextToCeo(piece, pieces) {
+  return getSurroundingPositions(piece.position).reduce(
+    (isCeoPresent, position) =>
+      isCeoPresent || isCeoInPosition(position, pieces),
+    false,
+  );
+}
+
+function setCeoBuffs(piece, index, pieces) {
+  return {
+    ...piece,
+    buffed: isNextToCeo(piece, pieces),
+  };
+}
+
+function move(pieces, id, toPosition, pieceState) {
+  let movedPieces = movePieces(pieces, id, toPosition, pieceState);
   movedPieces = killPieces(movedPieces, id);
 
   return movedPieces;
 }
 
-function movePieces(pieces, id, toPosition) {
+function movePieces(pieces, id, toPosition, pieceState) {
   return pieces.map(piece => {
     if (piece.id === id) {
-      return getMovedPiece(pieces, piece, toPosition);
+      return getMovedPiece(pieces, piece, toPosition, pieceState);
     }
 
     return getNotMovedPiece(piece);
   });
 }
 
-function getMovedPiece(pieces, piece, toPosition) {
+function getMovedPiece(pieces, piece, toPosition, pieceState) {
   piece.moved = true;
 
   const isThroughSniperLine = isPieceThroughSniperLine(
@@ -261,7 +278,7 @@ function getMovedPiece(pieces, piece, toPosition) {
     case CEO:
       return moveCeo(piece, toPosition, isThroughSniperLine);
     case SPY:
-      return moveSpy(piece, toPosition, isThroughSniperLine);
+      return moveSpy(piece, toPosition, isThroughSniperLine, pieceState);
     case SNIPER:
       return moveSniper(piece, toPosition, isThroughSniperLine);
     default:
@@ -306,7 +323,7 @@ function moveCeo(ceo, toPosition, isThroughSniperLine) {
   };
 }
 
-function moveSpy(spy, toPosition, isThroughSniperLine) {
+function moveSpy(spy, toPosition, isThroughSniperLine, pieceState) {
   const spyDirection = spy.position
     ? cells.getDirection(spy.position, toPosition)
     : undefined;
@@ -317,8 +334,11 @@ function moveSpy(spy, toPosition, isThroughSniperLine) {
     position: toPosition,
     direction: spyDirection,
     selectedDirection: spySelectedDirection,
-    showMoveCells: spy.moving ? true : false,
-    moving: !spy.moving,
+    showMoveCells:
+      (spy.position && pieceState === SELECTION) ||
+      (spy.buffed && pieceState === MOVEMENT)
+        ? true
+        : false,
     isThroughSniperLine,
   };
 }
@@ -379,7 +399,7 @@ function isPieceThroughSniperLine(piece, toPosition, pieces) {
     );
 
     return movementPositions.reduce(
-      (acc, cell) => acc || areCoordsInList(cell, snipedPositions),
+      (acc, position) => acc || areCoordsInList(position, snipedPositions),
       false,
     );
   }
@@ -410,7 +430,7 @@ function getSnipedPositions(pieces, piece) {
     .reduce(
       (allSnipedPositions, snipedPositions) => [
         ...allSnipedPositions,
-        snipedPositions,
+        ...snipedPositions,
       ],
       [],
     )
@@ -418,10 +438,15 @@ function getSnipedPositions(pieces, piece) {
 }
 
 function getSnipedPositionsBy(sniper, pieces) {
-  return truncatePositions(
-    cells.get(sniper.position).getPositionsInDirection(sniper.direction),
-    pieces,
-  );
+  const buffedSnipedPositions = cells
+    .get(sniper.position)
+    .getPositionsInDirection(sniper.direction);
+
+  if (sniper.buffed) {
+    return buffedSnipedPositions;
+  }
+
+  return truncatePositions(buffedSnipedPositions, pieces);
 }
 
 function togglePiece(piece) {
@@ -449,43 +474,68 @@ function toggle(pieces, id) {
   });
 }
 
-function getHighlightedCells(pieces) {
+function getHighlightedPositions(pieces) {
   return pieces.reduce(
     (acc, piece) =>
       piece.showMoveCells
-        ? acc.concat(getHighlightedCellsFor(piece, pieces))
+        ? acc.concat(getHighlightedPositionsFor(piece, pieces))
         : acc,
     [],
   );
 }
 
-function getHighlightedCellsFor(piece, pieces) {
+function getHighlightedPositionsFor(piece, pieces) {
   switch (getType(piece.id)) {
     case AGENT:
-      return getAgentCells(piece, pieces);
+      return getAgentPositions(piece, pieces);
     case CEO:
-      return getCeoCells(piece, pieces);
+      return getCeoPositions(piece, pieces);
     case SPY:
-      return getSpyCells(piece, pieces);
+      return getSpyPositions(piece, pieces);
     case SNIPER:
-      return getSniperCells(piece, pieces);
+      return getSniperPositions(piece, pieces);
     default:
       return [];
   }
 }
 
-function getAgentCells(agent, pieces) {
-  if (!agent.position) {
+function getFreePositionAt(position, piece, pieces) {
+  const pieceAtPosition = getPieceAtPosition(position, pieces);
+  if (!pieceAtPosition || !isSameTeam(pieceAtPosition, piece)) {
+    return [position];
+  }
+
+  return [];
+}
+
+function getBuffedAgentPositions(
+  agent,
+  pieces,
+  position1CellAhead,
+  position2CellsAhead,
+) {
+  const pieceAtPosition1 = getPieceAtPosition(position1CellAhead, pieces);
+
+  const agentPositions = pieceAtPosition1
+    ? getFreePositionAt(position1CellAhead, agent, pieces)
+    : [
+        position1CellAhead,
+        ...getFreePositionAt(position2CellsAhead, agent, pieces),
+      ];
+
+  if (agentPositions.some(position => !position)) {
     return getInitialLocationCells(pieces);
   }
 
-  const position2CellsAhead = cells
-    .get(agent.position)
-    .getPositionAfterDirections(agent.direction, agent.direction);
-  const position1CellAhead = cells
-    .get(agent.position)
-    .getPositionInDirection(agent.direction);
+  return agentPositions;
+}
 
+function getRegularAgentPositions(
+  agent,
+  pieces,
+  position1CellAhead,
+  position2CellsAhead,
+) {
   if (!isPieceBlocked(agent, pieces, position1CellAhead, position2CellsAhead)) {
     if (position2CellsAhead) {
       return [position2CellsAhead];
@@ -497,7 +547,37 @@ function getAgentCells(agent, pieces) {
   return [];
 }
 
-function getCeoCells(ceo, pieces) {
+function getAgentPositions(agent, pieces) {
+  if (!agent.position) {
+    return getInitialLocationCells(pieces);
+  }
+
+  const position1CellAhead = cells
+    .get(agent.position)
+    .getPositionInDirection(agent.direction);
+
+  const position2CellsAhead = cells
+    .get(agent.position)
+    .getPositionAfterDirections(agent.direction, agent.direction);
+
+  if (agent.buffed) {
+    return getBuffedAgentPositions(
+      agent,
+      pieces,
+      position1CellAhead,
+      position2CellsAhead,
+    );
+  }
+
+  return getRegularAgentPositions(
+    agent,
+    pieces,
+    position1CellAhead,
+    position2CellsAhead,
+  );
+}
+
+function getCeoPositions(ceo, pieces) {
   if (!ceo.position) {
     return getInitialLocationCells(pieces);
   }
@@ -516,19 +596,23 @@ function getCeoCells(ceo, pieces) {
     );
 }
 
-function getSpyCells(spy, pieces) {
+function getSurroundingPositions(position) {
+  return directions
+    .getAll()
+    .map(direction => cells.get(position).getPositionInDirection(direction));
+}
+
+function getSpyPositions(spy, pieces) {
   if (!spy.position) {
     return getInitialLocationCells(pieces);
   }
 
-  return directions
-    .getAll()
-    .map(direction => cells.get(spy.position).getPositionInDirection(direction))
+  return getSurroundingPositions(spy.position)
     .filter(position => cells.inBoard(position))
     .filter(
       position =>
         !isFriendlyAtPosition(
-          getPieceInPosition(position, pieces),
+          getPieceAtPosition(position, pieces),
           position,
           spy,
         ),
@@ -540,7 +624,7 @@ function getSpyCells(spy, pieces) {
     );
 }
 
-function getSniperCells(sniper, pieces) {
+function getSniperPositions(sniper, pieces) {
   if (!sniper.position) {
     return getInitialLocationCells(pieces).filter(position =>
       hasAvailableDirectionsForSniper(position, sniper, pieces),
@@ -555,10 +639,10 @@ function isDirectionAvailableForSniper(position, direction, sniper, pieces) {
     .get(position)
     .getPositionsInDirection(direction)
     .reduce((noPiecesInAnyPosition, position) => {
-      const pieceInPosition = getPieceInPosition(position, pieces);
+      const pieceAtPosition = getPieceAtPosition(position, pieces);
       return (
         noPiecesInAnyPosition &&
-        (!pieceInPosition || isSameTeam(pieceInPosition, sniper))
+        (!pieceAtPosition || isSameTeam(pieceAtPosition, sniper))
       );
     }, true);
 }
@@ -574,12 +658,12 @@ function hasAvailableDirectionsForSniper(position, sniper, pieces) {
     );
 }
 
-function getPieceInPosition(position, pieces) {
+function getPieceAtPosition(position, pieces) {
   return pieces.find(piece => areCoordsEqual(piece.position, position));
 }
 
 function hasPiece(position, pieces) {
-  return !!getPieceInPosition(position, pieces);
+  return !!getPieceAtPosition(position, pieces);
 }
 
 function hasPieceBackwards(position, pieces, spyPosition) {
@@ -602,7 +686,7 @@ function getThreeBackPositions(piece) {
 }
 
 function truncatePositions(positions, pieces) {
-  if (positions.length && !isPieceInPosition(positions[0], pieces)) {
+  if (positions.length && !isPieceAtPosition(positions[0], pieces)) {
     return [positions[0]].concat(truncatePositions(positions.slice(1), pieces));
   }
 
@@ -700,7 +784,7 @@ export default {
   init,
   toggle,
   move,
-  getHighlightedCells,
+  getHighlightedPositions,
   getSelectedPiece,
   changeSelectedPieceDirection,
   getPossibleDirections,
@@ -717,4 +801,5 @@ export default {
   isCeo,
   isSniper,
   isSniperOnBoard,
+  setCeoBuffs,
 };

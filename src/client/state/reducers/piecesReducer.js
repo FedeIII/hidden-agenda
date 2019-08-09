@@ -25,8 +25,8 @@ function toggledPieceState({ pieces, hasTurnEnded }, pieceId) {
   return pieces;
 }
 
-function movedPieceState(state, { pieceId, coords }) {
-  return pz.move(state.pieces, pieceId, coords);
+function movedPieceState({ pieces, pieceState }, { pieceId, coords }) {
+  return pz.move(pieces, pieceId, coords, pieceState);
 }
 
 function directedPieceState(pieces, direction) {
@@ -34,7 +34,7 @@ function directedPieceState(pieces, direction) {
 }
 
 function nextTurnState(pieces) {
-  return pz.removeIsThroughSniperLine(pieces);
+  return pz.removeIsThroughSniperLine(pieces).map(pz.setCeoBuffs);
 }
 
 function snipeState(pieces) {

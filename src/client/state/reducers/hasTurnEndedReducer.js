@@ -5,38 +5,37 @@ import {
   MOVE_PIECE,
 } from 'Client/actions';
 import { AGENT, CEO, SPY, SNIPER } from 'Domain/pieceTypes';
-import { MOVEMENT, MOVEMENT2, PLACEMENT, SELECTION } from 'Client/pieceStates';
+import { MOVEMENT, MOVEMENT2, MOVEMENT3, PLACEMENT } from 'Client/pieceStates';
 import pz from 'Domain/pz';
 
-function hasPieceEndedTurn(pieces, pieceState) {
+function hasPieceEndedTurn(pieces, pieceState, toggledPieceId) {
   const selectedPiece = pz.getSelectedPiece(pieces);
 
-  if (selectedPiece) {
+  if (selectedPiece && selectedPiece.id === toggledPieceId) {
     switch (pz.getType(selectedPiece.id)) {
       case AGENT:
         return pieceState === PLACEMENT || pieceState === MOVEMENT;
       case CEO:
         return pieceState === PLACEMENT || pieceState === MOVEMENT;
       case SPY:
-        return pieceState === PLACEMENT || pieceState === MOVEMENT2;
+        return selectedPiece.buffed
+          ? pieceState === PLACEMENT || pieceState === MOVEMENT3
+          : pieceState === PLACEMENT || pieceState === MOVEMENT2;
       case SNIPER:
         return pieceState === PLACEMENT || pieceState === MOVEMENT;
       default:
         return false;
     }
   }
+
+  return false;
 }
 
-function isPieceBeingDropped({ hasTurnEnded, pieces, pieceState }) {
-  return hasTurnEnded || hasPieceEndedTurn(pieces, pieceState);
-}
-
-function isPieceSniped({ pieces }, { pieceId, coords }) {
-  return pz.isPieceThroughSniperLine(
-    pz.getPieceById(pieceId, pieces),
-    coords,
-    pieces,
-  );
+function isPieceBeingDropped(
+  { hasTurnEnded, pieces, pieceState },
+  toggledPieceId,
+) {
+  return hasTurnEnded || hasPieceEndedTurn(pieces, pieceState, toggledPieceId);
 }
 
 function hasTurnEndedReducer(state, action) {
@@ -46,7 +45,7 @@ function hasTurnEndedReducer(state, action) {
     case START_GAME:
       return false;
     case TOGGLE_PIECE:
-      return isPieceBeingDropped(state);
+      return isPieceBeingDropped(state, action.payload.pieceId);
     case MOVE_PIECE:
       return false;
     default:

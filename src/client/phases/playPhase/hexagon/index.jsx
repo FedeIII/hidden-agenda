@@ -18,14 +18,14 @@ function useOnCellClick(coords) {
       event.preventDefault();
       event.stopPropagation();
 
-      const highlightedCells = pz.getHighlightedCells(pieces);
+      const highlightedPositions = pz.getHighlightedPositions(pieces);
       const selectedPiece = pz.getSelectedPiece(pieces);
 
       if (followMouse) {
         if (selectedPiece) {
           dispatch(togglePiece(selectedPiece.id));
         }
-      } else if (areCoordsInList(coords, highlightedCells)) {
+      } else if (areCoordsInList(coords, highlightedPositions)) {
         dispatch(movePiece(selectedPiece.id, coords));
       }
     },

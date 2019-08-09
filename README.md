@@ -54,10 +54,10 @@ yarn go
     * ~~block sniper position if no available line of sight in any direction~~
   * ~~select sniper after clicking on snipe~~
   * ~~kill after move~~
-* CEO buffs
-  * Agent
-  * Spy
-  * Sniper
+* ~~CEO buffs~~
+  * ~~Agent~~
+  * ~~Spy~~
+  * ~~Sniper~~
 * Remote multiplayer
 * Alignment cards
 * Game ending
@@ -68,11 +68,13 @@ yarn go
 * Port to electron
 
 ## Known Bugs
-* ~~Agent direction after sliding~~
-* ~~Switch selected agent allows to direct it without moving it first~~
-* ~~Pieces are not allowed to spawn over other pieces~~
-* ~~End turn on spy movement~~
-* ~~Spy ends turn on selection=>deselection from HQ~~
-* ~~If snipe is pressed at the end of the turn, end of turn conditions get messed up (agent ends turn before collocation)~~
+* Can't direct pieces outwards on the table border
+* ~~Agent slide on CEO buff~~
+* ~~Sniper sight doesn't get blocked by other pieces~~
 * ~~"Next Turn" becomes available before collocating the agent~~
-* Sniper sight doesn't get blocked by other pieces
+* ~~If snipe is pressed at the end of the turn, end of turn conditions get messed up (agent ends turn before collocation)~~
+* ~~Spy ends turn on selection=>deselection from HQ~~
+* ~~End turn on spy movement~~
+* ~~Pieces are not allowed to spawn over other pieces~~
+* ~~Switch selected agent allows to direct it without moving it first~~
+* ~~Agent direction after sliding~~
