@@ -22,6 +22,10 @@ yarn go
 ```
 
 ## Changelog
+### v0.4.0
+* Finished all mechanics for all pieces
+* Fixed multiple movement, selection and end turn bugs
+
 ### v0.3
 * Included Start Menu
 * Added player turns
@@ -58,13 +62,13 @@ yarn go
   * ~~Agent~~
   * ~~Spy~~
   * ~~Sniper~~
-* Remote multiplayer
 * Alignment cards
 * Game ending
 * Scores
 * Reveal mechanics
 * Accuse mechanics
 * Claim control mechanics
+* Remote multiplayer
 * Port to electron
 
 ## Known Bugs
