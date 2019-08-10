@@ -95,8 +95,8 @@ const positionInHQ = ({ selectedDirection, pieceId }) => {
   }
 };
 
-const onSelected = ({ selected }) => {
-  if (selected) {
+const onSelected = ({ selected, highlight }) => {
+  if (selected || highlight) {
     return css`
       filter: brightness(2);
     `;

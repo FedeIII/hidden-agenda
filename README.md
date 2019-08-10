@@ -62,9 +62,12 @@ yarn go
   * ~~Agent~~
   * ~~Spy~~
   * ~~Sniper~~
+* Cementeries
+  * assign kills
+  * show kills
+* Scores
 * Alignment cards
 * Game ending
-* Scores
 * Reveal mechanics
 * Accuse mechanics
 * Claim control mechanics
@@ -72,6 +75,8 @@ yarn go
 * Port to electron
 
 ## Known Bugs
+* Spies reset their movement when clicked on after first movement
+* Spies shouldn't be able to kill on their first move (or second move if buffed)
 * Can't direct pieces outwards on the table border
 * ~~Agent slide on CEO buff~~
 * ~~Sniper sight doesn't get blocked by other pieces~~

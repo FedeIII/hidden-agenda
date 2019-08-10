@@ -4,7 +4,7 @@ import { StateContext } from 'State';
 import { togglePiece } from 'Client/actions';
 import PieceStyled from './styled';
 
-function Piece({ id, selectedDirection, selected }) {
+function Piece({ id, selectedDirection, selected, highlight }) {
   const team = pz.getTeam(id);
   const type = pz.getType(id);
   const image = `img/${team}-${type}.png`;
@@ -18,6 +18,7 @@ function Piece({ id, selectedDirection, selected }) {
       src={image}
       pieceId={id}
       selected={selected}
+      highlight={highlight}
       selectedDirection={selectedDirection}
       onClick={onClick}
     />

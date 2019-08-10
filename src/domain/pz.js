@@ -1,5 +1,10 @@
 import cells from 'Domain/cells';
-import { areCoordsEqual, areCoordsInList, directions } from 'Domain/utils';
+import {
+  areCoordsEqual,
+  areCoordsInList,
+  directions,
+  getUniqueValues,
+} from 'Domain/utils';
 import { SELECTION, MOVEMENT } from 'Client/pieceStates';
 import { AGENT, CEO, SPY, SNIPER } from 'Domain/pieceTypes';
 
@@ -59,8 +64,9 @@ function createPiece(id) {
     selected: false,
     killed: false,
     showMoveCells: false,
-    isThroughSniperLine: false,
+    throughSniperLineOf: [],
     buffed: false,
+    highlight: false,
   };
 }
 
@@ -216,7 +222,11 @@ function isDifferentPiece(piece1, piece2) {
 }
 
 function isSamePosition(piece1, piece2) {
-  if (isDifferentPiece(piece1, piece2)) {
+  if (
+    isDifferentPiece(piece1, piece2) &&
+    cells.inBoard(piece1.position) &&
+    cells.inBoard(piece2.position)
+  ) {
     return areCoordsEqual(piece1.position, piece2.position);
   }
 }
@@ -266,21 +276,17 @@ function movePieces(pieces, id, toPosition, pieceState) {
 function getMovedPiece(pieces, piece, toPosition, pieceState) {
   piece.moved = true;
 
-  const isThroughSniperLine = isPieceThroughSniperLine(
-    piece,
-    toPosition,
-    pieces,
-  );
+  const throughSniperLineOf = getSnipersInSight(piece, toPosition, pieces);
 
   switch (getType(piece.id)) {
     case AGENT:
-      return moveAgent(piece, toPosition, isThroughSniperLine);
+      return moveAgent(piece, toPosition, throughSniperLineOf);
     case CEO:
-      return moveCeo(piece, toPosition, isThroughSniperLine);
+      return moveCeo(piece, toPosition, throughSniperLineOf);
     case SPY:
-      return moveSpy(piece, toPosition, isThroughSniperLine, pieceState);
+      return moveSpy(piece, toPosition, throughSniperLineOf, pieceState);
     case SNIPER:
-      return moveSniper(piece, toPosition, isThroughSniperLine);
+      return moveSniper(piece, toPosition, throughSniperLineOf);
     default:
       return;
   }
@@ -291,7 +297,7 @@ function getNotMovedPiece(piece) {
   return piece;
 }
 
-function moveAgent(agent, toPosition, isThroughSniperLine) {
+function moveAgent(agent, toPosition, throughSniperLineOf) {
   const agentSelectedDirection = agent.position
     ? agent.selectedDirection
     : [1, 0];
@@ -303,11 +309,11 @@ function moveAgent(agent, toPosition, isThroughSniperLine) {
     direction: agentDirection,
     selectedDirection: agentSelectedDirection,
     showMoveCells: false,
-    isThroughSniperLine,
+    throughSniperLineOf,
   };
 }
 
-function moveCeo(ceo, toPosition, isThroughSniperLine) {
+function moveCeo(ceo, toPosition, throughSniperLineOf) {
   const ceoDirection = ceo.position
     ? cells.getDirection(ceo.position, toPosition)
     : undefined;
@@ -319,11 +325,11 @@ function moveCeo(ceo, toPosition, isThroughSniperLine) {
     direction: ceoDirection,
     selectedDirection: ceoSelectedDirection,
     showMoveCells: false,
-    isThroughSniperLine,
+    throughSniperLineOf,
   };
 }
 
-function moveSpy(spy, toPosition, isThroughSniperLine, pieceState) {
+function moveSpy(spy, toPosition, throughSniperLineOf, pieceState) {
   const spyDirection = spy.position
     ? cells.getDirection(spy.position, toPosition)
     : undefined;
@@ -339,11 +345,11 @@ function moveSpy(spy, toPosition, isThroughSniperLine, pieceState) {
       (spy.buffed && pieceState === MOVEMENT)
         ? true
         : false,
-    isThroughSniperLine,
+    throughSniperLineOf,
   };
 }
 
-function moveSniper(sniper, toPosition, isThroughSniperLine) {
+function moveSniper(sniper, toPosition, throughSniperLineOf) {
   const sniperDirection = sniper.position
     ? cells.getDirection(sniper.position, toPosition)
     : undefined;
@@ -355,7 +361,7 @@ function moveSniper(sniper, toPosition, isThroughSniperLine) {
     direction: sniperDirection,
     selectedDirection: sniperSelectedDirection,
     showMoveCells: false,
-    isThroughSniperLine,
+    throughSniperLineOf,
   };
 }
 
@@ -366,9 +372,9 @@ function killPieces(pieces, movedId) {
     killedPieces.forEach(piece2 => {
       if (isSamePosition(piece1, piece2)) {
         if (piece1.id === movedId) {
-          killPiece(piece2);
+          killPiece({ killedPiece: piece2, killedById: piece1.id });
         } else {
-          killPiece(piece1);
+          killPiece({ killedPiece: piece1, killedById: piece2.id });
         }
       }
     });
@@ -383,38 +389,55 @@ function willAgentSlide({ position, direction }) {
   );
 }
 
-function killPiece(piece) {
-  piece.killed = true;
-  piece.position = [-1, -1];
+function killPiece({ killedPiece, killedById }) {
+  killedPiece.killed = true;
+  killedPiece.position = [-1, -1];
+  killedPiece.killedById = killedById;
 
-  return piece;
+  return killedPiece;
 }
 
-function isPieceThroughSniperLine(piece, toPosition, pieces) {
+function getSnipersInSight(piece, toPosition, pieces) {
   if (piece.position) {
-    const snipedPositions = getSnipedPositions(pieces, piece);
+    const allSnipedPositions = getSnipedPositions(pieces, piece);
     const movementPositions = cells.getMovementPositions(
       piece.position,
       toPosition,
     );
 
-    return movementPositions.reduce(
-      (acc, position) => acc || areCoordsInList(position, snipedPositions),
-      false,
+    return Object.entries(allSnipedPositions).reduce(
+      (allSnipersInSight, [sniperId, snipedPositions]) => [
+        ...allSnipersInSight,
+        ...movementPositions.reduce((snipersInSight, position) => {
+          if (areCoordsInList(position, snipedPositions)) {
+            return [...snipersInSight, sniperId];
+          }
+
+          return snipersInSight;
+        }, []),
+      ],
+      [],
     );
   }
 
-  return false;
+  return [];
 }
 
 function removeIsThroughSniperLine(pieces) {
-  return pieces.map(piece => ({ ...piece, isThroughSniperLine: false }));
+  return pieces.map(piece => ({ ...piece, throughSniperLineOf: [] }));
 }
 
-function killSnipedPiece(pieces) {
+function killSnipedPiece(pieces, sniperId) {
   return pieces.map(piece => {
-    if (piece.isThroughSniperLine) {
-      return killPiece(piece);
+    if (piece.throughSniperLineOf.length) {
+      return killPiece({ killedPiece: piece, killedById: sniperId });
+    }
+
+    if (piece.highlight) {
+      return {
+        ...piece,
+        highlight: false,
+      };
     }
 
     return piece;
@@ -424,17 +447,18 @@ function killSnipedPiece(pieces) {
 function getSnipedPositions(pieces, piece) {
   return pieces
     .filter(
-      eachPiece => isSniper(eachPiece.id) && !isSameTeam(piece, eachPiece),
+      eachPiece =>
+        isSniper(eachPiece.id) &&
+        !isSameTeam(piece, eachPiece) &&
+        eachPiece.position,
     )
-    .map(sniper => getSnipedPositionsBy(sniper, pieces))
     .reduce(
-      (allSnipedPositions, snipedPositions) => [
-        ...allSnipedPositions,
+      (snipedPositions, sniper) => ({
         ...snipedPositions,
-      ],
-      [],
-    )
-    .filter(position => !areCoordsEqual(position, [-1, -1]));
+        [sniper.id]: getSnipedPositionsBy(sniper, pieces),
+      }),
+      {},
+    );
 }
 
 function getSnipedPositionsBy(sniper, pieces) {
@@ -617,11 +641,12 @@ function getSpyPositions(spy, pieces) {
           spy,
         ),
     )
-    .filter(
-      position =>
+    .filter(position => {
+      return (
         !hasPiece(position, pieces) ||
-        hasPieceBackwards(position, pieces, spy.position),
-    );
+        hasPieceBackwards(position, pieces, spy.position)
+      );
+    });
 }
 
 function getSniperPositions(sniper, pieces) {
@@ -698,7 +723,7 @@ function getSelectedPiece(pieces) {
 }
 
 function getDirectedPiece(piece, direction, pieces) {
-  const isThroughSniperLine = isPieceThroughSniperLine(
+  const throughSniperLineOf = getSnipersInSight(
     piece,
     piece.position,
     pieces,
@@ -707,7 +732,7 @@ function getDirectedPiece(piece, direction, pieces) {
   return {
     ...piece,
     selectedDirection: direction,
-    isThroughSniperLine,
+    throughSniperLineOf,
   };
 }
 
@@ -780,6 +805,34 @@ function isSniperOnBoard(pieces) {
   );
 }
 
+function highlightSniperWithSight(piece, snipersWithSight) {
+  if (isSniper(piece.id) && snipersWithSight.includes(piece.id)) {
+    return {
+      ...piece,
+      highlight: true,
+    };
+  }
+
+  return piece;
+}
+
+function isInSniperSight(piece) {
+  return !!piece.throughSniperLineOf.length;
+}
+
+function highlightSnipersWithSight(pieces) {
+  const snipersWithSight = getUniqueValues(
+    pieces
+      .filter(piece => isInSniperSight(piece))
+      .reduce(
+        (snipers, piece) => [...snipers, ...piece.throughSniperLineOf],
+        [],
+      ),
+  );
+
+  return pieces.map(piece => highlightSniperWithSight(piece, snipersWithSight));
+}
+
 export default {
   init,
   toggle,
@@ -793,7 +846,6 @@ export default {
   getType,
   getNumber,
   getPieceById,
-  isPieceThroughSniperLine,
   removeIsThroughSniperLine,
   killSnipedPiece,
   isAgent,
@@ -802,4 +854,6 @@ export default {
   isSniper,
   isSniperOnBoard,
   setCeoBuffs,
+  highlightSnipersWithSight,
+  isInSniperSight,
 };

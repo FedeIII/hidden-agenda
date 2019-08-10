@@ -8,6 +8,14 @@ export function areCoordsInList(coords, list) {
   return !!list.find(([x, y] = []) => areCoordsEqual(coords, [x, y]));
 }
 
+export function getUniqueValues(array) {
+  return array.reduce(
+    (uniqueValues, elem) =>
+      uniqueValues.includes(elem) ? uniqueValues : [...uniqueValues, elem],
+    [],
+  );
+}
+
 // prettier-ignore
 const possibleDirections = [
   [1, 1],

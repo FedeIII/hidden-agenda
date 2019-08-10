@@ -7,18 +7,25 @@ import {
   SNIPE,
 } from 'Client/actions';
 
-function hasToToggle(selectedPiece, pieceId) {
-  return !selectedPiece || (selectedPiece && selectedPiece.id === pieceId);
+function hasToToggle(selectedPiece, pieceId, snipe) {
+  return (
+    !snipe &&
+    (!selectedPiece || (selectedPiece && selectedPiece.id === pieceId))
+  );
 }
 
-function toggledPieceState({ pieces, hasTurnEnded }, pieceId) {
+function toggledPieceState({ pieces, hasTurnEnded, snipe }, pieceId) {
   if (hasTurnEnded) {
     return pieces;
   }
 
+  if (pz.isSniper(pieceId) && pz.getPieceById(pieceId, pieces).highlight) {
+    return pz.killSnipedPiece(pieces, pieceId);
+  }
+
   const selectedPiece = pz.getSelectedPiece(pieces);
 
-  if (hasToToggle(selectedPiece, pieceId)) {
+  if (hasToToggle(selectedPiece, pieceId, snipe)) {
     return pz.toggle(pieces, pieceId);
   }
 
@@ -38,7 +45,7 @@ function nextTurnState(pieces) {
 }
 
 function snipeState(pieces) {
-  return pz.killSnipedPiece(pieces);
+  return pz.highlightSnipersWithSight(pieces);
 }
 
 function piecesReducer(state, action) {

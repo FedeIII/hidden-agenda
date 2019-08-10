@@ -3,6 +3,7 @@ import {
   NEXT_TURN,
   TOGGLE_PIECE,
   MOVE_PIECE,
+  SNIPE,
 } from 'Client/actions';
 import { AGENT, CEO, SPY, SNIPER } from 'Domain/pieceTypes';
 import { MOVEMENT, MOVEMENT2, MOVEMENT3, PLACEMENT } from 'Client/pieceStates';
@@ -38,6 +39,17 @@ function isPieceBeingDropped(
   return hasTurnEnded || hasPieceEndedTurn(pieces, pieceState, toggledPieceId);
 }
 
+function isSniperSelectedForSnipe(snipe, pieceId) {
+  return snipe && pz.isSniper(pieceId);
+}
+
+function togglePieceState(state, pieceId) {
+  return (
+    isPieceBeingDropped(state, pieceId) ||
+    isSniperSelectedForSnipe(state.snipe, pieceId)
+  );
+}
+
 function hasTurnEndedReducer(state, action) {
   switch (action.type) {
     case NEXT_TURN:
@@ -45,8 +57,10 @@ function hasTurnEndedReducer(state, action) {
     case START_GAME:
       return false;
     case TOGGLE_PIECE:
-      return isPieceBeingDropped(state, action.payload.pieceId);
+      return togglePieceState(state, action.payload.pieceId);
     case MOVE_PIECE:
+      return false;
+    case SNIPE:
       return false;
     default:
       return state.hasTurnEnded;
