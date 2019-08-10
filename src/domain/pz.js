@@ -723,11 +723,7 @@ function getSelectedPiece(pieces) {
 }
 
 function getDirectedPiece(piece, direction, pieces) {
-  const throughSniperLineOf = getSnipersInSight(
-    piece,
-    piece.position,
-    pieces,
-  );
+  const throughSniperLineOf = getSnipersInSight(piece, piece.position, pieces);
 
   return {
     ...piece,
@@ -833,6 +829,23 @@ function highlightSnipersWithSight(pieces) {
   return pieces.map(piece => highlightSniperWithSight(piece, snipersWithSight));
 }
 
+function getPiecesKilledByTeam(team, pieces) {
+  return pieces.reduce(
+    (piecesKilled, piece) => {
+      if (piece.killedById && getTeam(piece.killedById) === team) {
+        const type = getType(piece.id);
+        return {
+          ...piecesKilled,
+          [type]: piecesKilled[type] + 1,
+        };
+      }
+
+      return piecesKilled;
+    },
+    { A: 0, S: 0, N: 0, C: 0 },
+  );
+}
+
 export default {
   init,
   toggle,
@@ -856,4 +869,5 @@ export default {
   setCeoBuffs,
   highlightSnipersWithSight,
   isInSniperSight,
+  getPiecesKilledByTeam,
 };

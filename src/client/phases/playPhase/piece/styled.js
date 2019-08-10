@@ -46,7 +46,7 @@ const inHQ = ({ selectedDirection }) => {
 };
 
 const positionInHQ = ({ selectedDirection, pieceId }) => {
-  if (!selectedDirection) {
+  if (!selectedDirection && pieceId) {
     const type = pz.getType(pieceId);
     const pieceNumber = pz.getNumber(pieceId);
 
@@ -95,6 +95,18 @@ const positionInHQ = ({ selectedDirection, pieceId }) => {
   }
 };
 
+const inCementery = ({ killed }) => {
+  if (killed) {
+    return css`
+      position: relative;
+      top: 0;
+      left: 0;
+      width: 50%;
+      margin-right: 2px;
+    `;
+  }
+};
+
 const onSelected = ({ selected, highlight }) => {
   if (selected || highlight) {
     return css`
@@ -117,6 +129,7 @@ const PieceStyled = styled.img`
   ${withDirection}
   ${inHQ}
   ${positionInHQ}
+  ${inCementery}
   ${onSelected}
 `;
 

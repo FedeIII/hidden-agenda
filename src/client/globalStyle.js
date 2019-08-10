@@ -11,6 +11,7 @@ const GlobalStyle = createGlobalStyle`
     letter-spacing: 5px;
     margin: 0;
     width: 100%;
+    max-width: 874px;
   }
 
   .game {

@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { StateContext } from 'State';
 import pz from 'Domain/pz';
 import { HqStyled, HqStore } from './components';
+import Cementery from './cementery';
 import Piece from './piece/index';
 
 function getNotStartedTeamPieces(pieces, team) {
@@ -18,6 +19,7 @@ function HQ({ team }) {
           <Piece key={piece.id} {...piece} />
         ))}
       </HqStore>
+      <Cementery team={team} />
     </HqStyled>
   );
 }

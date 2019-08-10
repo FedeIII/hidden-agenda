@@ -63,8 +63,9 @@ yarn go
   * ~~Spy~~
   * ~~Sniper~~
 * Cementeries
-  * assign kills
-  * show kills
+  * ~~assign kills~~
+  * ~~show kills~~
+  * killing a ceo kills the rest of team pieces
 * Scores
 * Alignment cards
 * Game ending
