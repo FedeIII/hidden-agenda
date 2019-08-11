@@ -62,10 +62,10 @@ yarn go
   * ~~Agent~~
   * ~~Spy~~
   * ~~Sniper~~
-* Cementeries
+* ~~Cementeries~~
   * ~~assign kills~~
   * ~~show kills~~
-  * killing a ceo kills the rest of team pieces
+  * ~~killing a ceo kills the rest of team pieces~~
 * Scores
 * Alignment cards
 * Game ending

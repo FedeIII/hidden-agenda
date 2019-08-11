@@ -67,6 +67,8 @@ function createPiece(id) {
     throughSniperLineOf: [],
     buffed: false,
     highlight: false,
+    killedById: undefined,
+    teamKilledBy: undefined,
   };
 }
 
@@ -365,6 +367,23 @@ function moveSniper(sniper, toPosition, throughSniperLineOf) {
   };
 }
 
+function setTeamKilledBy(piece, killedCeo) {
+  if (isSameTeam(piece, killedCeo) && !piece.position) {
+    return killPiece({
+      killedPiece: piece,
+      killedById: killedCeo.teamKilledBy,
+    });
+  }
+
+  return piece;
+}
+
+function killWholeTeam(pieces, killedCeo) {
+  const killedPieces = pieces.map(piece => setTeamKilledBy(piece, killedCeo));
+  killedCeo.teamKilledBy = undefined;
+  return killedPieces;
+}
+
 function killPieces(pieces, movedId) {
   const killedPieces = pieces.slice(0);
 
@@ -380,7 +399,15 @@ function killPieces(pieces, movedId) {
     });
   });
 
-  return killedPieces;
+  const killedCeo = killedPieces.find(
+    piece => isCeo(piece.id) && piece.teamKilledBy,
+  );
+
+  if (!killedCeo) {
+    return killedPieces;
+  }
+
+  return killWholeTeam(killedPieces, killedCeo);
 }
 
 function willAgentSlide({ position, direction }) {
@@ -393,6 +420,10 @@ function killPiece({ killedPiece, killedById }) {
   killedPiece.killed = true;
   killedPiece.position = [-1, -1];
   killedPiece.killedById = killedById;
+
+  if (isCeo(killedPiece.id)) {
+    killedPiece.teamKilledBy = killedById;
+  }
 
   return killedPiece;
 }
