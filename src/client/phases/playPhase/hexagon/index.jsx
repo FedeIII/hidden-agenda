@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { StateContext } from 'State';
 import pz from 'Domain/pz';
 import { areCoordsInList } from 'Domain/utils';
-import { togglePiece, movePiece, directPiece } from 'Client/actions';
+import { togglePiece, movePiece } from 'Client/actions';
 import Piece from '../piece/index';
 
 import HexagonStyled from './styled';

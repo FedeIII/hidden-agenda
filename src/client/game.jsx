@@ -5,6 +5,7 @@ import GlobalStyle from './globalStyle';
 import { withState } from 'State';
 import StartPhase from 'Phases/startPhase';
 import PlayPhase from 'Phases/playPhase';
+import EndPhase from 'Phases/endPhase';
 
 export default withState(() => (
   <>
@@ -12,6 +13,7 @@ export default withState(() => (
     <Router>
       <Route exact path="/" component={StartPhase} />
       <Route exact path="/play" component={PlayPhase} />
+      <Route exact path="/end" component={EndPhase} />
     </Router>
   </>
 ));

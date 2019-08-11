@@ -17,6 +17,8 @@ import { AGENT, CEO, SPY, SNIPER } from 'Domain/pieceTypes';
 //      1: left
 //      0: right
 
+const NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END = 3;
+
 const pieceIds = [
   `0-${AGENT}1`,
   `0-${AGENT}2`,
@@ -877,6 +879,45 @@ function getPiecesKilledByTeam(team, pieces) {
   );
 }
 
+function hasGameFinished(pieces) {
+  return (
+    pieces.filter(piece => isCeo(piece.id) && piece.killed).length >=
+    NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END
+  );
+}
+
+const POINTS_PER_PIECE_TYPE = {
+  A: 5,
+  S: 10,
+  N: 10,
+  C: 20,
+};
+
+function getPointsFromKills(team, pieces) {
+  return Object.entries(getPiecesKilledByTeam(team, pieces)).reduce(
+    (score, [pieceType, pieceCount]) =>
+      score + POINTS_PER_PIECE_TYPE[pieceType] * pieceCount,
+    0,
+  );
+}
+
+function getPointsFromSurvivors(team, pieces) {
+  return pieces
+    .filter(
+      piece => getTeam(piece.id) === team && piece.position && !piece.killed,
+    )
+    .reduce(
+      (score, piece) => score + POINTS_PER_PIECE_TYPE[getType(piece.id)],
+      0,
+    );
+}
+
+function getPointsForTeam(team, pieces) {
+  return (
+    getPointsFromKills(team, pieces) + getPointsFromSurvivors(team, pieces)
+  );
+}
+
 export default {
   init,
   toggle,
@@ -901,4 +942,6 @@ export default {
   highlightSnipersWithSight,
   isInSniperSight,
   getPiecesKilledByTeam,
+  hasGameFinished,
+  getPointsForTeam,
 };

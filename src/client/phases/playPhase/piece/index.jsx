@@ -2,7 +2,7 @@ import React, { useContext, useCallback } from 'react';
 import pz from 'Domain/pz';
 import { StateContext } from 'State';
 import { togglePiece } from 'Client/actions';
-import PieceStyled from './styled';
+import PieceStyled from 'Client/components/pieceStyled';
 
 function Piece({ id, selectedDirection, selected, highlight }) {
   const team = pz.getTeam(id);

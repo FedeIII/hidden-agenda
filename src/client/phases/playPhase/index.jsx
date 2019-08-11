@@ -2,9 +2,10 @@ import React, { useContext, useCallback } from 'react';
 import { Redirect } from 'react-router-dom';
 import { StateContext } from 'State';
 import Button from 'Client/components/button';
+import HQs from 'Client/components/hqs';
 import pz from 'Domain/pz';
 import { nextTurn, snipe } from 'Client/actions';
-import { PlayPhaseStyled, Turn, Board, Buttons, HQs } from './components';
+import { PlayPhaseStyled, Turn, Board, Buttons } from './components';
 import HQ from './hq';
 import TableBoard from './tableBoard';
 
@@ -33,9 +34,16 @@ function useRenderTurn() {
   );
 }
 
+function useGameFinished() {
+  const [{ pieces }] = useContext(StateContext);
+
+  return pz.hasGameFinished(pieces);
+}
+
 function PlayPhase() {
   const readyToPlay = useReadyToPlay();
   const renderTurn = useRenderTurn();
+  const gameFinished = useGameFinished();
   const [{ hasTurnEnded, pieces }, dispatch] = useContext(StateContext);
 
   const isSniperOnBoard = pz.isSniperOnBoard(pieces);
@@ -55,6 +63,7 @@ function PlayPhase() {
   return (
     <PlayPhaseStyled>
       {!readyToPlay && <Redirect to="/" />}
+      {gameFinished && <Redirect to="/end" />}
       <Turn>{renderTurn()}</Turn>
       <Board>
         <HQs>

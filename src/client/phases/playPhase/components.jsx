@@ -22,14 +22,6 @@ export const Board = styled.div`
   margin-bottom: 20px;
 `;
 
-export const HQs = styled.div`
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  width: 28%;
-`;
-
 export const Buttons = styled.div`
   display: flex;
   justify-content: space-evenly;
@@ -55,38 +47,6 @@ export const BoardRow = styled.div`
   justify-content: center;
 `;
 
-const hqColor = ({ team }) => {
-  switch (team) {
-    default:
-    case '0':
-      return css`
-        background-color: white;
-      `;
-    case '1':
-      return css`
-        background-color: red;
-      `;
-    case '2':
-      return css`
-        background-color: black;
-      `;
-    case '3':
-      return css`
-        background-color: yellow;
-      `;
-  }
-};
-
-export const HqStyled = styled.div`
-  position: relative;
-  height: 42%;
-  display: flex;
-  flex-direction: column;
-  border: 2px solid gray;
-  padding: 8px;
-  ${hqColor}
-`;
-
 export const HqStore = styled.div`
   position: relative;
   width: 100%;
@@ -94,18 +54,5 @@ export const HqStore = styled.div`
   background-image: url('img/hexgrid.png');
   background-size: 100% 100%;
   background-repeat: no-repeat;
-`;
-
-export const CementeryStyled = styled.div`
-  letter-spacing: -3px;
-  display: flex;
-  min-height: 22%;
-  align-items: flex-end;
-`;
-
-export const CementeryCount = styled.span`
-  flex-basis: 25%;
-  display: flex;
-  align-items: center;
-  color: ${({ team }) => (team === '1' || team === '2' ? 'white' : 'black')};
+  margin-bottom: 10px;
 `;

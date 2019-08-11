@@ -66,9 +66,13 @@ yarn go
   * ~~assign kills~~
   * ~~show kills~~
   * ~~killing a ceo kills the rest of team pieces~~
+* ~~Game ending~~
 * Scores
+  * team scores
+    * ~~killed pieces~~
+    * survivor pieces
+  * player scores
 * Alignment cards
-* Game ending
 * Reveal mechanics
 * Accuse mechanics
 * Claim control mechanics

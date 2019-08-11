@@ -1,8 +1,9 @@
 import React, { useContext } from 'react';
 import { StateContext } from 'State';
 import pz from 'Domain/pz';
-import { HqStyled, HqStore } from './components';
-import Cementery from './cementery';
+import HqStyled from 'Client/components/hqStyled';
+import Cementery from 'Client/components/cementery';
+import { HqStore } from './components';
 import Piece from './piece/index';
 
 function getNotStartedTeamPieces(pieces, team) {
