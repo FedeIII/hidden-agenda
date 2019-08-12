@@ -1,12 +1,17 @@
-import React, { useContext, useCallback } from 'react';
-import { Redirect } from 'react-router-dom';
+import React, { useContext } from 'react';
 import { StateContext } from 'State';
-import Button from 'Client/components/button';
 import pz from 'Domain/pz';
 import HQs from 'Client/components/hqs';
 import HqStyled from 'Client/components/hqStyled';
 import { Cementery, Survivors } from 'Client/components/pieceCount';
-import { EndPhaseStyled, Score, Points, PieceCountTitle } from './components';
+import {
+  EndPhaseStyled,
+  Score,
+  Points,
+  PieceCountTitle,
+  PieceCountContainer,
+} from './components';
+import PieceScoreTable from './pieceScoreTable';
 
 function renderScore(team) {
   const [{ pieces }] = useContext(StateContext);
@@ -19,56 +24,35 @@ function renderScore(team) {
   );
 }
 
+function TeamScore({ team }) {
+  return (
+    <HqStyled team={team}>
+      {renderScore(team)}
+      <PieceCountContainer>
+        <PieceCountTitle>Killed:</PieceCountTitle>
+        <Cementery team={team} />
+      </PieceCountContainer>
+      <PieceCountContainer>
+        <PieceCountTitle>Survivors:</PieceCountTitle>
+        <Survivors team={team} />
+      </PieceCountContainer>
+    </HqStyled>
+  );
+}
+
 function EndPhase() {
   return (
     <EndPhaseStyled>
       <HQs>
-        <HqStyled team="0">
-          {renderScore('0')}
-          <div>
-            <PieceCountTitle>Killed:</PieceCountTitle>
-            <Cementery team="0" />
-          </div>
-          <div>
-            <PieceCountTitle>Survivors:</PieceCountTitle>
-            <Survivors team="0" />
-          </div>
-        </HqStyled>
-        <HqStyled team="1">
-          {renderScore('1')}
-          <div>
-            <PieceCountTitle>Killed:</PieceCountTitle>
-            <Cementery team="1" />
-          </div>
-          <div>
-            <PieceCountTitle>Survivors:</PieceCountTitle>
-            <Survivors team="1" />
-          </div>
-        </HqStyled>
+        <TeamScore team="0" />
+        <TeamScore team="1" />
       </HQs>
+
+      <PieceScoreTable />
+
       <HQs>
-        <HqStyled team="2">
-          {renderScore('2')}
-          <div>
-            <PieceCountTitle>Killed:</PieceCountTitle>
-            <Cementery team="2" />
-          </div>
-          <div>
-            <PieceCountTitle>Survivors:</PieceCountTitle>
-            <Survivors team="2" />
-          </div>
-        </HqStyled>
-        <HqStyled team="3">
-          {renderScore('3')}
-          <div>
-            <PieceCountTitle>Killed:</PieceCountTitle>
-            <Cementery team="3" />
-          </div>
-          <div>
-            <PieceCountTitle>Survivors:</PieceCountTitle>
-            <Survivors team="3" />
-          </div>
-        </HqStyled>
+        <TeamScore team="2" />
+        <TeamScore team="3" />
       </HQs>
     </EndPhaseStyled>
   );

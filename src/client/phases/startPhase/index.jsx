@@ -113,10 +113,7 @@ function usePlayerOptions(initialPlayers) {
 }
 
 function StartPhase() {
-  const [playerOptions, playerOptionsHandlers] = usePlayerOptions({
-    player1: 'sara',
-    player2: 'fede',
-  });
+  const [playerOptions, playerOptionsHandlers] = usePlayerOptions({});
 
   const { players, numberOfPlayers } = playerOptions;
   const {
