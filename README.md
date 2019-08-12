@@ -22,6 +22,11 @@ yarn go
 ```
 
 ## Changelog
+### v1.0.0
+* Desktop ready
+* First playable version
+* Local multiplayer
+
 ### v0.5.0
 * Added End Phase with team scores
 
