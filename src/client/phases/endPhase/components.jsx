@@ -1,6 +1,6 @@
 import styled, { css } from 'styled-components';
 
-export const EndPhaseStyled = styled.div`
+export const EndPhaseContainer = styled.div`
   position: relative;
   display: flex;
   flex-direction: row;

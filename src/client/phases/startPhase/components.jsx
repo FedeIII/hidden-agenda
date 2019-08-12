@@ -1,10 +1,12 @@
 import styled from 'styled-components';
 
-export const StartPhaseStyled = styled.div`
+export const StartPhaseContainer = styled.div`
   position: relative;
   display: flex;
   flex-direction: column;
   padding: 40px;
+  max-width: 960px;
+  width: 66vw;
 `;
 
 export const Options = styled.div`

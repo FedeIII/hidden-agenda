@@ -1,6 +1,14 @@
 import styled, { css } from 'styled-components';
 import pz from 'Domain/pz';
 
+const brightness = ({ pieceId = '' }) => {
+  if (pz.getTeam(pieceId) === '2') {
+    return css`
+      filter: brightness(1.2);
+    `;
+  }
+};
+
 const directionTransformMap = {
   '1': {
     '0': css`
@@ -126,6 +134,7 @@ const PieceStyled = styled.img`
   margin-top: 13%;
   z-index: 2;
 
+  ${brightness}
   ${withDirection}
   ${inHQ}
   ${positionInHQ}

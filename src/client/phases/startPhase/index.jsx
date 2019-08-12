@@ -4,7 +4,7 @@ import { startGame } from 'Client/actions';
 import { StateContext } from 'State';
 import Button from 'Client/components/button';
 import {
-  StartPhaseStyled,
+  StartPhaseContainer,
   Options,
   NumberPlayers,
   MainTitle,
@@ -102,7 +102,7 @@ function usePlayerOptions(initialPlayers) {
   );
 
   const onSelectPlayerOptions = useCallback(
-    (player, name) => setNames({ ...players, [player]: name }),
+    (player, name) => setNames({ ...players, [player]: name.toUpperCase() }),
     [players],
   );
 
@@ -113,7 +113,10 @@ function usePlayerOptions(initialPlayers) {
 }
 
 function StartPhase() {
-  const [playerOptions, playerOptionsHandlers] = usePlayerOptions({});
+  const [playerOptions, playerOptionsHandlers] = usePlayerOptions({
+    player1: undefined,
+    player2: undefined,
+  });
 
   const { players, numberOfPlayers } = playerOptions;
   const {
@@ -124,7 +127,7 @@ function StartPhase() {
   const [readyToStart, onStart] = useReadyToStart(players);
 
   return (
-    <StartPhaseStyled>
+    <StartPhaseContainer>
       {readyToStart && <Redirect to="/play" />}
       <Options>
         <NumberPlayers>
@@ -166,7 +169,7 @@ function StartPhase() {
           START
         </Button>
       </Buttons>
-    </StartPhaseStyled>
+    </StartPhaseContainer>
   );
 }
 

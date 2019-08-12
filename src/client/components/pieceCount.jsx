@@ -7,7 +7,7 @@ import PieceStyled from './pieceStyled';
 const PieceCount = styled.div`
   letter-spacing: -3px;
   display: flex;
-  min-height: 26px;
+  min-height: 39px;
   align-items: end;
   justify-content: flex-start;
   width: 100%;

@@ -5,7 +5,7 @@ import Button from 'Client/components/button';
 import HQs from 'Client/components/hqs';
 import pz from 'Domain/pz';
 import { nextTurn, snipe } from 'Client/actions';
-import { PlayPhaseStyled, Turn, Board, Buttons } from './components';
+import { PlayPhaseContainer, Turn, Board, Buttons } from './components';
 import HQ from './hq';
 import TableBoard from './tableBoard';
 
@@ -61,7 +61,7 @@ function PlayPhase() {
   }, [hasTurnEnded]);
 
   return (
-    <PlayPhaseStyled>
+    <PlayPhaseContainer>
       {!readyToPlay && <Redirect to="/" />}
       {gameFinished && <Redirect to="/end" />}
       <Turn>{renderTurn()}</Turn>
@@ -84,7 +84,7 @@ function PlayPhase() {
           NEXT TURN
         </Button>
       </Buttons>
-    </PlayPhaseStyled>
+    </PlayPhaseContainer>
   );
 }
 

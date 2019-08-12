@@ -5,7 +5,7 @@ import HQs from 'Client/components/hqs';
 import HqStyled from 'Client/components/hqStyled';
 import { Cementery, Survivors } from 'Client/components/pieceCount';
 import {
-  EndPhaseStyled,
+  EndPhaseContainer,
   Score,
   Points,
   PieceCountTitle,
@@ -42,7 +42,7 @@ function TeamScore({ team }) {
 
 function EndPhase() {
   return (
-    <EndPhaseStyled>
+    <EndPhaseContainer>
       <HQs>
         <TeamScore team="0" />
         <TeamScore team="1" />
@@ -54,7 +54,7 @@ function EndPhase() {
         <TeamScore team="2" />
         <TeamScore team="3" />
       </HQs>
-    </EndPhaseStyled>
+    </EndPhaseContainer>
   );
 }
 

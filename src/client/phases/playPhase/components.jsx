@@ -1,10 +1,11 @@
 import styled, { css } from 'styled-components';
 
-export const PlayPhaseStyled = styled.div`
+export const PlayPhaseContainer = styled.div`
   position: relative;
   display: flex;
   flex-direction: column;
   padding: 40px 40px 60px;
+  min-width: 75vw;
 `;
 
 export const Turn = styled.div`
@@ -50,7 +51,7 @@ export const BoardRow = styled.div`
 export const HqStore = styled.div`
   position: relative;
   width: 100%;
-  height: 100%;
+  height: 80%;
   background-image: url('img/hexgrid.png');
   background-size: 100% 100%;
   background-repeat: no-repeat;
