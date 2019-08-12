@@ -5,7 +5,8 @@ const HQs = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: space-around;
-  width: 28%;
+  width: 25%;
+  flex-shrink: 0;
 `;
 
 export default HQs;

@@ -35,13 +35,15 @@ function renderPieceCountList(pieces, team, getPieceCount) {
   return getPieceCount(pieces, team)
     .filter(([pieceType, pieceCount]) => pieceCount !== 0)
     .map(([pieceType, pieceCount]) => (
-      <PieceTypeCount key={`cementery-${team}-${pieceType}`} team={team}>
+      <PieceTypeCount key={`piece-count-${team}-${pieceType}`} team={team}>
         <PieceType type={pieceType} team={team} /> x {pieceCount}
       </PieceTypeCount>
     ));
 }
 
-// CEMENTERY
+/**
+ * CEMENTERY
+ */
 
 function useGetKilledPiecesCount(team) {
   const [{ pieces }] = useContext(StateContext);
@@ -63,7 +65,9 @@ function Cementery({ team }) {
   );
 }
 
-// SURVIVORS
+/**
+ * SURVIVORS
+ */
 
 function useGetSurvivorsCount(team) {
   const [{ pieces }] = useContext(StateContext);

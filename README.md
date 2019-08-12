@@ -22,6 +22,9 @@ yarn go
 ```
 
 ## Changelog
+### v0.5.0
+* Added End Phase with team scores
+
 ### v0.4.0
 * Finished all mechanics for all pieces
 * Fixed multiple movement, selection and end turn bugs
@@ -68,10 +71,10 @@ yarn go
   * ~~killing a ceo kills the rest of team pieces~~
 * ~~Game ending~~
 * Scores
-  * team scores
+  * ~~team scores~~
     * ~~killed pieces~~
     * ~~survivor pieces~~
-    * piece score table
+    * ~~piece score table~~
   * player scores
 * Alignment cards
 * Reveal mechanics
