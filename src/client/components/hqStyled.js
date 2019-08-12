@@ -32,6 +32,7 @@ const HqStyled = styled.div`
   border: 2px solid gray;
   padding: 16px 8px;
   margin-bottom: 20px;
+  justify-content: space-between;
   ${hqColor}
 `;
 

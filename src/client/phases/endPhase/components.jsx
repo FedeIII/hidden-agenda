@@ -18,3 +18,8 @@ export const Score = styled.div`
 export const Points = styled.sup`
   font-size: 16px;
 `;
+
+export const PieceCountTitle = styled.span`
+  display: inline-block;
+  margin-bottom: 8px;
+`;

@@ -862,21 +862,27 @@ function highlightSnipersWithSight(pieces) {
   return pieces.map(piece => highlightSniperWithSight(piece, snipersWithSight));
 }
 
-function getPiecesKilledByTeam(team, pieces) {
-  return pieces.reduce(
-    (piecesKilled, piece) => {
-      if (piece.killedById && getTeam(piece.killedById) === team) {
-        const type = getType(piece.id);
-        return {
-          ...piecesKilled,
-          [type]: piecesKilled[type] + 1,
-        };
-      }
+function addPieceToCount(pieceCount, piece) {
+  const type = getType(piece.id);
 
-      return piecesKilled;
-    },
-    { A: 0, S: 0, N: 0, C: 0 },
-  );
+  return {
+    ...pieceCount,
+    [type]: pieceCount[type] + 1,
+  };
+}
+
+function getKilledPiecesByTeam(team, pieces) {
+  return pieces
+    .filter(piece => piece.killedById && getTeam(piece.killedById) === team)
+    .reduce(addPieceToCount, { A: 0, S: 0, N: 0, C: 0 });
+}
+
+function getSurvivorsForTeam(team, pieces) {
+  return pieces
+    .filter(
+      piece => getTeam(piece.id) === team && piece.position && !piece.killed,
+    )
+    .reduce(addPieceToCount, { A: 0, S: 0, N: 0, C: 0 });
 }
 
 function hasGameFinished(pieces) {
@@ -894,7 +900,7 @@ const POINTS_PER_PIECE_TYPE = {
 };
 
 function getPointsFromKills(team, pieces) {
-  return Object.entries(getPiecesKilledByTeam(team, pieces)).reduce(
+  return Object.entries(getKilledPiecesByTeam(team, pieces)).reduce(
     (score, [pieceType, pieceCount]) =>
       score + POINTS_PER_PIECE_TYPE[pieceType] * pieceCount,
     0,
@@ -941,7 +947,8 @@ export default {
   setCeoBuffs,
   highlightSnipersWithSight,
   isInSniperSight,
-  getPiecesKilledByTeam,
+  getKilledPiecesByTeam,
+  getSurvivorsForTeam,
   hasGameFinished,
   getPointsForTeam,
 };

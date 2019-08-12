@@ -70,7 +70,8 @@ yarn go
 * Scores
   * team scores
     * ~~killed pieces~~
-    * survivor pieces
+    * ~~survivor pieces~~
+    * piece score table
   * player scores
 * Alignment cards
 * Reveal mechanics
