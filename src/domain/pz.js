@@ -1,4 +1,4 @@
-import cells from 'Domain/cells';
+import cells, { OUT_POSITION } from 'Domain/cells';
 import {
   areCoordsEqual,
   areCoordsInList,
@@ -420,7 +420,7 @@ function willAgentSlide({ position, direction }) {
 
 function killPiece({ killedPiece, killedById }) {
   killedPiece.killed = true;
-  killedPiece.position = [-1, -1];
+  killedPiece.position = OUT_POSITION;
   killedPiece.killedById = killedById;
 
   if (isCeo(killedPiece.id)) {

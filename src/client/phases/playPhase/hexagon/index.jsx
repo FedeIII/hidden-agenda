@@ -33,7 +33,7 @@ function useOnCellClick(coords) {
   );
 }
 
-function Hexagon({ row, cell, piece, highlighted, onMouseEnter }) {
+function Hexagon({ row, cell, piece, highlighted, onMouseEnter, edge }) {
   const onCellClick = useOnCellClick([row, cell]);
 
   return (
@@ -41,6 +41,7 @@ function Hexagon({ row, cell, piece, highlighted, onMouseEnter }) {
       highlighted={highlighted}
       row={row}
       cell={cell}
+      edge={edge}
       onClick={onCellClick}
       onMouseEnter={onMouseEnter}
     >

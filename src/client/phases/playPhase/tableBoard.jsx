@@ -7,10 +7,10 @@ import { StateContext } from 'State';
 import { TableBoardStyled, BoardRow } from './components';
 import Hexagon from './hexagon';
 
-const ROW_NUMBERS = [0, 1, 2, 3, 4, 5, 6];
-const CELLS_BY_ROW = [4, 5, 6, 7, 6, 5, 4];
+export const ROW_NUMBERS = [0, 1, 2, 3, 4, 5, 6];
+export const CELLS_BY_ROW = [4, 5, 6, 7, 6, 5, 4];
 
-function renderHexagon({ row, cell }) {
+function renderHexagon({ row, cell, edge }) {
   const [{ pieces, followMouse, pieceState }, dispatch] = useContext(
     StateContext,
   );
@@ -55,34 +55,47 @@ function renderHexagon({ row, cell }) {
 
   return (
     <Hexagon
-      key={`${row}${cell}`}
+      key={`hexagon-${row}-${cell}`}
       row={row}
       cell={cell}
       piece={piece}
       highlighted={highlighted}
+      edge={edge}
       onClick={onHexagonClick}
       onMouseEnter={onMouseEnter}
     />
   );
 }
 
+function renderRow(row, numberOfCells) {
+  const cells = [renderHexagon({ row, cell: -1, edge: true })];
+
+  for (let cell = 0; cell < numberOfCells; cell++) {
+    cells.push(
+      renderHexagon({
+        row,
+        cell,
+        edge: row < 0 || row >= ROW_NUMBERS.length,
+      }),
+    );
+  }
+
+  cells.push(renderHexagon({ row, cell: numberOfCells, edge: true }));
+
+  return <BoardRow key={`row-${row}`}>{cells}</BoardRow>;
+}
+
 function TableBoard() {
   return (
     <TableBoardStyled>
+      {renderRow(-1, 3)}
+
       {ROW_NUMBERS.map(row => {
         const numberOfCells = CELLS_BY_ROW[row];
-        const cells = [];
-
-        for (let cell = 0; cell < numberOfCells; cell++) {
-          cells.push(renderHexagon({ row, cell }));
-        }
-
-        return (
-          <BoardRow key={row} className={`board__row-${row}`}>
-            {cells}
-          </BoardRow>
-        );
+        return renderRow(row, numberOfCells);
       })}
+
+      {renderRow(ROW_NUMBERS.length, 3)}
     </TableBoardStyled>
   );
 }

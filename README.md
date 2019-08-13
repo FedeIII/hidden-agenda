@@ -4,10 +4,9 @@ An abstract board game with psychology
 ## Getting Started
 
 ### Installing
-* Install [yarn](https://yarnpkg.com/en/docs/install)
 * Install dependencies
 ```
-yarn install
+npm install
 ```
 * Build dist folder
 ```
@@ -26,6 +25,9 @@ yarn go
 * Desktop ready
 * First playable version
 * Local multiplayer
+
+#### v1.0.1
+* Fixed direction for the pieces at the border of the board
 
 ### v0.5.0
 * Added End Phase with team scores
@@ -91,7 +93,7 @@ yarn go
 ## Known Bugs
 * Spies reset their movement when clicked on after first movement
 * Spies shouldn't be able to kill on their first move (or second move if buffed)
-* Can't direct pieces outwards on the table border
+* ~~Can't direct pieces outwards on the table border~~
 * ~~Agent slide on CEO buff~~
 * ~~Sniper sight doesn't get blocked by other pieces~~
 * ~~"Next Turn" becomes available before collocating the agent~~

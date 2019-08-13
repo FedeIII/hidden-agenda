@@ -4,7 +4,7 @@ import PieceStyled from 'Client/components/pieceStyled';
 
 const Table = styled.div`
   background-color: lightslategray;
-  border: 1px solid gray;
+  border: 2px solid gray;
   width: 100%;
   display: flex;
   flex-direction: column;

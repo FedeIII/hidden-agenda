@@ -33,7 +33,7 @@ export const Button = styled.button``;
 
 export const TableBoardStyled = styled.div`
   position: relative;
-  width: 50%;
+  width: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;

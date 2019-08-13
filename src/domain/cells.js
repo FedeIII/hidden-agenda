@@ -10,7 +10,7 @@ import { areCoordsEqual } from 'Domain/utils';
 
 const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
 const cells = [];
-const outPosition = [-1, -1];
+export const OUT_POSITION = [null, null];
 
 function createGetPositionInDirection(r, c) {
   return function getPositionInDirection([v, h] = []) {
@@ -164,17 +164,17 @@ cellsByRow.forEach(numberOfCells => {
   cells.push(row);
 });
 
-function get([r, c] = outPosition) {
+function get([r, c] = OUT_POSITION) {
   if (inBoard([r, c])) {
     return cells[r][c];
   }
 
   return {
-    position: outPosition,
-    getPositionInDirection: () => outPosition,
-    getPositionsInDirections: () => [outPosition],
-    getPositionAfterDirections: () => outPosition,
-    getPositionsInDirection: () => [outPosition],
+    position: OUT_POSITION,
+    getPositionInDirection: () => OUT_POSITION,
+    getPositionsInDirections: () => [OUT_POSITION],
+    getPositionAfterDirections: () => OUT_POSITION,
+    getPositionsInDirection: () => [OUT_POSITION],
   };
 }
 
@@ -189,7 +189,7 @@ function getDirection(from, to) {
   return [v, h];
 }
 
-function inBoard([r, c] = outPosition) {
+function inBoard([r, c] = OUT_POSITION) {
   if (r >= 0 && r < 7) {
     if (c >= 0 && c < cellsByRow[r]) {
       return true;
