@@ -25,9 +25,8 @@ yarn go
 * Desktop ready
 * First playable version
 * Local multiplayer
-
-#### v1.0.1
-* Fixed direction for the pieces at the border of the board
+* **v1.0.1**
+  * Fixed direction for the pieces at the border of the board
 
 ### v0.5.0
 * Added End Phase with team scores
