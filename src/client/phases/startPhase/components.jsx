@@ -75,7 +75,3 @@ export const PlayerNameInput = styled.input`
     letter-spacing: 5px;
   }
 `;
-
-export const Buttons = styled.div`
-  text-align: center;
-`;

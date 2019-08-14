@@ -21,6 +21,9 @@ yarn go
 ```
 
 ## Changelog
+### v1.1.0
+* Added alignment cards selection
+
 ### v1.0.0
 * Desktop ready
 * First playable version
@@ -82,7 +85,7 @@ yarn go
     * ~~survivor pieces~~
     * ~~piece score table~~
   * player scores
-* Alignment cards
+* ~~Alignment cards~~
 * Reveal mechanics
 * Accuse mechanics
 * Claim control mechanics

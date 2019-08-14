@@ -1,11 +1,12 @@
 import React, { useContext, useCallback } from 'react';
 import { Redirect } from 'react-router-dom';
 import { StateContext } from 'State';
-import Button from 'Client/components/button';
+import { Button } from 'Client/components/button';
+import { Title } from 'Client/components/title';
 import HQs from 'Client/components/hqs';
 import pz from 'Domain/pz';
 import { nextTurn, snipe } from 'Client/actions';
-import { PlayPhaseContainer, Turn, Board, Buttons } from './components';
+import { PlayPhaseContainer, Board, Buttons } from './components';
 import HQ from './hq';
 import TableBoard from './tableBoard';
 
@@ -64,7 +65,9 @@ function PlayPhase() {
     <PlayPhaseContainer>
       {!readyToPlay && <Redirect to="/" />}
       {gameFinished && <Redirect to="/end" />}
-      <Turn>{renderTurn()}</Turn>
+
+      <Title>{renderTurn()}</Title>
+
       <Board>
         <HQs>
           <HQ team="0" />
@@ -76,6 +79,7 @@ function PlayPhase() {
           <HQ team="3" />
         </HQs>
       </Board>
+
       <Buttons>
         <Button small active={isSniperOnBoard} onClick={onSnipe}>
           SNIPE!

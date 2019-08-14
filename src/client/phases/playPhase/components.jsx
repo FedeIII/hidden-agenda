@@ -8,14 +8,6 @@ export const PlayPhaseContainer = styled.div`
   min-width: 75vw;
 `;
 
-export const Turn = styled.div`
-  padding: 20px;
-  text-align: center;
-  color: white;
-  font-weight: bold;
-  font-size: 16px;
-`;
-
 export const Board = styled.div`
   position: relative;
   display: flex;

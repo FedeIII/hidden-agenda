@@ -100,11 +100,5 @@ export default function pieceStateReducer(state, action) {
     result = state.pieceState;
   }
 
-  console.log(
-    'PIECE_STATE',
-    action.type,
-    action.payload && action.payload.pieceId,
-    result,
-  );
   return result;
 }

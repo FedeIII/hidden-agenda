@@ -32,7 +32,7 @@ const onActive = ({ active }) => {
   }
 };
 
-const Button = styled.button`
+export const Button = styled.button`
   font-family: monospace;
   font-size: 17px;
   color: white;
@@ -52,4 +52,6 @@ const Button = styled.button`
   }
 `;
 
-export default Button;
+export const Buttons = styled.div`
+  text-align: center;
+`;

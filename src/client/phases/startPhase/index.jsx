@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useContext } from 'react';
 import { Redirect } from 'react-router-dom';
 import { startGame } from 'Client/actions';
 import { StateContext } from 'State';
-import Button from 'Client/components/button';
+import { Button, Buttons } from 'Client/components/button';
 import {
   StartPhaseContainer,
   Options,
@@ -14,7 +14,6 @@ import {
   Players,
   Player,
   PlayerNameInput,
-  Buttons,
 } from './components';
 
 function NumberPlayersOption({ n, numberPlayers, onChange }) {
@@ -128,7 +127,7 @@ function StartPhase() {
 
   return (
     <StartPhaseContainer>
-      {readyToStart && <Redirect to="/play" />}
+      {readyToStart && <Redirect to="/alignment" />}
       <Options>
         <NumberPlayers>
           <MainTitle>1. NUMBER OF PLAYERS</MainTitle>
@@ -166,7 +165,7 @@ function StartPhase() {
           active={arePlayersReady(numberOfPlayers, players)}
           onClick={onStart}
         >
-          START
+          GET ALIGNMENTS
         </Button>
       </Buttons>
     </StartPhaseContainer>
