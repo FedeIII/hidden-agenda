@@ -10,13 +10,18 @@ import { AlignmentFriend, AlignmentFoe } from './alignments';
 const FRIEND_CARDS = ['0', '0', '1', '1', '2', '2', '3', '3'];
 const FOE_CARDS = ['0', '0', '1', '1', '2', '2', '3', '3'];
 
-function getCard(remainingCards, setRemainingCards) {
+function getCard(remainingCards, setRemainingCards, excludedCard) {
   const randomIndex = Math.floor(Math.random() * remainingCards.length);
-  const friendCard = remainingCards.splice(randomIndex, 1)[0];
+  const card = remainingCards.splice(randomIndex, 1)[0];
+
+  if (excludedCard === card) {
+    remainingCards.push(card);
+    return getCard(remainingCards, setRemainingCards, excludedCard);
+  }
 
   setRemainingCards(remainingCards);
 
-  return friendCard;
+  return card;
 }
 
 function useSelectedCards() {
@@ -29,7 +34,7 @@ function useSelectedCards() {
   );
 
   const getFoeCard = useCallback(
-    () => getCard(remainingFoes, setRemainingFoes),
+    friendCard => getCard(remainingFoes, setRemainingFoes, friendCard),
     [remainingFoes, setRemainingFoes],
   );
 
@@ -73,25 +78,6 @@ function useAlignmentCards(start) {
     });
   }, [players, playerTurn, start, resetReveals, setPlayerTurn]);
 
-  const revealFriend = useCallback(() => {
-    if (cardsRevealed.friend) {
-      return;
-    }
-
-    dispatch(setAlignment({ name: playerTurn, friend: getFriendCard() }));
-    setCardsRevealed(reveals => ({ friend: true, foe: reveals.foe }));
-  }, [playerTurn, setCardsRevealed, cardsRevealed]);
-
-  const revealFoe = useCallback(() => {
-    if (cardsRevealed.foe) {
-      return;
-    }
-
-    dispatch(setAlignment({ name: playerTurn, foe: getFoeCard() }));
-
-    setCardsRevealed(reveals => ({ friend: reveals.friend, foe: true }));
-  }, [playerTurn, setCardsRevealed, cardsRevealed]);
-
   const currentFriend = useMemo(() => {
     const currentPlayer = players.find(player => player.name === playerTurn);
 
@@ -111,6 +97,25 @@ function useAlignmentCards(start) {
 
     return null;
   }, [players, playerTurn]);
+
+  const revealFriend = useCallback(() => {
+    if (cardsRevealed.friend) {
+      return;
+    }
+
+    dispatch(setAlignment({ name: playerTurn, friend: getFriendCard() }));
+    setCardsRevealed(reveals => ({ friend: true, foe: reveals.foe }));
+  }, [playerTurn, setCardsRevealed, cardsRevealed]);
+
+  const revealFoe = useCallback(() => {
+    if (cardsRevealed.foe) {
+      return;
+    }
+
+    dispatch(setAlignment({ name: playerTurn, foe: getFoeCard(currentFriend) }));
+
+    setCardsRevealed(reveals => ({ friend: reveals.friend, foe: true }));
+  }, [playerTurn, setCardsRevealed, cardsRevealed]);
 
   return {
     cardsRevealed,

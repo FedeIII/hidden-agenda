@@ -71,5 +71,6 @@ export const AlignmentTeam = styled.span`
   display: flex;
   align-items: center;
   text-align: center;
+  justify-content: center;
   ${cardTeamColor}
 `;
