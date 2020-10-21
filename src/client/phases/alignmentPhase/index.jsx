@@ -4,6 +4,7 @@ import { StateContext } from 'State';
 import { setAlignment } from 'Client/actions';
 import { Button, Buttons } from 'Client/components/button';
 import { Title, Subtitle } from 'Client/components/title';
+import useTest from 'Hooks/useTest';
 import { AlignmentPhaseContainer, Alignments } from './components';
 import { AlignmentFriend, AlignmentFoe } from './alignments';
 
@@ -172,9 +173,12 @@ function AlignmentPhase() {
   const isButtonActive =
     Object.values(cardsRevealed).every(revealed => revealed) || !playerTurn;
 
+  const goToNextPhase = readyToStart || useTest();
+  console.log('goToNextPhase', goToNextPhase);
+
   return (
     <AlignmentPhaseContainer>
-      {readyToStart && <Redirect to="/play" />}
+      {goToNextPhase && <Redirect to="/play" />}
       {renderTitle(playerTurn)}
 
       {playerTurn && (

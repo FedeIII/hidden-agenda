@@ -13,6 +13,7 @@ module.exports = {
       Components: path.resolve(__dirname, './src/client/components'),
       Phases: path.resolve(__dirname, './src/client/phases'),
       State: path.resolve(__dirname, './src/client/state'),
+      Hooks: path.resolve(__dirname, './src/client/hooks'),
       Domain: path.resolve(__dirname, './src/domain'),
       react: path.resolve('./node_modules/react'),
       'react-dom': path.resolve('./node_modules/react-dom'),

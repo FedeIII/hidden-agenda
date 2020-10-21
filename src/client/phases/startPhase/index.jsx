@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useContext } from 'react';
 import { Redirect } from 'react-router-dom';
 import { startGame } from 'Client/actions';
 import { StateContext } from 'State';
+import useTest from 'Hooks/useTest';
 import { Button, Buttons } from 'Client/components/button';
 import {
   StartPhaseContainer,
@@ -125,9 +126,11 @@ function StartPhase() {
 
   const [readyToStart, onStart] = useReadyToStart(players);
 
+  const goToNextPhase = readyToStart || useTest();
+
   return (
     <StartPhaseContainer>
-      {readyToStart && <Redirect to="/alignment" />}
+      {goToNextPhase && <Redirect to="/alignment" />}
       <Options>
         <NumberPlayers>
           <MainTitle>1. NUMBER OF PLAYERS</MainTitle>
