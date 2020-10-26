@@ -21,6 +21,9 @@ yarn go
 ```
 
 ## Changelog
+### v1.2.0
+* Added alignment reminder during Play Phase
+
 ### v1.1.0
 * Added alignment cards selection
 
