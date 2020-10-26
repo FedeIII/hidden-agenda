@@ -1,11 +1,12 @@
 import React from 'react';
 import { AlignmentCardStyled, AlignmentTeam } from './components';
+export { Alignments } from './components';
 
 function AlignmentCard(props) {
-  const { children, team } = props;
+  const { children, team, small } = props;
   return (
     <AlignmentCardStyled {...props}>
-      {children && <AlignmentTeam team={team}>{children}</AlignmentTeam>}
+      {children && <AlignmentTeam small team={team}>{children}</AlignmentTeam>}
     </AlignmentCardStyled>
   );
 }

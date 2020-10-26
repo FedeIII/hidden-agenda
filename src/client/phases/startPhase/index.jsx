@@ -126,7 +126,8 @@ function StartPhase() {
 
   const [readyToStart, onStart] = useReadyToStart(players);
 
-  const goToNextPhase = readyToStart || useTest();
+  const isTest = useTest()
+  const goToNextPhase = readyToStart || isTest;
 
   return (
     <StartPhaseContainer>

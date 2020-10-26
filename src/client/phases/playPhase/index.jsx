@@ -1,95 +1,156 @@
-import React, { useContext, useCallback } from 'react';
+import React, { useMemo, useContext, useCallback } from 'react';
 import { Redirect } from 'react-router-dom';
 import { StateContext } from 'State';
 import { Button } from 'Client/components/button';
 import { Title } from 'Client/components/title';
 import HQs from 'Client/components/hqs';
+import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
+import useBooleanState from 'Hooks/useBooleanState';
 import pz from 'Domain/pz';
 import { nextTurn, snipe } from 'Client/actions';
-import { PlayPhaseContainer, Board, Buttons } from './components';
+import { TEAM_NAMES } from 'Domain/teams';
+import { PlayPhaseContainer, Board, Buttons, AlignmentWarningStyled } from './components';
 import HQ from './hq';
 import TableBoard from './tableBoard';
 
+function useAlignmentMessages() {
+	const [isAlignmentWarningShown, showWarning, hideWarning] = useBooleanState(false);
+	const [isAlignmentShown, showAlignment, hideAlignment] = useBooleanState(false);
+
+	const onWarningConfirm = useCallback(() => {
+		hideWarning();
+		showAlignment();
+	}, [hideWarning, showAlignment]);
+
+	return [isAlignmentWarningShown, isAlignmentShown, showWarning, onWarningConfirm, hideAlignment];
+}
+
 function useReadyToPlay() {
-  const [{ players }] = useContext(StateContext);
+	const [{ players }] = useContext(StateContext);
 
-  return useCallback(() => {
-    const playerNames = Object.values(players);
+	return useCallback(() => {
+		const playerNames = Object.values(players);
 
-    return (
-      playerNames.length > 1 &&
-      playerNames.reduce(
-        (arePlayersReady, playerName) => arePlayersReady && playerName,
-        true,
-      )
-    );
-  }, [players]);
+		return (
+			playerNames.length > 1 &&
+			playerNames.reduce((arePlayersReady, playerName) => arePlayersReady && playerName, true)
+		);
+	}, [players]);
 }
 
 function useRenderTurn() {
-  const [{ players }] = useContext(StateContext);
+	const [{ players }] = useContext(StateContext);
 
-  return useCallback(
-    () => `Player's turn: ${players.find(player => player.turn).name}`,
-    [players],
-  );
+	return useCallback(() => `Player's turn: ${players.find(player => player.turn).name}`, [players]);
 }
 
 function useGameFinished() {
-  const [{ pieces }] = useContext(StateContext);
+	const [{ pieces }] = useContext(StateContext);
 
-  return pz.hasGameFinished(pieces);
+	return pz.hasGameFinished(pieces);
+}
+
+function AlignmentWarning(props) {
+	const { onClose } = props;
+	const [{ players }] = useContext(StateContext);
+
+	const playerName = useMemo(() => players.find(player => player.turn).name, [players]);
+
+	return (
+		<AlignmentWarningStyled>
+			This information is only for {playerName}{' '}
+			<Button small active onClick={onClose}>
+				Confirm
+			</Button>
+		</AlignmentWarningStyled>
+	);
+}
+
+function AlignmentReminder(props) {
+	const { onClose } = props;
+	const [{ players }] = useContext(StateContext);
+
+	const player = useMemo(() => players.find(player => player.turn), [players]);
+
+	return (
+		<Alignments small>
+			<AlignmentFriend small disabled player={player.name} team={player.friend}>
+				{TEAM_NAMES[player.friend]}
+			</AlignmentFriend>
+			<AlignmentFoe small disabled player={player.name} team={player.foe}>
+				{TEAM_NAMES[player.foe]}
+			</AlignmentFoe>
+			<Button small active onClick={onClose}>
+				HIDE
+			</Button>
+		</Alignments>
+	);
 }
 
 function PlayPhase() {
-  const readyToPlay = useReadyToPlay();
-  const renderTurn = useRenderTurn();
-  const gameFinished = useGameFinished();
-  const [{ hasTurnEnded, pieces }, dispatch] = useContext(StateContext);
+	const [
+		isAlignmentWarningShown,
+		isAlignmentShown,
+		showWarning,
+		onWarningConfirm,
+		hideAlignment,
+	] = useAlignmentMessages();
 
-  const isSniperOnBoard = pz.isSniperOnBoard(pieces);
+	const readyToPlay = useReadyToPlay();
+	const renderTurn = useRenderTurn();
+	const gameFinished = useGameFinished();
+	const [{ hasTurnEnded, pieces }, dispatch] = useContext(StateContext);
 
-  const onSnipe = useCallback(() => {
-    if (isSniperOnBoard) {
-      dispatch(snipe());
-    }
-  }, [isSniperOnBoard]);
+	const isSniperOnBoard = pz.isSniperOnBoard(pieces);
 
-  const onNextTurn = useCallback(() => {
-    if (hasTurnEnded) {
-      dispatch(nextTurn());
-    }
-  }, [hasTurnEnded]);
+	const onSnipe = useCallback(() => {
+		if (isSniperOnBoard) {
+			dispatch(snipe());
+		}
+	}, [isSniperOnBoard]);
 
-  return (
-    <PlayPhaseContainer>
-      {!readyToPlay && <Redirect to="/" />}
-      {gameFinished && <Redirect to="/end" />}
+	const onNextTurn = useCallback(() => {
+		if (hasTurnEnded) {
+			dispatch(nextTurn());
+		}
+	}, [hasTurnEnded]);
 
-      <Title>{renderTurn()}</Title>
+	return (
+		<PlayPhaseContainer>
+			{!readyToPlay && <Redirect to="/" />}
+			{gameFinished && <Redirect to="/end" />}
 
-      <Board>
-        <HQs>
-          <HQ team="0" />
-          <HQ team="1" />
-        </HQs>
-        <TableBoard />
-        <HQs>
-          <HQ team="2" />
-          <HQ team="3" />
-        </HQs>
-      </Board>
+			<Title>{renderTurn()}</Title>
 
-      <Buttons>
-        <Button small active={isSniperOnBoard} onClick={onSnipe}>
-          SNIPE!
-        </Button>
-        <Button active={hasTurnEnded} onClick={onNextTurn}>
-          NEXT TURN
-        </Button>
-      </Buttons>
-    </PlayPhaseContainer>
-  );
+			<Board>
+				<HQs>
+					<HQ team="0" />
+					<HQ team="1" />
+				</HQs>
+				<TableBoard />
+				<HQs>
+					<HQ team="2" />
+					<HQ team="3" />
+				</HQs>
+			</Board>
+
+			<Buttons>
+				<Button small active={isSniperOnBoard} onClick={onSnipe}>
+					SNIPE!
+				</Button>
+				<Button active={hasTurnEnded} onClick={onNextTurn}>
+					NEXT TURN
+				</Button>
+				{!isAlignmentWarningShown && !isAlignmentShown && (
+					<Button small active onClick={showWarning}>
+						FRIEND & FOE
+					</Button>
+				)}
+				{isAlignmentWarningShown && <AlignmentWarning onClose={onWarningConfirm} />}
+				{isAlignmentShown && <AlignmentReminder onClose={hideAlignment} />}
+			</Buttons>
+		</PlayPhaseContainer>
+	);
 }
 
 export default PlayPhase;

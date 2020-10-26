@@ -49,3 +49,7 @@ export const HqStore = styled.div`
   background-repeat: no-repeat;
   margin-bottom: 10px;
 `;
+
+export const AlignmentWarningStyled = styled.div`
+  color: white;
+`;
