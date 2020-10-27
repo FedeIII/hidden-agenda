@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { StateContext } from 'State';
-import pz from 'Domain/pz';
+import teams from 'Domain/teams';
 import HQs from 'Client/components/hqs';
 import HqStyled from 'Client/components/hqStyled';
 import { Cementery, Survivors } from 'Client/components/pieceCount';
@@ -10,15 +10,17 @@ import {
   Points,
   PieceCountTitle,
   PieceCountContainer,
+  Scores,
 } from './components';
-import PieceScoreTable from './pieceScoreTable';
+import PieceScore from './pieceScore';
+import PlayersScore from './playersScore';
 
 function renderScore(team) {
   const [{ pieces }] = useContext(StateContext);
 
   return (
     <Score>
-      {pz.getPointsForTeam(team, pieces)}
+      {teams.getPointsForTeam(team, pieces)}
       <Points>pts</Points>
     </Score>
   );
@@ -48,7 +50,10 @@ function EndPhase() {
         <TeamScore team="1" />
       </HQs>
 
-      <PieceScoreTable />
+      <Scores>
+        <PieceScore />
+        <PlayersScore />
+      </Scores>
 
       <HQs>
         <TeamScore team="2" />
