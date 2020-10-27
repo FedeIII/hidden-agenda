@@ -21,6 +21,9 @@ yarn go
 ```
 
 ## Changelog
+### v1.3.0
+* Added player scores and winner
+
 ### v1.2.0
 * Added alignment reminder during Play Phase
 
@@ -82,16 +85,18 @@ yarn go
   * ~~show kills~~
   * ~~killing a ceo kills the rest of team pieces~~
 * ~~Game ending~~
-* Scores
+* ~~Scores~~
   * ~~team scores~~
     * ~~killed pieces~~
     * ~~survivor pieces~~
     * ~~piece score table~~
-  * player scores
+  * ~~player scores~~
 * ~~Alignment cards~~
 * Reveal mechanics
 * Accuse mechanics
 * Claim control mechanics
+* UI revamp
+* 3D
 * Remote multiplayer
 * Port to electron
 
