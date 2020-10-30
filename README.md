@@ -23,6 +23,8 @@ yarn go
 ## Changelog
 ### v1.3.0
 * Added player scores and winner
+* **v1.3.1**
+  * Fixed action buttons moving while using friend&foe reminder
 
 ### v1.2.0
 * Added alignment reminder during Play Phase
