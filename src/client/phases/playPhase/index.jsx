@@ -1,15 +1,23 @@
 import React, { useMemo, useContext, useCallback } from 'react';
 import { Redirect } from 'react-router-dom';
 import { StateContext } from 'State';
-import { Button } from 'Client/components/button';
+
 import { Title } from 'Client/components/title';
 import HQs from 'Client/components/hqs';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
+import { Button } from 'Client/components/button';
 import useBooleanState from 'Hooks/useBooleanState';
 import pz from 'Domain/pz';
 import { nextTurn, snipe } from 'Client/actions';
 import { TEAM_NAMES } from 'Domain/teams';
-import { PlayPhaseContainer, Board, Buttons, AlignmentWarningStyled } from './components';
+import {
+	PlayPhaseContainer,
+	Board,
+	Actions,
+	Action,
+	AlignmentWarningStyled,
+	AlignmentWarningMessage,
+} from './components';
 import HQ from './hq';
 import TableBoard from './tableBoard';
 
@@ -58,7 +66,7 @@ function AlignmentWarning(props) {
 
 	return (
 		<AlignmentWarningStyled>
-			This information is only for {playerName}{' '}
+			<AlignmentWarningMessage>This information is only for {playerName}'s eyes</AlignmentWarningMessage>
 			<Button small active onClick={onClose}>
 				Confirm
 			</Button>
@@ -134,21 +142,27 @@ function PlayPhase() {
 				</HQs>
 			</Board>
 
-			<Buttons>
-				<Button small active={isSniperOnBoard} onClick={onSnipe}>
-					SNIPE!
-				</Button>
-				<Button active={hasTurnEnded} onClick={onNextTurn}>
-					NEXT TURN
-				</Button>
-				{!isAlignmentWarningShown && !isAlignmentShown && (
-					<Button small active onClick={showWarning}>
-						FRIEND & FOE
+			<Actions>
+				<Action>
+					<Button small active={isSniperOnBoard} onClick={onSnipe}>
+						SNIPE!
 					</Button>
-				)}
-				{isAlignmentWarningShown && <AlignmentWarning onClose={onWarningConfirm} />}
-				{isAlignmentShown && <AlignmentReminder onClose={hideAlignment} />}
-			</Buttons>
+				</Action>
+				<Action>
+					<Button active={hasTurnEnded} onClick={onNextTurn}>
+						NEXT TURN
+					</Button>
+				</Action>
+				<Action>
+					{!isAlignmentWarningShown && !isAlignmentShown && (
+						<Button small active onClick={showWarning}>
+							FRIEND & FOE
+						</Button>
+					)}
+					{isAlignmentWarningShown && <AlignmentWarning onClose={onWarningConfirm} />}
+					{isAlignmentShown && <AlignmentReminder onClose={hideAlignment} />}
+				</Action>
+			</Actions>
 		</PlayPhaseContainer>
 	);
 }
