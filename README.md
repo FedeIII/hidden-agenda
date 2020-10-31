@@ -103,7 +103,7 @@ yarn go
 * Port to electron
 
 ## Known Bugs
-* Snipe broken
+* ~~Snipe broken~~
 * Snipers should be able to deploy facing enemy pieces 
 * Spies reset their movement when clicked on after first movement
 * Spies shouldn't be able to kill on their first move (or second move if buffed)
