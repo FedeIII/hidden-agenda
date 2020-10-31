@@ -120,6 +120,8 @@ function isPieceAtPosition(position, pieces) {
 	);
 }
 
+// DIRECTIONS
+
 function getThreeFrontDirections(direction) {
 	const index = directions.findIndex(direction);
 
@@ -170,6 +172,8 @@ function isPieceInDirection(position, direction, pieces, exceptionPieces) {
 			);
 		}, false);
 }
+
+////
 
 function isSameTeam(piece1, piece2) {
 	return getTeam(piece1.id) === getTeam(piece2.id);
@@ -222,6 +226,8 @@ function setCeoBuffs(piece, index, pieces) {
 		buffed: isNextToCeo(piece, pieces),
 	};
 }
+
+// MOVE
 
 function move(pieces, id, toPosition, pieceState) {
 	let movedPieces = movePieces(pieces, id, toPosition, pieceState);
@@ -321,6 +327,8 @@ function moveSniper(sniper, toPosition, throughSniperLineOf) {
 	};
 }
 
+// KILL
+
 function setTeamKilledBy(piece, killedCeo) {
 	if (isSameTeam(piece, killedCeo) && !piece.position) {
 		return killPiece({
@@ -377,6 +385,8 @@ function killPiece({ killedPiece, killedById }) {
 
 	return killedPiece;
 }
+
+// SNIPE
 
 function getSnipersInSight(piece, toPosition, pieces) {
 	if (piece.position) {
@@ -638,7 +648,8 @@ function getSelectedPiece(pieces) {
 }
 
 function getDirectedPiece(piece, direction, pieces) {
-	const throughSniperLineOf = getSnipersInSight(piece, piece.position, pieces);
+	const inSniperLineOf = getSnipersInSight(piece, piece.position, pieces);
+	const throughSniperLineOf = getUniqueValues([...inSniperLineOf, ...piece.throughSniperLineOf]);
 
 	return {
 		...piece,
@@ -729,6 +740,10 @@ function isInSniperSight(piece) {
 	return !!piece.throughSniperLineOf.length;
 }
 
+function isAnyPieceThroughSniperLine(pieces) {
+	return pieces.some(isInSniperSight);
+}
+
 function highlightSnipersWithSight(pieces) {
 	const snipersWithSight = getUniqueValues(
 		pieces
@@ -787,6 +802,7 @@ export default {
 	setCeoBuffs,
 	highlightSnipersWithSight,
 	isInSniperSight,
+	isAnyPieceThroughSniperLine,
 	getKilledPiecesByTeam,
 	getSurvivorsForTeam,
 	hasGameFinished,

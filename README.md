@@ -104,7 +104,7 @@ yarn go
 
 ## Known Bugs
 * Snipe broken
-* Spies should be able to deploy facing enemy pieces 
+* Snipers should be able to deploy facing enemy pieces 
 * Spies reset their movement when clicked on after first movement
 * Spies shouldn't be able to kill on their first move (or second move if buffed)
 * ~~Can't direct pieces outwards on the table border~~

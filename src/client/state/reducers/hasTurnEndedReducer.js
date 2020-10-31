@@ -50,6 +50,14 @@ function togglePieceState(state, pieceId) {
   );
 }
 
+function snipeState(state) {
+  if (pz.isAnyPieceThroughSniperLine(state.pieces)){
+    return false;
+  }
+
+  return state.hasTurnEnded;
+}
+
 function hasTurnEndedReducer(state, action) {
   switch (action.type) {
     case NEXT_TURN:
@@ -61,7 +69,7 @@ function hasTurnEndedReducer(state, action) {
     case MOVE_PIECE:
       return false;
     case SNIPE:
-      return false;
+      return snipeState(state);
     default:
       return state.hasTurnEnded;
   }
