@@ -1,5 +1,5 @@
 import { SNIPE, NEXT_TURN } from 'Client/actions';
-import pz from 'Domain/pz';
+import { pz } from 'Domain/pieces';
 
 function snipeState(pieces) {
   return pieces.some(piece => pz.isInSniperSight(piece));

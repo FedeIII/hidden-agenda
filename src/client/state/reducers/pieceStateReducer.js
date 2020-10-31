@@ -1,15 +1,14 @@
-import pz from 'Domain/pz';
-import { SPY } from 'Domain/pieceTypes';
+import { pz, TYPES, STATES } from 'Domain/pieces';
 import { TOGGLE_PIECE, MOVE_PIECE } from 'Client/actions';
-import {
-  SELECTION,
+
+const { SPY } = TYPES;
+const { SELECTION,
   DESELECTION,
   PLACEMENT,
   MOVEMENT,
   MOVEMENT2,
   MOVEMENT3,
-  COLLOCATION,
-} from 'Client/pieceStates';
+  COLLOCATION, } = STATES;
 
 function toggledPieceState(pieceId, { pieces, followMouse, pieceState }) {
   const selectedPiece = pz.getSelectedPiece(pieces);

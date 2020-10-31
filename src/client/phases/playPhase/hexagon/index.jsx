@@ -1,7 +1,7 @@
 import React, { useCallback, useContext } from 'react';
 import PropTypes from 'prop-types';
 import { StateContext } from 'State';
-import pz from 'Domain/pz';
+import { pz } from 'Domain/pieces';
 import { areCoordsInList } from 'Domain/utils';
 import { togglePiece, movePiece } from 'Client/actions';
 import Piece from '../piece/index';

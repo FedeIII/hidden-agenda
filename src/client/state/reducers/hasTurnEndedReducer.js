@@ -5,9 +5,10 @@ import {
   MOVE_PIECE,
   SNIPE,
 } from 'Client/actions';
-import { AGENT, CEO, SPY, SNIPER } from 'Domain/pieceTypes';
-import { MOVEMENT, MOVEMENT2, MOVEMENT3, PLACEMENT } from 'Client/pieceStates';
-import pz from 'Domain/pz';
+import { pz, TYPES, STATES } from 'Domain/pieces';
+
+const { AGENT, CEO, SPY, SNIPER } = TYPES;
+const { MOVEMENT, MOVEMENT2, MOVEMENT3, PLACEMENT } = STATES;
 
 function hasPieceEndedTurn(pieces, pieceState, toggledPieceId) {
   const selectedPiece = pz.getSelectedPiece(pieces);

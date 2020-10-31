@@ -1,5 +1,5 @@
 import React, { useContext, useCallback } from 'react';
-import pz from 'Domain/pz';
+import { pz } from 'Domain/pieces';
 import { StateContext } from 'State';
 import { togglePiece } from 'Client/actions';
 import PieceStyled from 'Client/components/pieceStyled';

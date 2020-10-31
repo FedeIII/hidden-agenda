@@ -1,7 +1,7 @@
 import React, { useContext, useCallback } from 'react';
 import styled from 'styled-components';
 import { StateContext } from 'State';
-import pz from 'Domain/pz';
+import { pz } from 'Domain/pieces';
 import PieceStyled from './pieceStyled';
 
 const PieceCount = styled.div`

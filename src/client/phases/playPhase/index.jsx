@@ -7,7 +7,7 @@ import HQs from 'Client/components/hqs';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
 import { Button } from 'Client/components/button';
 import useBooleanState from 'Hooks/useBooleanState';
-import pz from 'Domain/pz';
+import { pz } from 'Domain/pieces';
 import { nextTurn, snipe } from 'Client/actions';
 import { TEAM_NAMES } from 'Domain/teams';
 import {

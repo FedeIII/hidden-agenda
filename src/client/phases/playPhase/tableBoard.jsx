@@ -1,5 +1,5 @@
 import React, { useContext, useCallback } from 'react';
-import pz from 'Domain/pz';
+import { pz } from 'Domain/pieces';
 import { areCoordsEqual, areCoordsInList } from 'Domain/utils';
 import cells from 'Domain/cells';
 import { togglePiece, movePiece, directPiece } from 'Client/actions';

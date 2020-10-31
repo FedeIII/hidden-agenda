@@ -1,5 +1,5 @@
 import styled, { css } from 'styled-components';
-import pz from 'Domain/pz';
+import { pz } from 'Domain/pieces';
 
 const brightness = ({ pieceId = '' }) => {
   if (pz.getTeam(pieceId) === '2') {

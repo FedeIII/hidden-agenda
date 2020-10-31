@@ -1,7 +1,8 @@
-import pz from 'Domain/pz';
 import { MOVE_PIECE, DIRECT_PIECE } from 'Client/actions';
-import { AGENT, CEO, SPY, SNIPER } from 'Domain/pieceTypes';
-import { MOVEMENT, COLLOCATION } from 'Client/pieceStates';
+import { pz, TYPES, STATES } from 'Domain/pieces';
+
+const { AGENT, CEO, SPY, SNIPER } = TYPES;
+const { COLLOCATION } = STATES;
 
 function movedPieceState({ pieces, followMouse, pieceState }) {
   const selectedPiece = pz.getSelectedPiece(pieces);

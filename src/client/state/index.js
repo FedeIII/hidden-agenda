@@ -1,5 +1,5 @@
 import React, { createContext, useReducer } from 'react';
-import pz from 'Domain/pz';
+import { pz } from 'Domain/pieces';
 import getWrapperName from './getWrapperName';
 
 import players from './reducers/playersReducer';

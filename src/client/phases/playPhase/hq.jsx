@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { StateContext } from 'State';
-import pz from 'Domain/pz';
+import { pz } from 'Domain/pieces';
 import HqStyled from 'Client/components/hqStyled';
 import { Cementery } from 'Client/components/pieceCount';
 import { HqStore } from './components';

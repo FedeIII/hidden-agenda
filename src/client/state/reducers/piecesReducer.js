@@ -1,4 +1,4 @@
-import pz from 'Domain/pz';
+import { pz } from 'Domain/pieces';
 import {
   TOGGLE_PIECE,
   MOVE_PIECE,

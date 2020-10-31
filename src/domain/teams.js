@@ -1,4 +1,4 @@
-import pz, { POINTS_PER_PIECE_TYPE } from 'Domain/pz';
+import { pz, POINTS_PER_PIECE_TYPE } from 'Domain/pieces';
 
 const TEAM_NAMES = {
 	0: 'BLACK TEAM',
