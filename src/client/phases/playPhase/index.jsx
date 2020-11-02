@@ -149,7 +149,7 @@ function PlayPhase() {
 					</Button>
 				</Action>
 				<Action>
-					<Button active={hasTurnEnded} onClick={onNextTurn}>
+					<Button id="next-turn" active={hasTurnEnded} onClick={onNextTurn}>
 						NEXT TURN
 					</Button>
 				</Action>

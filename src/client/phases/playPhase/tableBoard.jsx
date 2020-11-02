@@ -45,7 +45,7 @@ function renderHexagon({ row, cell, edge }) {
 
 	return (
 		<Hexagon
-			key={`hexagon-${row}-${cell}`}
+			key={`hex-${row}-${cell}`}
 			row={row}
 			cell={cell}
 			piece={piece}

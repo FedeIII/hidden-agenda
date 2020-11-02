@@ -38,6 +38,7 @@ function Hexagon({ row, cell, piece, highlighted, onMouseEnter, edge }) {
 
   return (
     <HexagonStyled
+      id={`hex-${row}-${cell}`}
       highlighted={highlighted}
       row={row}
       cell={cell}

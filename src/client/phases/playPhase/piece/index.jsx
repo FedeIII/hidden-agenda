@@ -9,12 +9,13 @@ function Piece({ id, selectedDirection, selected, highlight }) {
   const type = pz.getType(id);
   const image = `img/${team}-${type}.png`;
 
-  const [state, dispatch] = useContext(StateContext);
+  const [_state, dispatch] = useContext(StateContext);
 
   const onClick = useCallback(() => dispatch(togglePiece(id)), [dispatch, id]);
 
   return (
     <PieceStyled
+      id={`pz-${id}`}
       src={image}
       pieceId={id}
       selected={selected}

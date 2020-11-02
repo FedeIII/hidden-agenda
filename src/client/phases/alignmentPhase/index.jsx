@@ -175,6 +175,7 @@ function AlignmentPhase() {
 			{playerTurn && (
 				<Alignments>
 					<AlignmentFriend
+            id="alingnment-card-friend"
 						player={playerTurn}
 						team={currentFriend}
 						disabled={cardsRevealed.friend}
@@ -183,6 +184,7 @@ function AlignmentPhase() {
 						{TEAM_NAMES[currentFriend]}
 					</AlignmentFriend>
 					<AlignmentFoe
+            id="alingnment-card-foe"
 						player={playerTurn}
 						disabled={cardsRevealed.foe}
 						team={currentFoe}
@@ -194,7 +196,7 @@ function AlignmentPhase() {
 			)}
 
 			<Buttons>
-				<Button active={isButtonActive} onClick={nextTurn}>
+				<Button id="alignments-btn" active={isButtonActive} onClick={nextTurn}>
 					{playerTurn ? 'NEXT PLAYER' : 'START'}
 				</Button>
 			</Buttons>

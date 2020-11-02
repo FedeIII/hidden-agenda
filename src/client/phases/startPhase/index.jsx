@@ -59,7 +59,7 @@ function PlayerOptions({ n, onChange }) {
 
 function useReadyToStart(players) {
   const [readyToStart, setReadyToStart] = useState(false);
-  const [state, dispatch] = useContext(StateContext);
+  const [_state, dispatch] = useContext(StateContext);
 
   const onStart = useCallback(() => {
     setReadyToStart(true);
@@ -166,6 +166,7 @@ function StartPhase() {
 
       <Buttons>
         <Button
+          id="start-btn"
           active={arePlayersReady(numberOfPlayers, players)}
           onClick={onStart}
         >

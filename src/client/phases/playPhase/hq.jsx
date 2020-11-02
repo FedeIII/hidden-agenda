@@ -15,7 +15,7 @@ function HQ({ team }) {
 
   return (
     <HqStyled key={`team${team}`} team={team}>
-      <HqStore>
+      <HqStore id={`store-${team}`}>
         {getNotStartedTeamPieces(pieces, team).map(piece => (
           <Piece key={piece.id} {...piece} />
         ))}

@@ -5,9 +5,10 @@ let browser;
 global.beforeEach(async () => {
   browser = await initBrowser();
   global.page = await browser.newPage();
-  await global.page.goto('http://localhost:8081');
+  await page.goto('http://localhost:8081');
 });
 
 global.afterEach(async () => {
+  await page.screenshot({ path: 'test.png' });
   await browser.close();
 });
