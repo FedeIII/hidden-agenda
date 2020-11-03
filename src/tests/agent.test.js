@@ -2,7 +2,7 @@ import { goToPlay } from './helpers/navigation.js';
 import clickOn from './helpers/clickOn';
 import get, { DIRECTION } from './helpers/get';
 
-describe('Agent', () => {
+describe('AGENT', () => {
   beforeEach(async () => {
     await goToPlay(2);
   });
@@ -95,19 +95,19 @@ describe('Agent', () => {
 		await clickOn.cell(2, 3);
     await clickOn.cell(1, 2);
     
-    const direction1 = get.pieceIn(1, 1).direction;
-    const direction2 = get.pieceIn(1, 2).direction;
-    const direction3 = get.pieceIn(1, 3).direction;
-    const direction4 = get.pieceIn(2, 1).direction;
-    const direction5 = get.pieceIn(2, 2).direction;
-    const direction6 = get.pieceIn(2, 3).direction;
+    const direction1 = await get.pieceIn(1, 1).direction;
+    const direction2 = await get.pieceIn(1, 2).direction;
+    const direction3 = await get.pieceIn(1, 3).direction;
+    const direction4 = await get.pieceIn(2, 1).direction;
+    const direction5 = await get.pieceIn(2, 2).direction;
+    const direction6 = await get.pieceIn(2, 3).direction;
 
-    expect(await direction1).toEqual(DIRECTION.up.right);
-    expect(await direction2).toEqual(DIRECTION.right);
-    expect(await direction3).toEqual(DIRECTION.down.right);
-    expect(await direction4).toEqual(DIRECTION.down.left);
-    expect(await direction5).toEqual(DIRECTION.left);
-    expect(await direction6).toEqual(DIRECTION.up.left);
+    expect(direction1).toEqual(DIRECTION.up.right);
+    expect(direction2).toEqual(DIRECTION.right);
+    expect(direction3).toEqual(DIRECTION.down.right);
+    expect(direction4).toEqual(DIRECTION.down.left);
+    expect(direction5).toEqual(DIRECTION.left);
+    expect(direction6).toEqual(DIRECTION.up.left);
   });
   
   it('moves two cells in front of it', async () => {
@@ -119,11 +119,11 @@ describe('Agent', () => {
 
 		await clickOn.team(0).agent(1);
 
-		const isNextCellHighlighted = get.cell(2, 2).isHighlighted;
-    const is2NextCellsHighlighted = get.cell(3, 3).isHighlighted;
+		const isNextCellHighlighted = await get.cell(2, 2).isHighlighted;
+    const is2NextCellsHighlighted = await get.cell(3, 3).isHighlighted;
     
-    expect(await isNextCellHighlighted).toBeFalsy();
-		expect(await is2NextCellsHighlighted).toBeTruthy();
+    expect(isNextCellHighlighted).toBeFalsy();
+		expect(is2NextCellsHighlighted).toBeTruthy();
 	});
 
 	it('can NOT move if there is a piece in the next cell', async () => {
@@ -145,11 +145,11 @@ describe('Agent', () => {
 		const pieceId = await get.pieceIn(1, 1).id;
 		expect(pieceId).toEqual('pz-0-A1');
 
-		const isNextCellHighlighted = get.cell(2, 2).isHighlighted;
-    const is2NextCellsHighlighted = get.cell(3, 3).isHighlighted;
+		const isNextCellHighlighted = await get.cell(2, 2).isHighlighted;
+    const is2NextCellsHighlighted = await get.cell(3, 3).isHighlighted;
     
-		expect(await isNextCellHighlighted).toBeFalsy();
-		expect(await is2NextCellsHighlighted).toBeFalsy();
+		expect(isNextCellHighlighted).toBeFalsy();
+		expect(is2NextCellsHighlighted).toBeFalsy();
   });
 
   describe('direction after moving', () => {
@@ -242,7 +242,7 @@ describe('Agent', () => {
 		expect(pieceId).toEqual('pz-0-A1');
 
 		const agentCount = await get.cementery(0).agent;
-		expect(agentCount).not.toEqual('x1');
+		expect(agentCount).toEqual('x 1');
 	});
 
 	it('can return to any position except the same when moving outside the board', async () => {
@@ -254,23 +254,23 @@ describe('Agent', () => {
 
 		await clickOn.team(1).agent(1);
 
-		const is00Highlighted = get.cell(0, 0).isHighlighted;
-		const is12Highlighted = get.cell(1, 2).isHighlighted;
-		const is03Highlighted = get.cell(0, 3).isHighlighted;
-		const is31Highlighted = get.cell(3, 1).isHighlighted;
-		const is44Highlighted = get.cell(4, 4).isHighlighted;
-		const is61Highlighted = get.cell(6, 1).isHighlighted;
+		const is00Highlighted = await get.cell(0, 0).isHighlighted;
+		const is12Highlighted = await get.cell(1, 2).isHighlighted;
+		const is03Highlighted = await get.cell(0, 3).isHighlighted;
+		const is31Highlighted = await get.cell(3, 1).isHighlighted;
+		const is44Highlighted = await get.cell(4, 4).isHighlighted;
+		const is61Highlighted = await get.cell(6, 1).isHighlighted;
 
-		const is53Highlighted = get.cell(5, 3).isHighlighted;
+		const is53Highlighted = await get.cell(5, 3).isHighlighted;
 
-		expect(await is00Highlighted).toBeTruthy();
-		expect(await is12Highlighted).toBeTruthy();
-		expect(await is03Highlighted).toBeTruthy();
-		expect(await is31Highlighted).toBeTruthy();
-		expect(await is44Highlighted).toBeTruthy();
-		expect(await is61Highlighted).toBeTruthy();
+		expect(is00Highlighted).toBeTruthy();
+		expect(is12Highlighted).toBeTruthy();
+		expect(is03Highlighted).toBeTruthy();
+		expect(is31Highlighted).toBeTruthy();
+		expect(is44Highlighted).toBeTruthy();
+		expect(is61Highlighted).toBeTruthy();
 
-		expect(await is53Highlighted).toBeFalsy();
+		expect(is53Highlighted).toBeFalsy();
   });
 
   describe('CEO buff', () => {
@@ -291,11 +291,11 @@ describe('Agent', () => {
   
       await clickOn.team(0).agent(1);
   
-      const isNextCellHighlighted = get.cell(2, 2).isHighlighted;
-      const is2NextCellsHighlighted = get.cell(3, 3).isHighlighted;
+      const isNextCellHighlighted = await get.cell(2, 2).isHighlighted;
+      const is2NextCellsHighlighted = await get.cell(3, 3).isHighlighted;
       
-      expect(await isNextCellHighlighted).toBeTruthy();
-      expect(await is2NextCellsHighlighted).toBeTruthy();
+      expect(isNextCellHighlighted).toBeTruthy();
+      expect(is2NextCellsHighlighted).toBeTruthy();
     });
 
     it('can kill a piece right in front of it', async () => {
@@ -318,7 +318,7 @@ describe('Agent', () => {
       expect(pieceId).toEqual('pz-0-A1');
 
       const agentCount = await get.cementery(0).agent;
-		  expect(agentCount).not.toEqual('x1');
+		  expect(agentCount).toEqual('x 1');
     });
   });
 });

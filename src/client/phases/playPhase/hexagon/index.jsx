@@ -8,17 +8,15 @@ import Piece from '../piece/index';
 
 import HexagonStyled from './styled';
 
-// import PieceContainer from 'containers/pieceContainer';
-
 function useOnCellClick(coords) {
-  const [{ followMouse, pieces }, dispatch] = useContext(StateContext);
+  const [{ followMouse, pieces, pieceState}, dispatch] = useContext(StateContext);
 
   return useCallback(
     event => {
       event.preventDefault();
       event.stopPropagation();
 
-      const highlightedPositions = pz.getHighlightedPositions(pieces);
+      const highlightedPositions = pz.getHighlightedPositions(pieces, pieceState);
       const selectedPiece = pz.getSelectedPiece(pieces);
 
       if (followMouse) {

@@ -12,7 +12,7 @@ export const CELLS_BY_ROW = [4, 5, 6, 7, 6, 5, 4];
 
 function renderHexagon({ row, cell, edge }) {
 	const [{ pieces, followMouse, pieceState }, dispatch] = useContext(StateContext);
-	const highlightedPositions = pz.getHighlightedPositions(pieces);
+	const highlightedPositions = pz.getHighlightedPositions(pieces, pieceState);
 	const selectedPiece = pz.getSelectedPiece(pieces);
 
 	const piece = pieces.find(
