@@ -25,6 +25,10 @@ yarn go
 * Added player scores and winner
 * **v1.3.1**
   * Fixed action buttons moving while using friend&foe reminder
+* **v1.3.2**
+  * Fixed snipe! mechanics
+* **v1.3.3**
+  * Fixed spy killing
 
 ### v1.2.0
 * Added alignment reminder during Play Phase
