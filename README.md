@@ -73,7 +73,7 @@ yarn go
   * ~~Spy~~
   * ~~Sniper~~
 * ~~Spy kill mechanics~~
-* ~~Sniper kill mechanics~~
+* Sniper kill mechanics
   * ~~kill before move~~
   * ~~allow to snipe if any sniper is placed~~
   * ~~block sniper-related spawns:~~
@@ -82,6 +82,7 @@ yarn go
     * ~~block sniper position if no available line of sight in any direction~~
   * ~~select sniper after clicking on snipe~~
   * ~~kill after move~~
+  * kill priority between snipers
 * ~~CEO buffs~~
   * ~~Agent~~
   * ~~Spy~~
@@ -107,10 +108,12 @@ yarn go
 * Port to electron
 
 ## Known Bugs
+* Snipers turning don't update the `throughSniperLineOf` prop of pieces already in the board
+* Snipers killing don't undo the consecuences
 * ~~Snipe broken~~
 * Snipers should be able to deploy facing enemy pieces 
 * Spies reset their movement when clicked on after first movement
-* Spies shouldn't be able to kill on their first move (or second move if buffed)
+* ~~Spies shouldn't be able to kill on their first move (or second move if buffed)~~
 * ~~Can't direct pieces outwards on the table border~~
 * ~~Agent slide on CEO buff~~
 * ~~Sniper sight doesn't get blocked by other pieces~~

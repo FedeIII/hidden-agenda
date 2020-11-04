@@ -24,6 +24,9 @@ const get = {
 			get direction() {
 				return page.$eval(`#hex-${row}-${cell}`, el => getComputedStyle(el.children[0]).transform);
 			},
+			get isHighlighted() {
+				return page.$eval(`#hex-${row}-${cell}`, el => getComputedStyle(el.children[0]).filter === 'brightness(2)');
+			},
 		};
   },
 

@@ -144,7 +144,7 @@ function PlayPhase() {
 
 			<Actions>
 				<Action>
-					<Button small active={isSniperOnBoard} onClick={onSnipe}>
+					<Button id="snipe" mall active={isSniperOnBoard} onClick={onSnipe}>
 						SNIPE!
 					</Button>
 				</Action>
