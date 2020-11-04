@@ -243,6 +243,30 @@ describe('AGENT', () => {
 
 		const agentCount = await get.cementery(0).agent;
 		expect(agentCount).toEqual('x 1');
+  });
+  
+  it('can NOT kill if the piece is from the same team', async () => {
+		await clickOn.team(0).agent(2);
+		await clickOn.cell(3, 3);
+		await clickOn.cell(4, 3);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).agent(1);
+		await clickOn.cell(1, 1);
+		await clickOn.cell(2, 2);
+
+		await page.click('#next-turn');
+
+    await clickOn.team(0).agent(1);
+    
+    const isHighlighted = await get.cell(0, 0).isHighlighted;
+    expect(isHighlighted).toBeFalsy();
+
+    await clickOn.cell(3, 3);
+
+		const pieceId = await get.pieceIn(3, 3).id;
+		expect(pieceId).toEqual('pz-0-A2');
 	});
 
 	it('can return to any position except the same when moving outside the board', async () => {

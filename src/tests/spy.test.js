@@ -389,6 +389,27 @@ describe('SPY', () => {
 
 			const pieceId = await get.pieceIn(1, 2).id;
 			expect(pieceId).toEqual('pz-1-A1');
+    });
+    
+    it('can NOT kill if the piece is from the same team', async () => {
+			await clickOn.team(0).agent(1);
+			await clickOn.cell(1, 1);
+			await clickOn.cell(0, 0);
+
+			await page.click('#next-turn');
+
+			await clickOn.team(0).spy();
+			await clickOn.cell(3, 3);
+			await clickOn.cell(2, 2);
+
+			await page.click('#next-turn');
+
+			await clickOn.team(0).spy();
+			await clickOn.cell(2, 2);
+			await clickOn.cell(1, 1);
+
+			const pieceId = await get.pieceIn(1, 1).id;
+			expect(pieceId).toEqual('pz-0-A1');
 		});
 	});
 
