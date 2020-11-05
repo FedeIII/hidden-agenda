@@ -3,9 +3,9 @@ import clickOn from './helpers/clickOn';
 import get, { DIRECTION } from './helpers/get';
 
 describe('AGENT', () => {
-  beforeEach(async () => {
-    await goToPlay(2);
-  });
+	beforeEach(async () => {
+		await goToPlay(2);
+	});
 
 	it('can be placed in the board', async () => {
 		await clickOn.team(0).agent(1);
@@ -51,6 +51,10 @@ describe('AGENT', () => {
 		await page.click('#next-turn');
 
 		await clickOn.team(0).agent(2);
+
+		const isHighlighted = await get.cell(1, 1).isHighlighted;
+		expect(isHighlighted).toBeFalsy();
+
 		await clickOn.cell(1, 1);
 
 		const firstStoredPieceId = await get.pieceIn.store(0).id;
@@ -58,59 +62,59 @@ describe('AGENT', () => {
 
 		const isHighlighted = await get.cell(1, 1).isHighlighted;
 		expect(isHighlighted).toBeFalsy();
-  });
+	});
 
-  it('can be placed directed towards any direction', async () => {
+	it('can be placed directed towards any direction', async () => {
 		await clickOn.team(0).agent(1);
-    await clickOn.cell(1, 1);
+		await clickOn.cell(1, 1);
 		await clickOn.cell(0, 1);
 
 		await page.click('#next-turn');
 
 		await clickOn.team(0).agent(2);
 		await clickOn.cell(1, 2);
-    await clickOn.cell(1, 3);
-    
-    await page.click('#next-turn');
+		await clickOn.cell(1, 3);
+
+		await page.click('#next-turn');
 
 		await clickOn.team(0).agent(3);
 		await clickOn.cell(1, 3);
-    await clickOn.cell(2, 4);
-    
-    await page.click('#next-turn');
+		await clickOn.cell(2, 4);
+
+		await page.click('#next-turn');
 
 		await clickOn.team(0).agent(4);
 		await clickOn.cell(2, 1);
-    await clickOn.cell(3, 1);
-    
-    await page.click('#next-turn');
+		await clickOn.cell(3, 1);
+
+		await page.click('#next-turn');
 
 		await clickOn.team(0).agent(5);
 		await clickOn.cell(2, 2);
-    await clickOn.cell(2, 1);
-    
-    await page.click('#next-turn');
+		await clickOn.cell(2, 1);
+
+		await page.click('#next-turn');
 
 		await clickOn.team(1).agent(1);
 		await clickOn.cell(2, 3);
-    await clickOn.cell(1, 2);
-    
-    const direction1 = await get.pieceIn(1, 1).direction;
-    const direction2 = await get.pieceIn(1, 2).direction;
-    const direction3 = await get.pieceIn(1, 3).direction;
-    const direction4 = await get.pieceIn(2, 1).direction;
-    const direction5 = await get.pieceIn(2, 2).direction;
-    const direction6 = await get.pieceIn(2, 3).direction;
+		await clickOn.cell(1, 2);
 
-    expect(direction1).toEqual(DIRECTION.up.right);
-    expect(direction2).toEqual(DIRECTION.right);
-    expect(direction3).toEqual(DIRECTION.down.right);
-    expect(direction4).toEqual(DIRECTION.down.left);
-    expect(direction5).toEqual(DIRECTION.left);
-    expect(direction6).toEqual(DIRECTION.up.left);
-  });
-  
-  it('moves two cells in front of it', async () => {
+		const direction1 = await get.pieceIn(1, 1).direction;
+		const direction2 = await get.pieceIn(1, 2).direction;
+		const direction3 = await get.pieceIn(1, 3).direction;
+		const direction4 = await get.pieceIn(2, 1).direction;
+		const direction5 = await get.pieceIn(2, 2).direction;
+		const direction6 = await get.pieceIn(2, 3).direction;
+
+		expect(direction1).toEqual(DIRECTION.up.right);
+		expect(direction2).toEqual(DIRECTION.right);
+		expect(direction3).toEqual(DIRECTION.down.right);
+		expect(direction4).toEqual(DIRECTION.down.left);
+		expect(direction5).toEqual(DIRECTION.left);
+		expect(direction6).toEqual(DIRECTION.up.left);
+	});
+
+	it('moves two cells in front of it', async () => {
 		await clickOn.team(0).agent(1);
 		await clickOn.cell(1, 1);
 		await clickOn.cell(2, 2);
@@ -120,9 +124,9 @@ describe('AGENT', () => {
 		await clickOn.team(0).agent(1);
 
 		const isNextCellHighlighted = await get.cell(2, 2).isHighlighted;
-    const is2NextCellsHighlighted = await get.cell(3, 3).isHighlighted;
-    
-    expect(isNextCellHighlighted).toBeFalsy();
+		const is2NextCellsHighlighted = await get.cell(3, 3).isHighlighted;
+
+		expect(isNextCellHighlighted).toBeFalsy();
 		expect(is2NextCellsHighlighted).toBeTruthy();
 	});
 
@@ -146,81 +150,81 @@ describe('AGENT', () => {
 		expect(pieceId).toEqual('pz-0-A1');
 
 		const isNextCellHighlighted = await get.cell(2, 2).isHighlighted;
-    const is2NextCellsHighlighted = await get.cell(3, 3).isHighlighted;
-    
+		const is2NextCellsHighlighted = await get.cell(3, 3).isHighlighted;
+
 		expect(isNextCellHighlighted).toBeFalsy();
 		expect(is2NextCellsHighlighted).toBeFalsy();
-  });
+	});
 
-  describe('direction after moving', () => {
-    beforeEach(async () => {
-      await clickOn.team(0).agent(1);
-      await clickOn.cell(1, 1);
-      await clickOn.cell(2, 2);
+	describe('direction after moving', () => {
+		beforeEach(async () => {
+			await clickOn.team(0).agent(1);
+			await clickOn.cell(1, 1);
+			await clickOn.cell(2, 2);
 
-      await page.click('#next-turn');
-    });
+			await page.click('#next-turn');
+		});
 
-    it('can face straight', async () => {
-      await clickOn.team(0).agent(1);
+		it('can face straight', async () => {
+			await clickOn.team(0).agent(1);
 
-      await clickOn.cell(3, 3);
-      await clickOn.cell(4, 3);
+			await clickOn.cell(3, 3);
+			await clickOn.cell(4, 3);
 
-      const direction = await get.pieceIn(3, 3).direction;
-      expect(direction).toEqual(DIRECTION.down.right);
-    });
+			const direction = await get.pieceIn(3, 3).direction;
+			expect(direction).toEqual(DIRECTION.down.right);
+		});
 
-    it('can face left angle', async () => {
-      await clickOn.team(0).agent(1);
+		it('can face left angle', async () => {
+			await clickOn.team(0).agent(1);
 
-      await clickOn.cell(3, 3);
-      await clickOn.cell(3, 4);
+			await clickOn.cell(3, 3);
+			await clickOn.cell(3, 4);
 
-      const direction = await get.pieceIn(3, 3).direction;
-      expect(direction).toEqual(DIRECTION.right);
-    });
+			const direction = await get.pieceIn(3, 3).direction;
+			expect(direction).toEqual(DIRECTION.right);
+		});
 
-    it('can face right angle', async () => {
-      await clickOn.team(0).agent(1);
+		it('can face right angle', async () => {
+			await clickOn.team(0).agent(1);
 
-      await clickOn.cell(3, 3);
-      await clickOn.cell(4, 2);
+			await clickOn.cell(3, 3);
+			await clickOn.cell(4, 2);
 
-      const direction = await get.pieceIn(3, 3).direction;
-      expect(direction).toEqual(DIRECTION.down.left);
-    });
+			const direction = await get.pieceIn(3, 3).direction;
+			expect(direction).toEqual(DIRECTION.down.left);
+		});
 
-    it('can NOT face backwards', async () => {
-      await clickOn.team(0).agent(1);
+		it('can NOT face backwards', async () => {
+			await clickOn.team(0).agent(1);
 
-      await clickOn.cell(3, 3);
-      await clickOn.cell(2, 2);
+			await clickOn.cell(3, 3);
+			await clickOn.cell(2, 2);
 
-      const direction = await get.pieceIn(3, 3).direction;
-      expect(direction).not.toEqual(DIRECTION.up.left);
-    });
+			const direction = await get.pieceIn(3, 3).direction;
+			expect(direction).not.toEqual(DIRECTION.up.left);
+		});
 
-    it('can NOT face backwards left angle', async () => {
-      await clickOn.team(0).agent(1);
+		it('can NOT face backwards left angle', async () => {
+			await clickOn.team(0).agent(1);
 
-      await clickOn.cell(3, 3);
-      await clickOn.cell(3, 2);
+			await clickOn.cell(3, 3);
+			await clickOn.cell(3, 2);
 
-      const direction = await get.pieceIn(3, 3).direction;
-      expect(direction).not.toEqual(DIRECTION.left);
-    });
+			const direction = await get.pieceIn(3, 3).direction;
+			expect(direction).not.toEqual(DIRECTION.left);
+		});
 
-    it('can NOT face backwards right angle', async () => {
-      await clickOn.team(0).agent(1);
+		it('can NOT face backwards right angle', async () => {
+			await clickOn.team(0).agent(1);
 
-      await clickOn.cell(3, 3);
-      await clickOn.cell(2, 3);
+			await clickOn.cell(3, 3);
+			await clickOn.cell(2, 3);
 
-      const direction = await get.pieceIn(3, 3).direction;
-      expect(direction).not.toEqual(DIRECTION.up.right);
-    });
-  });
+			const direction = await get.pieceIn(3, 3).direction;
+			expect(direction).not.toEqual(DIRECTION.up.right);
+		});
+	});
 
 	it('can kill if there is a piece 2 cells in front of it', async () => {
 		await clickOn.team(1).agent(1);
@@ -243,9 +247,9 @@ describe('AGENT', () => {
 
 		const agentCount = await get.cementery(0).agent;
 		expect(agentCount).toEqual('x 1');
-  });
-  
-  it('can NOT kill if the piece is from the same team', async () => {
+	});
+
+	it('can NOT kill if the piece is from the same team', async () => {
 		await clickOn.team(0).agent(2);
 		await clickOn.cell(3, 3);
 		await clickOn.cell(4, 3);
@@ -258,12 +262,12 @@ describe('AGENT', () => {
 
 		await page.click('#next-turn');
 
-    await clickOn.team(0).agent(1);
-    
-    const isHighlighted = await get.cell(0, 0).isHighlighted;
-    expect(isHighlighted).toBeFalsy();
+		await clickOn.team(0).agent(1);
 
-    await clickOn.cell(3, 3);
+		const isHighlighted = await get.cell(0, 0).isHighlighted;
+		expect(isHighlighted).toBeFalsy();
+
+		await clickOn.cell(3, 3);
 
 		const pieceId = await get.pieceIn(3, 3).id;
 		expect(pieceId).toEqual('pz-0-A2');
@@ -295,54 +299,54 @@ describe('AGENT', () => {
 		expect(is61Highlighted).toBeTruthy();
 
 		expect(is53Highlighted).toBeFalsy();
-  });
+	});
 
-  describe('CEO buff', () => {
-    beforeEach(async () => {
-      await clickOn.team(0).ceo();
-      await clickOn.cell(0, 0);
-      await clickOn.cell(1, 1);
+	describe('CEO buff', () => {
+		beforeEach(async () => {
+			await clickOn.team(0).ceo();
+			await clickOn.cell(0, 0);
+			await clickOn.cell(1, 1);
 
-      await page.click('#next-turn');
-    });
+			await page.click('#next-turn');
+		});
 
-    it('moves one OR two cells in front of it', async () => {
-      await clickOn.team(0).agent(1);
-      await clickOn.cell(1, 1);
-      await clickOn.cell(2, 2);
-  
-      await page.click('#next-turn');
-  
-      await clickOn.team(0).agent(1);
-  
-      const isNextCellHighlighted = await get.cell(2, 2).isHighlighted;
-      const is2NextCellsHighlighted = await get.cell(3, 3).isHighlighted;
-      
-      expect(isNextCellHighlighted).toBeTruthy();
-      expect(is2NextCellsHighlighted).toBeTruthy();
-    });
+		it('moves one OR two cells in front of it', async () => {
+			await clickOn.team(0).agent(1);
+			await clickOn.cell(1, 1);
+			await clickOn.cell(2, 2);
 
-    it('can kill a piece right in front of it', async () => {
-      await clickOn.team(1).agent(1);
-      await clickOn.cell(2, 2);
-      await clickOn.cell(3, 3);
+			await page.click('#next-turn');
 
-      await page.click('#next-turn');
+			await clickOn.team(0).agent(1);
 
-      await clickOn.team(0).agent(1);
-      await clickOn.cell(1, 1);
-      await clickOn.cell(2, 2);
+			const isNextCellHighlighted = await get.cell(2, 2).isHighlighted;
+			const is2NextCellsHighlighted = await get.cell(3, 3).isHighlighted;
 
-      await page.click('#next-turn');
+			expect(isNextCellHighlighted).toBeTruthy();
+			expect(is2NextCellsHighlighted).toBeTruthy();
+		});
 
-      await clickOn.team(0).agent(1);
-      await clickOn.cell(2, 2);
+		it('can kill a piece right in front of it', async () => {
+			await clickOn.team(1).agent(1);
+			await clickOn.cell(2, 2);
+			await clickOn.cell(3, 3);
 
-      const pieceId = await get.pieceIn(2, 2).id;
-      expect(pieceId).toEqual('pz-0-A1');
+			await page.click('#next-turn');
 
-      const agentCount = await get.cementery(0).agent;
-		  expect(agentCount).toEqual('x 1');
-    });
-  });
+			await clickOn.team(0).agent(1);
+			await clickOn.cell(1, 1);
+			await clickOn.cell(2, 2);
+
+			await page.click('#next-turn');
+
+			await clickOn.team(0).agent(1);
+			await clickOn.cell(2, 2);
+
+			const pieceId = await get.pieceIn(2, 2).id;
+			expect(pieceId).toEqual('pz-0-A1');
+
+			const agentCount = await get.cementery(0).agent;
+			expect(agentCount).toEqual('x 1');
+		});
+	});
 });

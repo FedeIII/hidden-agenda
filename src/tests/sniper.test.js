@@ -51,10 +51,6 @@ describe('SNIPER', () => {
 		await page.click('#next-turn');
 
 		await clickOn.team(0).sniper();
-		await clickOn.cell(1, 1);
-
-		const firstStoredPieceId = await get.pieceIn(1, 1).id;
-		expect(firstStoredPieceId).toEqual('pz-0-A1');
 
 		const isHighlighted = await get.cell(1, 1).isHighlighted;
 		expect(isHighlighted).toBeFalsy();
