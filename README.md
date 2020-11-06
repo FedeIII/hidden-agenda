@@ -109,7 +109,7 @@ yarn go
 
 ## Known Bugs
 * ~~Snipers turning don't update the `throughSniperLineOf` prop of pieces already in the board~~
-* Snipers killing don't undo the consecuences
+* ~~Snipers killing don't undo the consecuences~~
 * ~~Snipe broken~~
 * Snipers should be able to deploy facing enemy pieces 
 * Spies reset their movement when clicked on after first movement
