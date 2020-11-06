@@ -8,6 +8,7 @@ import pieces from './reducers/piecesReducer';
 import pieceState from './reducers/pieceStateReducer';
 import followMouse from './reducers/followMouseReducer';
 import snipe from './reducers/snipeReducer';
+import piecesPrevState from './reducers/piecesPrevStateReducer';
 
 const reducers = {
   players,
@@ -16,6 +17,7 @@ const reducers = {
   pieceState,
   followMouse,
   snipe,
+  piecesPrevState,
 };
 
 function gameReducer(state, action) {
@@ -39,6 +41,7 @@ const initialState = {
   pieceState: undefined,
   followMouse: false,
   snipe: false,
+  piecesPrevState: pz.init(),
 };
 
 const urlParams = new URLSearchParams(window.location.search);

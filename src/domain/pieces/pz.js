@@ -532,7 +532,7 @@ function removeIsThroughSniperLine(pieces) {
 	return pieces.map(piece => ({ ...piece, throughSniperLineOf: [] }));
 }
 
-function killSnipedPiece(pieces, sniperId) {
+function killSnipedPiece(pieces, prevPieces, sniperId) {
 	return pieces.map(piece => {
 		if (piece.throughSniperLineOf.length) {
 			return killPiece({ killedPiece: piece, killedById: sniperId });
@@ -545,7 +545,7 @@ function killSnipedPiece(pieces, sniperId) {
 			};
 		}
 
-		return piece;
+		return getPieceById(piece.id, prevPieces);
 	});
 }
 

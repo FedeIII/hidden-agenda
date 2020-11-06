@@ -255,22 +255,18 @@ describe('SNIPER', () => {
 			await clickOn.cell(1, 1);
 
 			await page.click('#next-turn');
-			await page.screenshot({ path: 'test1.png' });
 
 			await clickOn.team(0).sniper();
 			await clickOn.cell(5, 2);
 			await clickOn.cell(4, 2);
 
 			await page.click('#next-turn');
-			await page.screenshot({ path: 'test2.png' });
 
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(0, 1);
 			await clickOn.cell(0, 1);
 
 			await page.click('#snipe');
-
-			await page.screenshot({ path: 'test3.png' });
 
 			const isHighlighted = await get.pieceIn(5, 2).isHighlighted;
 			expect(isHighlighted).toBeTruthy();
@@ -307,6 +303,37 @@ describe('SNIPER', () => {
 
 			const agentCount = await get.cementery(0).agent;
 			expect(agentCount).toEqual('x 1');
+		});
+
+		it('kills to avoid consecuences', async () => {
+			await clickOn.team(1).agent(1);
+			await clickOn.cell(2, 1);
+			await clickOn.cell(1, 1);
+
+			await page.click('#next-turn');
+
+			await clickOn.team(0).agent(1);
+			await clickOn.cell(0, 1);
+			await clickOn.cell(1, 2);
+
+			await page.click('#next-turn');
+
+			await clickOn.team(0).sniper();
+			await clickOn.cell(5, 2);
+			await clickOn.cell(4, 2);
+
+			await page.click('#next-turn');
+
+			await clickOn.team(1).agent(1);
+			await clickOn.cell(0, 1);
+			await clickOn.cell(0, 1);
+
+			await page.click('#snipe');
+
+			await clickOn.team(0).sniper();
+
+			const pieceId = await get.pieceIn(0, 1).id;
+			expect(pieceId).toEqual('pz-0-A1');
 		});
 
 		it('does NOT kill if the moving piece is from the same team', async () => {

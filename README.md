@@ -108,7 +108,7 @@ yarn go
 * Port to electron
 
 ## Known Bugs
-* Snipers turning don't update the `throughSniperLineOf` prop of pieces already in the board
+* ~~Snipers turning don't update the `throughSniperLineOf` prop of pieces already in the board~~
 * Snipers killing don't undo the consecuences
 * ~~Snipe broken~~
 * Snipers should be able to deploy facing enemy pieces 
