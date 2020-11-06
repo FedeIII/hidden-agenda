@@ -3,7 +3,7 @@ import { areCoordsEqual, areCoordsInList, directions, getUniqueValues } from 'Do
 import { TYPES, STATES, NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END, IDS } from 'Domain/pieces';
 
 const { AGENT, CEO, SPY, SNIPER } = TYPES;
-const { SELECTION, MOVEMENT } = STATES;
+const { SELECTION, MOVEMENT, MOVEMENT2, MOVEMENT3, DESELECTION, COLLOCATION, PLACEMENT } = STATES;
 
 ////////////////////
 // INITIALIZATION //
@@ -34,7 +34,7 @@ function init() {
 // TOGGLING //
 //////////////
 
-function toggle({ hasTurnEnded, pieces, piecesPrevState, snipe }, pieceId) {
+function toggle({ hasTurnEnded, pieces, piecesPrevState, snipe, pieceState }, pieceId) {
 	if (hasTurnEnded) {
 		return pieces;
 	}
@@ -45,7 +45,7 @@ function toggle({ hasTurnEnded, pieces, piecesPrevState, snipe }, pieceId) {
 
 	const selectedPiece = getSelectedPiece(pieces);
 
-	if (hasToToggle(selectedPiece, pieceId, snipe)) {
+	if (hasToToggle(selectedPiece, pieceId, snipe, pieceState, pieces)) {
 		return pieces.map(piece => {
 			if (piece.id === pieceId) {
 				togglePiece(piece);
@@ -58,8 +58,26 @@ function toggle({ hasTurnEnded, pieces, piecesPrevState, snipe }, pieceId) {
 	return pieces;
 }
 
-function hasToToggle(selectedPiece, pieceId, snipe) {
-	return !snipe && (!selectedPiece || (selectedPiece && selectedPiece.id === pieceId));
+function hasToToggle(selectedPiece, pieceId, snipe, pieceState, pieces) {
+	if (snipe) {
+		return false;
+	}
+
+	if (!selectedPiece) {
+		return true;
+	}
+
+	if (isSpy(pieceId)) {
+		if (pieceState === MOVEMENT) {
+			return false;
+		}
+
+		if (getPieceById(pieceId, pieces).buffed && pieceState === MOVEMENT2) {
+			return false;
+		}
+	}
+
+	return selectedPiece.id === pieceId;
 }
 
 function togglePiece(piece) {
@@ -71,6 +89,30 @@ function togglePiece(piece) {
 		piece.selected = true;
 		piece.showMoveCells = true;
 	}
+}
+
+function togglePieceState(pieceId, { pieces, pieceState, followMouse }) {
+	const selectedPiece = getSelectedPiece(pieces);
+
+	if (!!selectedPiece && selectedPiece.id !== pieceId) {
+		return pieceState;
+	}
+
+	if (followMouse) {
+		return COLLOCATION;
+	}
+
+	const toggledPiece = getPieceById(pieceId, pieces);
+
+	if (toggledPiece.selected) {
+		if (isSniper(toggledPiece.id) && !!toggledPiece.position) {
+			return MOVEMENT;
+		}
+
+		return SELECTION;
+	}
+
+	return DESELECTION;
 }
 
 ///////////////
@@ -101,10 +143,6 @@ function movePieces(pieces, id, toPosition, pieceState) {
 			return getMovedPiece(pieces, piece, toPosition, pieceState, id);
 		}
 
-		// if (isSniper(id) && isPositionInEnemySniperLine(piece.position, pieces)) {
-		// 	return getNotMovedPieceInSniperLine(piece, id);
-		// }
-
 		return getNotMovedPiece(piece);
 	});
 }
@@ -130,12 +168,6 @@ function getMovedPiece(pieces, piece, toPosition, pieceState) {
 
 function getNotMovedPiece(piece) {
 	piece.moved = false;
-	return piece;
-}
-
-function getNotMovedPieceInSniperLine(piece, sniperId) {
-	piece.moved = false;
-	piece.throughSniperLineOf = [...piece.throughSniperLineOf, sniperId];
 	return piece;
 }
 
@@ -194,6 +226,29 @@ function moveSniper(sniper, toPosition, throughSniperLineOf) {
 		showMoveCells: false,
 		throughSniperLineOf,
 	};
+}
+
+function movedPieceState(pieceId, { pieces, pieceState }) {
+	const movedPiece = getPieceById(pieceId, pieces);
+
+	if (!movedPiece.direction) {
+		return PLACEMENT;
+	}
+
+	switch (getType(movedPiece.id)) {
+		case SPY:
+			return getMovedSpyState(movedPiece, pieceState);
+		default:
+			return MOVEMENT;
+	}
+}
+
+function getMovedSpyState(spy, pieceState) {
+	if (spy.buffed) {
+		return pieceState === MOVEMENT ? MOVEMENT2 : pieceState === MOVEMENT2 ? MOVEMENT3 : MOVEMENT;
+	}
+
+	return pieceState === MOVEMENT ? MOVEMENT2 : MOVEMENT;
 }
 
 ////////////////
@@ -790,7 +845,9 @@ function getSurvivorsForTeam(team, pieces) {
 export const pz = {
 	init,
 	toggle,
+	togglePieceState,
 	move,
+	movedPieceState,
 	getPossibleDirections,
 	changeSelectedPieceDirection,
 	getSelectedPiece,
