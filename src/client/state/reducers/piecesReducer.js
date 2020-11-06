@@ -1,26 +1,8 @@
 import { pz } from 'Domain/pieces';
 import { TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE, NEXT_TURN, SNIPE } from 'Client/actions';
 
-function hasToToggle(selectedPiece, pieceId, snipe) {
-	return !snipe && (!selectedPiece || (selectedPiece && selectedPiece.id === pieceId));
-}
-
-function toggledPieceState({ pieces, piecesPrevState, hasTurnEnded, snipe }, pieceId) {
-	if (hasTurnEnded) {
-		return pieces;
-	}
-
-	if (pz.isSniper(pieceId) && pz.getPieceById(pieceId, pieces).highlight) {
-		return pz.killSnipedPiece(pieces, piecesPrevState, pieceId);
-	}
-
-	const selectedPiece = pz.getSelectedPiece(pieces);
-
-	if (hasToToggle(selectedPiece, pieceId, snipe)) {
-		return pz.toggle(pieces, pieceId);
-	}
-
-	return pieces;
+function toggledPieceState(state, pieceId) {
+  return pz.toggle(state, pieceId);
 }
 
 function movedPieceState({ pieces, pieceState }, { pieceId, coords }) {

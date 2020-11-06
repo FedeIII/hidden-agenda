@@ -52,16 +52,14 @@ describe('AGENT', () => {
 
 		await clickOn.team(0).agent(2);
 
-		const isHighlighted = await get.cell(1, 1).isHighlighted;
-		expect(isHighlighted).toBeFalsy();
+		expect(await get.cell(1, 1).isHighlighted).toBeFalsy();
 
 		await clickOn.cell(1, 1);
 
 		const firstStoredPieceId = await get.pieceIn.store(0).id;
 		expect(firstStoredPieceId).toEqual('pz-0-A2');
 
-		const isHighlighted = await get.cell(1, 1).isHighlighted;
-		expect(isHighlighted).toBeFalsy();
+		expect(await get.cell(1, 1).isHighlighted).toBeFalsy();
 	});
 
 	it('can be placed directed towards any direction', async () => {

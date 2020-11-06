@@ -165,7 +165,6 @@ function AlignmentPhase() {
 	const isButtonActive = Object.values(cardsRevealed).every(revealed => revealed) || !playerTurn;
 
 	const goToNextPhase = readyToStart || useTest();
-	console.log('goToNextPhase', goToNextPhase);
 
 	return (
 		<AlignmentPhaseContainer>

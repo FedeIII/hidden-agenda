@@ -111,7 +111,7 @@ yarn go
 * ~~Snipers turning don't update the `throughSniperLineOf` prop of pieces already in the board~~
 * ~~Snipers killing don't undo the consecuences~~
 * ~~Snipe broken~~
-* Snipers should be able to deploy facing enemy pieces 
+* ~~Snipers should be able to deploy facing enemy pieces~~
 * Spies reset their movement when clicked on after first movement
 * ~~Spies shouldn't be able to kill on their first move (or second move if buffed)~~
 * ~~Can't direct pieces outwards on the table border~~

@@ -34,14 +34,32 @@ function init() {
 // TOGGLING //
 //////////////
 
-function toggle(pieces, id) {
-	return pieces.map(piece => {
-		if (piece.id === id) {
-			togglePiece(piece);
-		}
+function toggle({ hasTurnEnded, pieces, piecesPrevState, snipe }, pieceId) {
+	if (hasTurnEnded) {
+		return pieces;
+	}
 
-		return piece;
-	});
+	if (isSniper(pieceId) && getPieceById(pieceId, pieces).highlight) {
+		return killSnipedPiece(pieces, piecesPrevState, pieceId);
+	}
+
+	const selectedPiece = getSelectedPiece(pieces);
+
+	if (hasToToggle(selectedPiece, pieceId, snipe)) {
+		return pieces.map(piece => {
+			if (piece.id === pieceId) {
+				togglePiece(piece);
+			}
+
+			return piece;
+		});
+	}
+
+	return pieces;
+}
+
+function hasToToggle(selectedPiece, pieceId, snipe) {
+	return !snipe && (!selectedPiece || (selectedPiece && selectedPiece.id === pieceId));
 }
 
 function togglePiece(piece) {
@@ -83,7 +101,7 @@ function movePieces(pieces, id, toPosition, pieceState) {
 			return getMovedPiece(pieces, piece, toPosition, pieceState, id);
 		}
 
-		// if (isSniper(id) && isPositionInEnemySniperLine(piece.position, pieces)) {	
+		// if (isSniper(id) && isPositionInEnemySniperLine(piece.position, pieces)) {
 		// 	return getNotMovedPieceInSniperLine(piece, id);
 		// }
 
@@ -411,7 +429,7 @@ function getFreeCellsUntilPiece(positions, pieces) {
 			return [positions[0]];
 		}
 
-		return [positions[0]].concat(getFreeCellsUntilPiece(positions.slice(1), pieces)); 
+		return [positions[0]].concat(getFreeCellsUntilPiece(positions.slice(1), pieces));
 	}
 
 	return [];
