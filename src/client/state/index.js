@@ -11,74 +11,86 @@ import snipe from './reducers/snipeReducer';
 import piecesPrevState from './reducers/piecesPrevStateReducer';
 
 const reducers = {
-  players,
-  hasTurnEnded,
-  pieces,
-  pieceState,
-  followMouse,
-  snipe,
-  piecesPrevState,
+	players,
+	hasTurnEnded,
+	pieces,
+	pieceState,
+	followMouse,
+	snipe,
+	piecesPrevState,
 };
 
 function gameReducer(state, action) {
-  const newState = Object.entries(reducers).reduce(
-    (newState, [stateVar, reducer]) => ({
-      ...newState,
-      [stateVar]: reducer(state, action),
-    }),
-    {},
-  );
+	const newState = Object.entries(reducers).reduce(
+		(newState, [stateVar, reducer]) => ({
+			...newState,
+			[stateVar]: reducer(state, action),
+		}),
+		{},
+	);
 
-  console.log(action, '=>', newState);
+	console.log(action, '=>', newState);
 
-  return newState;
+	return newState;
 }
 
-const initialState = {
-  players: [],
-  hasTurnEnded: false,
-  pieces: pz.init(),
-  pieceState: undefined,
-  followMouse: false,
-  snipe: false,
-  piecesPrevState: pz.init(),
+let initialState = {
+	players: [],
+	hasTurnEnded: false,
+	pieces: pz.init(),
+	pieceState: undefined,
+	followMouse: false,
+	snipe: false,
+	piecesPrevState: pz.init(),
 };
 
 const urlParams = new URLSearchParams(window.location.search);
 const test = urlParams.get('test');
 
-if (test) {
-  initialState.players = [{
-    name: 'fede',
-    turn: true,
-    friend: '0',
-    foe: '1',
-  }, {
-    name: 'sara',
-    turn: false,
-    friend: '2',
-    foe: '3',
-  }];
+if (test === 'endgame') {
+	initialState.players = [
+		{
+			name: 'fede',
+			turn: true,
+			friend: '0',
+			foe: '1',
+		},
+		{
+			name: 'sara',
+			turn: false,
+			friend: '2',
+			foe: '3',
+		},
+	];
 
-  initialState.pieces = [{"id":"0-A1","position":[-1,-1],"direction":[-1,0],"selectedDirection":[-1,0],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"2-A1","moved":false},{"id":"0-A2","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false},{"id":"0-A3","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false},{"id":"0-A4","selected":true,"killed":false,"showMoveCells":true,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":true,"position":[1,1],"direction":[0,0],"selectedDirection":[0,0]},{"id":"0-A5","position":[3,3],"direction":[1,0],"selectedDirection":[1,0],"selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false},{"id":"0-C","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false},{"id":"0-S","position":[-1,-1],"direction":[1,1],"selectedDirection":[1,1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"2-A1","moved":false},{"id":"0-N","position":[-1,-1],"direction":[1,0],"selectedDirection":[1,0],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"2-A1","moved":false},{"id":"1-A1","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"1-A2","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"1-A3","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"1-A4","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"1-A5","position":[3,5],"direction":[0,0],"selectedDirection":[0,0],"selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false},{"id":"1-C","position":[-1,-1],"direction":[0,0],"selectedDirection":[0,0],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"1-S","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"1-N","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"2-A1","position":[-1,-1],"direction":[0,1],"selectedDirection":[0,1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"1-A5","moved":false},{"id":"2-A2","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false,"position":[6,2],"direction":[1,0],"selectedDirection":[1,0]},{"id":"2-A3","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false,"position":[6,0],"direction":[1,1],"selectedDirection":[1,1]},{"id":"2-A4","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false,"position":[6,1],"direction":[0,0],"selectedDirection":[0,0]},{"id":"2-A5","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false,"position":[5,0],"direction":[1,1],"selectedDirection":[1,1]},{"id":"2-C","position":[1,3],"direction":[0,0],"selectedDirection":[0,0],"selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false},{"id":"2-S","position":[-1,-1],"direction":[0,0],"selectedDirection":[0,0],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"1-A5","moved":false},{"id":"2-N","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false,"position":[5,1],"direction":[0,0],"selectedDirection":[0,0]},{"id":"3-A1","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-A2","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-A3","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-A4","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-A5","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-C","position":[-1,-1],"direction":[0,0],"selectedDirection":[0,0],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-S","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-N","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false}];
+	initialState.pieces = JSON.parse(
+		'[{"id":"0-A1","position":[-1,-1],"direction":[-1,0],"selectedDirection":[-1,0],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"2-A1","moved":false},{"id":"0-A2","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false},{"id":"0-A3","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false},{"id":"0-A4","selected":true,"killed":false,"showMoveCells":true,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":true,"position":[1,1],"direction":[0,0],"selectedDirection":[0,0]},{"id":"0-A5","position":[3,3],"direction":[1,0],"selectedDirection":[1,0],"selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false},{"id":"0-C","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false},{"id":"0-S","position":[-1,-1],"direction":[1,1],"selectedDirection":[1,1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"2-A1","moved":false},{"id":"0-N","position":[-1,-1],"direction":[1,0],"selectedDirection":[1,0],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"2-A1","moved":false},{"id":"1-A1","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"1-A2","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"1-A3","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"1-A4","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"1-A5","position":[3,5],"direction":[0,0],"selectedDirection":[0,0],"selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false},{"id":"1-C","position":[-1,-1],"direction":[0,0],"selectedDirection":[0,0],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"1-S","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"1-N","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A5","moved":false},{"id":"2-A1","position":[-1,-1],"direction":[0,1],"selectedDirection":[0,1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"1-A5","moved":false},{"id":"2-A2","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false,"position":[6,2],"direction":[1,0],"selectedDirection":[1,0]},{"id":"2-A3","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false,"position":[6,0],"direction":[1,1],"selectedDirection":[1,1]},{"id":"2-A4","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false,"position":[6,1],"direction":[0,0],"selectedDirection":[0,0]},{"id":"2-A5","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false,"position":[5,0],"direction":[1,1],"selectedDirection":[1,1]},{"id":"2-C","position":[1,3],"direction":[0,0],"selectedDirection":[0,0],"selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false},{"id":"2-S","position":[-1,-1],"direction":[0,0],"selectedDirection":[0,0],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"1-A5","moved":false},{"id":"2-N","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"moved":false,"position":[5,1],"direction":[0,0],"selectedDirection":[0,0]},{"id":"3-A1","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-A2","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-A3","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-A4","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-A5","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-C","position":[-1,-1],"direction":[0,0],"selectedDirection":[0,0],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-S","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false},{"id":"3-N","position":[-1,-1],"selected":false,"killed":true,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false,"killedById":"0-A1","moved":false}]',
+	);
 
-  initialState.test = true;
+	initialState.test = true;
+} else if (test === 'play') {
+	initialState = JSON.parse(
+		'{"players":[{"name":"FEDE","turn":true,"friend":"2","foe":"0"},{"name":"SARA","turn":false,"friend":"1","foe":"0"}],"hasTurnEnded":false,"pieces":[{"id":"0-A1","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-A2","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-A3","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-A4","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-A5","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-C","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-S","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-N","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-A1","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-A2","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-A3","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-A4","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-A5","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-C","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-S","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-N","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-A1","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-A2","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-A3","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-A4","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-A5","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-C","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-S","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-N","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-A1","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-A2","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-A3","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-A4","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-A5","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-C","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-S","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-N","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false}],"pieceState":"deselection","followMouse":false,"snipe":false,"piecesPrevState":[{"id":"0-A1","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-A2","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-A3","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-A4","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-A5","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-C","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-S","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"0-N","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-A1","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-A2","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-A3","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-A4","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-A5","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-C","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-S","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"1-N","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-A1","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-A2","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-A3","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-A4","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-A5","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-C","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-S","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"2-N","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-A1","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-A2","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-A3","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-A4","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-A5","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-C","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-S","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false},{"id":"3-N","selected":false,"killed":false,"showMoveCells":false,"throughSniperLineOf":[],"buffed":false,"highlight":false}]}',
+	);
 }
 
 export const StateContext = createContext(null);
+export const TestContext = createContext(test);
 
 export function withState(WrappedComponent) {
-  function WithState(props) {
-    const [state, dispatch] = useReducer(gameReducer, initialState);
+	function WithState(props) {
+		const [state, dispatch] = useReducer(gameReducer, initialState);
 
-    return (
-      <StateContext.Provider value={[state, dispatch]}>
-        <WrappedComponent {...props} />
-      </StateContext.Provider>
-    );
-  }
+		return (
+			<TestContext.Provider value={test}>
+				<StateContext.Provider value={[state, dispatch]}>
+					<WrappedComponent {...props} />
+				</StateContext.Provider>
+			</TestContext.Provider>
+		);
+	}
 
-  WithState.displayName = getWrapperName('WithState', WrappedComponent);
+	WithState.displayName = getWrapperName('WithState', WrappedComponent);
 
-  return WithState;
+	return WithState;
 }
