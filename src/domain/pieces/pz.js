@@ -94,6 +94,16 @@ function togglePiece(piece) {
 function togglePieceState(pieceId, { pieces, pieceState, followMouse }) {
 	const selectedPiece = getSelectedPiece(pieces);
 
+	if (isSpy(pieceId, pieces)) {
+		if (pieceState === MOVEMENT) {
+			return MOVEMENT;
+		}
+
+		if (getPieceById(pieceId, pieces).buffed && pieceState === MOVEMENT2) {
+			return MOVEMENT2;
+		}
+	}
+
 	if (!!selectedPiece && selectedPiece.id !== pieceId) {
 		return pieceState;
 	}

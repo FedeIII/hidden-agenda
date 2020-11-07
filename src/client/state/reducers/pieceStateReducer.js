@@ -1,14 +1,6 @@
 import { pz } from 'Domain/pieces';
 import { TOGGLE_PIECE, MOVE_PIECE } from 'Client/actions';
 
-function toggledPieceState(pieceId, state) {
-	return pz.togglePieceState(pieceId, state);
-}
-
-function movedPieceState(pieceId, state) {
-  return pz.movedPieceState(pieceId, state);
-}
-
 /**
  * undefined === in HQ
  *
@@ -35,10 +27,10 @@ export default function pieceStateReducer(state, action) {
 	if (!state.hasTurnEnded) {
 		switch (action.type) {
 			case TOGGLE_PIECE:
-				result = toggledPieceState(action.payload.pieceId, state);
+				result = pz.togglePieceState(action.payload.pieceId, state);
 				break;
 			case MOVE_PIECE:
-				result = movedPieceState(action.payload.pieceId, state);
+				result = pz.movedPieceState(action.payload.pieceId, state);
 				break;
 			default:
 				result = state.pieceState;

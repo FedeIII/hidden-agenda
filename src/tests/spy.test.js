@@ -191,6 +191,23 @@ describe('SPY', () => {
 		expect(cell2Over12).toBeFalsy();
 	});
 
+	it('can NOT be deselected during movement', async () => {
+		await clickOn.team(0).spy();
+		await clickOn.cell(2, 2);
+		await clickOn.cell(3, 3);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).spy();
+		await clickOn.cell(3, 3);
+
+		await clickOn.team(0).spy();
+		await clickOn.team(0).spy();
+
+		expect(await get.pieceIn(3, 3).isHighlighted).toBeTruthy();
+		expect(await get.cell(4, 3).isHighlighted).toBeTruthy();
+	});
+
 	it('stays in the moving direction after moving', async () => {
 		await clickOn.team(0).spy();
 		await clickOn.cell(2, 2);
@@ -432,6 +449,27 @@ describe('SPY', () => {
 
 			const pieceId = await get.pieceIn(5, 3).id;
 			expect(pieceId).toEqual('pz-0-S');
+		});
+
+		it('can NOT be deselected during movement', async () => {
+			await clickOn.team(0).spy();
+			await clickOn.cell(2, 2);
+			await clickOn.cell(3, 3);
+	
+			await page.click('#next-turn');
+	
+			await clickOn.team(0).spy();
+			await clickOn.cell(3, 3);
+
+			await page.click('#next-turn');
+
+			await clickOn.cell(4, 3);
+	
+			await clickOn.team(0).spy();
+			await clickOn.team(0).spy();
+	
+			expect(await get.pieceIn(4, 3).isHighlighted).toBeTruthy();
+			expect(await get.cell(5, 3).isHighlighted).toBeTruthy();
 		});
 
 		it('does NOT kill on the first cell', async () => {
