@@ -15,14 +15,15 @@ export const Board = styled.div`
 	display: flex;
 	flex-direction: row;
 	margin-bottom: 20px;
-	min-width: 80vw;
+	width: 90vw;
+	height: 75vh;
 `;
 
 export const Actions = styled.div`
-	width: 80vw;
+	width: 90vw;
 	display: flex;
 	justify-content: space-evenly;
-	padding: 20px;
+	padding: 0;
 `;
 
 export const Action = styled.div`
@@ -64,5 +65,17 @@ export const HqStore = styled.div`
 	background-image: url('img/hexgrid.png');
 	background-size: 100% 100%;
 	background-repeat: no-repeat;
-	margin-bottom: 10px;
+	margin-top: 53px;
+	margin-bottom: 8px;
+`;
+
+export const HqButton = styled(Button)`
+	position: absolute;
+	font-size: 16px;
+`
+export const HqMessage = styled.span`
+	position: absolute;
+	font-size: 16px;
+	top: 40px;
+	letter-spacing: -0.5px;
 `;

@@ -26,11 +26,11 @@ const hqColor = ({ team }) => {
 
 const HqStyled = styled.div`
   position: relative;
-  height: 36%;
+  height: 50%;
   display: flex;
   flex-direction: column;
   border: 2px solid gray;
-  padding: 16px 8px;
+  padding: 8px;
   margin-bottom: 20px;
   justify-content: space-between;
   ${hqColor}

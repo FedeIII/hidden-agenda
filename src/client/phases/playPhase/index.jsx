@@ -8,6 +8,7 @@ import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/ali
 import { Button } from 'Client/components/button';
 import useBooleanState from 'Hooks/useBooleanState';
 import { pz } from 'Domain/pieces';
+import py from 'Domain/py';
 import { nextTurn, snipe } from 'Client/actions';
 import { TEAM_NAMES } from 'Domain/teams';
 import {
@@ -49,7 +50,7 @@ function useReadyToPlay() {
 function useRenderTurn() {
 	const [{ players }] = useContext(StateContext);
 
-	return useCallback(() => `Player's turn: ${players.find(player => player.turn).name}`, [players]);
+	return useCallback(() => `Player's turn: ${py.getTurn(players)}`, [players]);
 }
 
 function useGameFinished() {

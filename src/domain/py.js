@@ -1,7 +1,11 @@
 import teams from 'Domain/teams';
 import py from 'Domain/py';
 
-const NO_PLAYER = { name: 'NO PLAYER', score: 0 };
+const NO_PLAYER = { name: null, score: 0 };
+
+function getTurn(players) {
+	return players.find(player => player.turn).name;
+}
 
 function getPoints(player, pieces) {
 	const friendPoints = teams.getPointsForTeam(player.friend, pieces);
@@ -25,6 +29,7 @@ function getWinner(players, pieces) {
 }
 
 export default {
+	getTurn,
 	getPoints,
 	getWinner,
 };

@@ -82,7 +82,7 @@ yarn go
     * ~~block sniper position if no available line of sight in any direction~~
   * ~~select sniper after clicking on snipe~~
   * ~~kill after move~~
-  * kill priority between snipers
+  * kill priority between snipers?
 * ~~CEO buffs~~
   * ~~Agent~~
   * ~~Spy~~

@@ -846,6 +846,10 @@ function getPieceById(id, pieces) {
 	return pieces.find(piece => piece.id === id);
 }
 
+function getCeo(pieces, team) {
+	return pieces.find(piece => isCeo(piece.id) && getTeam(piece.id) == team);
+}
+
 function getSurvivorsForTeam(team, pieces) {
 	return pieces
 		.filter(piece => getTeam(piece.id) === team && piece.position && !piece.killed)
@@ -881,4 +885,5 @@ export const pz = {
 	getSurvivorsForTeam,
 	hasGameFinished,
 	getAllTeamPieces,
+	getCeo,
 };
