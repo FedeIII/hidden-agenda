@@ -1,6 +1,7 @@
 import cells, { OUT_POSITION } from 'Domain/cells';
 import { areCoordsEqual, areCoordsInList, directions, getUniqueValues } from 'Domain/utils';
 import { TYPES, STATES, NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END, IDS } from 'Domain/pieces';
+import py from 'Domain/py';
 
 const { AGENT, CEO, SPY, SNIPER } = TYPES;
 const { SELECTION, MOVEMENT, MOVEMENT2, MOVEMENT3, DESELECTION, COLLOCATION, PLACEMENT } = STATES;
@@ -34,7 +35,8 @@ function init() {
 // TOGGLING //
 //////////////
 
-function toggle({ hasTurnEnded, pieces, piecesPrevState, snipe, pieceState }, pieceId) {
+function toggle(state, pieceId) {
+	const { hasTurnEnded, pieces, piecesPrevState, snipe, pieceState, teamControl } = state;
 	if (hasTurnEnded) {
 		return pieces;
 	}
@@ -45,7 +47,7 @@ function toggle({ hasTurnEnded, pieces, piecesPrevState, snipe, pieceState }, pi
 
 	const selectedPiece = getSelectedPiece(pieces);
 
-	if (hasToToggle(selectedPiece, pieceId, snipe, pieceState, pieces)) {
+	if (hasToToggle(pieceId, selectedPiece, state)) {
 		return pieces.map(piece => {
 			if (piece.id === pieceId) {
 				togglePiece(piece);
@@ -58,8 +60,12 @@ function toggle({ hasTurnEnded, pieces, piecesPrevState, snipe, pieceState }, pi
 	return pieces;
 }
 
-function hasToToggle(selectedPiece, pieceId, snipe, pieceState, pieces) {
+function hasToToggle(pieceId, selectedPiece, { players, snipe, pieceState, pieces, teamControl, piecesPrevState }) {
 	if (snipe) {
+		return false;
+	}
+
+	if (isToggledTeamControlled(pieceId, teamControl, piecesPrevState, players, pieces)) {
 		return false;
 	}
 
@@ -78,6 +84,34 @@ function hasToToggle(selectedPiece, pieceId, snipe, pieceState, pieces) {
 	}
 
 	return selectedPiece.id === pieceId;
+}
+
+function isToggledTeamControlled(pieceId, teamControl, piecesPrevState, players, pieces) {
+	if (isCeo(pieceId) && isCeoPlacement(pieceId, piecesPrevState)) {
+		return false;
+	}
+
+	if (cells.inBoard(getPieceById(pieceId, pieces).position)) {
+		return false;
+	}
+
+	const toggledTeam = getTeam(pieceId);
+	const controlledTeams = teamControl
+		.map(({ player, enabled }, teamIndex) => ({
+			controlled: !!(player && !enabled),
+			teamIndex,
+			player,
+		}))
+		.filter(({ controlled, player }) => controlled && py.getTurn(players) != player)
+		.map(({ teamIndex }) => String(teamIndex));
+
+	return controlledTeams.includes(toggledTeam);
+}
+
+function isCeoPlacement(ceoId, piecesPrevState) {
+	const ceo = getPieceById(ceoId, piecesPrevState);
+
+	return !ceo.direction;
 }
 
 function togglePiece(piece) {

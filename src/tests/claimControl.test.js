@@ -11,7 +11,7 @@ describe('CLAIM CONTROL', () => {
 		await page.click('#claim-0');
 
 		expect(await get.cell(3, 3).isHighlighted).toBeTruthy();
-		expect(await get.piece.ceo(0).isHighlighted).toBeTruthy();
+		expect(await get.team(0).ceo().isHighlighted).toBeTruthy();
 		expect(await page.$eval('#claim-0', el => el.innerText)).toEqual('Cancel');
 		expect(await page.$('#controlled-0')).toBe(null);
 	});
@@ -21,7 +21,7 @@ describe('CLAIM CONTROL', () => {
 		await page.click('#claim-0');
 
 		expect(await get.cell(3, 3).isHighlighted).toBeFalsy();
-		expect(await get.piece.ceo(0).isHighlighted).toBeFalsy();
+		expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
 		expect(await page.$eval('#claim-0', el => el.innerText)).toEqual('Claim Control');
 		expect(await page.$('#controlled-0')).toBe(null);
 	});
@@ -32,7 +32,7 @@ describe('CLAIM CONTROL', () => {
 		await clickOn.team(0).ceo();
 
 		expect(await get.cell(3, 3).isHighlighted).toBeFalsy();
-		expect(await get.piece.ceo(0).isHighlighted).toBeFalsy();
+		expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
 		expect(await page.$eval('#claim-0', el => el.innerText)).toEqual('Claim Control');
 		expect(await page.$('#controlled-0')).toBe(null);
 	});
@@ -44,7 +44,7 @@ describe('CLAIM CONTROL', () => {
 		await clickOn.cell(3, 3);
 
 		expect(await get.pieceIn(3, 3).id).toEqual('pz-0-C');
-		expect(await get.piece.ceo(0).isHighlighted).toBeFalsy();
+		expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
 		expect(await page.$eval('#controlled-0', el => el.innerText)).toEqual('Controlled by: FEDE');
 	});
 
@@ -56,7 +56,7 @@ describe('CLAIM CONTROL', () => {
 
 		await page.click('#next-turn');
 
-		await clickOn.team(0).agent(1);
+		await clickOn.team(1).agent(1);
 		await clickOn.cell(2, 2);
 		await clickOn.cell(2, 2);
 
@@ -79,7 +79,7 @@ describe('CLAIM CONTROL', () => {
 
 		await page.click('#next-turn');
 
-		await clickOn.team(0).agent(1);
+		await clickOn.team(1).agent(1);
 		await clickOn.cell(2, 2);
 		await clickOn.cell(2, 2);
 
@@ -94,7 +94,76 @@ describe('CLAIM CONTROL', () => {
 
 		await page.click('#claim-0');
 
-		expect(await get.piece.ceo(0).isHighlighted).toBeFalsy();
+		expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
 		expect(await get.cell(4, 3).isHighlighted).toBeFalsy();
+	});
+
+	it('can NOT place a piece from a company controlled by other player', async () => {
+		await page.click('#claim-0');
+
+		await clickOn.cell(3, 3);
+		await clickOn.cell(3, 3);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).agent(1);
+
+		expect(await get.team(0).agent(1).isHighlighted).toBeFalsy();
+		expect(await get.cell(4, 3).isHighlighted).toBeFalsy();
+	});
+
+	it('can place a piece from a company controlled by yourself', async () => {
+		await page.click('#claim-0');
+
+		await clickOn.cell(3, 3);
+		await clickOn.cell(3, 3);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(1).agent(1);
+
+		await clickOn.cell(4, 4);
+		await clickOn.cell(4, 4);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).agent(1);
+
+		expect(await get.team(0).agent(1).isHighlighted).toBeTruthy();
+		expect(await get.cell(2, 3).isHighlighted).toBeTruthy();
+
+		await clickOn.cell(2, 2);
+		await clickOn.cell(2, 2);
+
+		expect(await get.pieceIn(2, 2).id).toEqual('pz-0-A1');
+	});
+
+	it('can move a piece from a company controlled by other player', async () => {
+		await page.click('#claim-0');
+
+		await clickOn.cell(3, 3);
+		await clickOn.cell(3, 3);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(1).agent(1);
+
+		await clickOn.cell(4, 4);
+		await clickOn.cell(4, 4);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).agent(1);
+
+		await clickOn.cell(2, 2);
+		await clickOn.cell(1, 2);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).agent(1);
+		
+		expect(await get.team(0).agent(1).isHighlighted).toBeTruthy();
+		expect(await get.cell(1, 2).isHighlighted).toBeTruthy();
+		expect(await get.cell(0, 2).isHighlighted).toBeTruthy();
 	});
 });

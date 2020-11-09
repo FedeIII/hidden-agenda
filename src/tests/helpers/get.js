@@ -61,14 +61,29 @@ const get = {
 		};
 	},
 
-	piece: {
-		ceo(team) {
-			return {
-				get isHighlighted() {
-					return page.$eval(`#pz-${team}-${CEO}`, el => getComputedStyle(el).filter === 'brightness(2)');
-				},
-			};
-		},
+	team(teamNumber) {
+		return {
+			agent(agentNumber) {
+				return {
+					get isHighlighted() {
+						return page.$eval(
+							`#pz-${teamNumber}-${AGENT}${agentNumber}`,
+							el => getComputedStyle(el).filter === 'brightness(2)',
+						);
+					},
+				};
+			},
+			ceo() {
+				return {
+					get isHighlighted() {
+						return page.$eval(
+							`#pz-${teamNumber}-${CEO}`,
+							el => getComputedStyle(el).filter === 'brightness(2)',
+						);
+					},
+				};
+			},
+		};
 	},
 };
 
