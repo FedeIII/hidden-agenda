@@ -1,7 +1,7 @@
 import { pz, POINTS_PER_PIECE_TYPE } from 'Domain/pieces';
 import cells from 'Domain/cells';
 
-const TEAM_NAMES = {
+export const TEAM_NAMES = {
 	0: 'BLACK TEAM',
 	1: 'RED TEAM',
 	2: 'WHITE TEAM',
@@ -150,5 +150,3 @@ export default {
 	movePieceForControl,
 	togglePieceForControl,
 };
-
-export { TEAM_NAMES };

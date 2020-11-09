@@ -30,7 +30,7 @@ function useSelectedCards() {
 	const [remainingFriends, setRemainingFriends] = useState(FRIEND_CARDS);
 	const [remainingFoes, setRemainingFoes] = useState(FOE_CARDS);
 
-	const getFriendCard = useCallback(() => getCard(remainingFriends, setRemainingFriends), [
+	const getFriendCard = useCallback((foeCard) => getCard(remainingFriends, setRemainingFriends, foeCard), [
 		remainingFriends,
 		setRemainingFriends,
 	]);
@@ -103,7 +103,7 @@ function useAlignmentCards(start) {
 			return;
 		}
 
-		dispatch(setAlignment({ name: playerTurn, friend: getFriendCard() }));
+		dispatch(setAlignment({ name: playerTurn, friend: getFriendCard(currentFoe) }));
 		setCardsRevealed(reveals => ({ friend: true, foe: reveals.foe }));
 	}, [playerTurn, setCardsRevealed, cardsRevealed]);
 
