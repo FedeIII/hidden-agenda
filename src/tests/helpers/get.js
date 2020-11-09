@@ -25,10 +25,13 @@ const get = {
 				return page.$eval(`#hex-${row}-${cell}`, el => getComputedStyle(el.children[0]).transform);
 			},
 			get isHighlighted() {
-				return page.$eval(`#hex-${row}-${cell}`, el => getComputedStyle(el.children[0]).filter === 'brightness(2)');
+				return page.$eval(
+					`#hex-${row}-${cell}`,
+					el => getComputedStyle(el.children[0]).filter === 'brightness(2)',
+				);
 			},
 		};
-  },
+	},
 
 	cell(row, cell) {
 		return {
@@ -39,7 +42,7 @@ const get = {
 				);
 			},
 		};
-  },
+	},
 
 	cementery(team) {
 		return {
@@ -56,6 +59,16 @@ const get = {
 				return page.$eval(`#piece-count-${team}-${CEO}`, el => el.innerText);
 			},
 		};
+	},
+
+	piece: {
+		ceo(team) {
+			return {
+				get isHighlighted() {
+					return page.$eval(`#pz-${team}-${CEO}`, el => getComputedStyle(el).filter === 'brightness(2)');
+				},
+			};
+		},
 	},
 };
 

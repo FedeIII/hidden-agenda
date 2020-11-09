@@ -1,5 +1,5 @@
 import { pz } from 'Domain/pieces';
-import { TOGGLE_PIECE, MOVE_PIECE } from 'Client/actions';
+import { TOGGLE_PIECE, MOVE_PIECE, CLAIM_CONTROL, CANCEL_CONTROL } from 'Client/actions';
 
 /**
  * undefined === in HQ
@@ -31,6 +31,12 @@ export default function pieceStateReducer(state, action) {
 				break;
 			case MOVE_PIECE:
 				result = pz.movedPieceState(action.payload.pieceId, state);
+				break;
+			case CLAIM_CONTROL:
+				result = pz.claimControlPieceState(action.payload.team, state);
+				break;
+			case CANCEL_CONTROL:
+				result = pz.cancelControlPieceState();
 				break;
 			default:
 				result = state.pieceState;

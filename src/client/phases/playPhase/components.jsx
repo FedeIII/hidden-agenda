@@ -72,6 +72,7 @@ export const HqStore = styled.div`
 export const HqButton = styled(Button)`
 	position: absolute;
 	font-size: 16px;
+	width: calc(100% - 16px);
 `
 export const HqMessage = styled.span`
 	position: absolute;

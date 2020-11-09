@@ -59,3 +59,11 @@ export function claimControl(playerName, team) {
 		type: CLAIM_CONTROL,
 	};
 }
+
+export const CANCEL_CONTROL = 'CANCEL_CONTROL';
+export function cancelControl(team) {
+	return {
+		payload: { team },
+		type: CANCEL_CONTROL,
+	};
+}

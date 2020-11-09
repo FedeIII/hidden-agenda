@@ -695,6 +695,79 @@ function highlightSnipersWithSight(pieces) {
 	return pieces.map(piece => highlightSniperWithSight(piece, snipersWithSight));
 }
 
+function isSniperOnBoard(pieces) {
+	return !!pieces.find(piece => getType(piece.id) === SNIPER && cells.inBoard(piece.position));
+}
+
+function isInSniperSight(piece) {
+	return !!piece.throughSniperLineOf.length;
+}
+
+function isAnyPieceThroughSniperLine(pieces) {
+	return pieces.some(isInSniperSight);
+}
+
+///////////////////
+// CLAIM CONTROL //
+///////////////////
+
+function claimControl(team, { pieces, teamControl }) {
+	return pieces.map(claimControlPieceMap(team, teamControl));
+}
+
+function claimControlPieceMap(team, teamControl) {
+	return function toggleCeo(piece) {
+		if (!isCeo(piece.id)) {
+			return piece;
+		}
+
+		if (getTeam(piece.id) != team) {
+			return piece;
+		}
+
+		if (teamControl[team].player) {
+			return piece;
+		}
+
+		togglePiece(piece);
+		return piece;
+	};
+}
+
+function claimControlPieceState(team, { teamControl, pieceState }) {
+	if (teamControl[team].player) {
+		return pieceState;
+	}
+
+	return SELECTION;
+}
+
+function cancelControl(team, { pieces, teamControl }) {
+	return pieces.map(cancelControlPieceMap(team, teamControl));
+}
+
+function cancelControlPieceMap(team, teamControl) {
+	return function toggleCeo(piece) {
+		if (!isCeo(piece.id)) {
+			return piece;
+		}
+
+		if (getTeam(piece.id) != team) {
+			return piece;
+		}
+
+		if (teamControl[team].player) {
+			togglePiece(piece);
+		}
+
+		return piece;
+	};
+}
+
+function cancelControlPieceState() {
+	return DESELECTION;
+}
+
 /////////
 // CEO //
 /////////
@@ -802,18 +875,6 @@ function isSniper(id) {
 	return getType(id) === SNIPER;
 }
 
-function isSniperOnBoard(pieces) {
-	return !!pieces.find(piece => getType(piece.id) === SNIPER && cells.inBoard(piece.position));
-}
-
-function isInSniperSight(piece) {
-	return !!piece.throughSniperLineOf.length;
-}
-
-function isAnyPieceThroughSniperLine(pieces) {
-	return pieces.some(isInSniperSight);
-}
-
 function hasGameFinished(pieces) {
 	return pieces.filter(piece => isCeo(piece.id) && piece.killed).length >= NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END;
 }
@@ -857,33 +918,58 @@ function getSurvivorsForTeam(team, pieces) {
 }
 
 export const pz = {
+	// INITIALIZATION
 	init,
+
+	// TOGGLING
 	toggle,
 	togglePieceState,
+
+	// MOVEMENT
 	move,
 	movedPieceState,
+
+	// DIRECTIONS
 	getPossibleDirections,
 	changeSelectedPieceDirection,
 	getSelectedPiece,
+
+	// POSITIONS
 	getHighlightedPositions,
-	getTeam,
-	getType,
-	getNumber,
-	getPieceById,
+
+	// SNIPERS
 	removeIsThroughSniperLine,
 	killSnipedPiece,
+	highlightSnipersWithSight,
+	isInSniperSight,
+	isAnyPieceThroughSniperLine,
+
+	// CLAIM CONTROL
+	claimControl,
+	claimControlPieceState,
+	cancelControl,
+	cancelControlPieceState,
+
+	// KILLING
+	getKilledPiecesByTeam,
+
+	// CEO
+	setCeoBuffs,
+
+	// CHECKS
 	isAgent,
 	isSpy,
 	isCeo,
 	isSniper,
 	isSniperOnBoard,
-	setCeoBuffs,
-	highlightSnipersWithSight,
-	isInSniperSight,
-	isAnyPieceThroughSniperLine,
-	getKilledPiecesByTeam,
-	getSurvivorsForTeam,
 	hasGameFinished,
+
+	// GETTERS
+	getTeam,
+	getType,
+	getNumber,
+	getPieceById,
+	getSurvivorsForTeam,
 	getAllTeamPieces,
 	getCeo,
 };
