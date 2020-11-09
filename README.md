@@ -21,6 +21,9 @@ yarn go
 ```
 
 ## Changelog
+### v1.4.0
+* Added claim control by deploying CEO
+
 ### v1.3.0
 * Added player scores and winner
 * **v1.3.1**
@@ -29,6 +32,10 @@ yarn go
   * Fixed snipe! mechanics
 * **v1.3.3**
   * Fixed spy killing
+* **v1.3.4**
+  * Fixed sniper kill consecuences
+* **v1.3.5**
+  * Fixed spy movement
 
 ### v1.2.0
 * Added alignment reminder during Play Phase
@@ -102,6 +109,8 @@ yarn go
 * Reveal mechanics
 * Accuse mechanics
 * Claim control mechanics
+  * ~~deploying CEO~~
+  * revealing
 * UI revamp
 * 3D
 * Remote multiplayer
