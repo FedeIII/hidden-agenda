@@ -1,11 +1,18 @@
 import { pz, POINTS_PER_PIECE_TYPE } from 'Domain/pieces';
 import cells from 'Domain/cells';
 
+export const TEAM_COLORS = {
+	0: 'black',
+	1: 'red',
+	2: 'white',
+	3: 'yellow',
+};
+
 export const TEAM_NAMES = {
-	0: 'BLACK TEAM',
-	1: 'RED TEAM',
-	2: 'WHITE TEAM',
-	3: 'YELLOW TEAM',
+	0: `${TEAM_COLORS[0].toUpperCase()} TEAM`,
+	1: `${TEAM_COLORS[1].toUpperCase()} TEAM`,
+	2: `${TEAM_COLORS[2].toUpperCase()} TEAM`,
+	3: `${TEAM_COLORS[3].toUpperCase()} TEAM`,
 };
 
 function initControl() {

@@ -1,4 +1,5 @@
 import styled, { css } from 'styled-components';
+import { TEAM_COLORS } from 'Domain/teams';
 
 const containerMargin = ({ small }) => {
 	if (small) {
@@ -55,21 +56,21 @@ const cardTeamColor = ({ team }) => {
 		default:
 		case '0':
 			return css`
-				background-color: black;
+				background-color: ${TEAM_COLORS[team]};
 				color: white;
 			`;
 		case '1':
 			return css`
-				background-color: red;
+				background-color: ${TEAM_COLORS[team]};
 				color: white;
 			`;
 		case '2':
 			return css`
-				background-color: white;
+				background-color: ${TEAM_COLORS[team]};
 			`;
 		case '3':
 			return css`
-				background-color: yellow;
+				background-color: ${TEAM_COLORS[team]};
 			`;
 	}
 };

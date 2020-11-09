@@ -14,9 +14,9 @@ function PlayerScore(props) {
 	return (
 		<Row>
 			<Cell big>{player.name}:</Cell>
-			<Cell>
-				{friendPoints} - {foePoints}
-			</Cell>
+			<Cell team={player.friend}>{friendPoints}</Cell>
+			<Cell>-</Cell>
+			<Cell team={player.foe}>{foePoints}</Cell>
 			<Cell>=</Cell>
 			<Cell big>{py.getPoints(player, pieces)} pts.</Cell>
 		</Row>
