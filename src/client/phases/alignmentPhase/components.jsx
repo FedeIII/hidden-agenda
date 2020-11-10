@@ -6,5 +6,5 @@ export const AlignmentPhaseContainer = styled.div`
   flex-direction: column;
   padding: 40px;
   max-width: 960px;
-  width: 66vw;
+  width: 100%;
 `;

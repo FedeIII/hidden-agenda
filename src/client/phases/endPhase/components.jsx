@@ -6,7 +6,7 @@ export const EndPhaseContainer = styled.div`
 	display: flex;
 	flex-direction: row;
 	justify-content: space-evenly;
-	padding: 40px 40px 60px;
+	padding: 10px 40px 60px;
 	margin-top: 40px;
 	align-items: center;
 `;

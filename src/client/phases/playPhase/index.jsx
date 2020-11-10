@@ -9,7 +9,7 @@ import { Button } from 'Client/components/button';
 import useBooleanState from 'Hooks/useBooleanState';
 import { pz } from 'Domain/pieces';
 import py from 'Domain/py';
-import { nextTurn, snipe } from 'Client/actions';
+import { nextTurn, snipe, revealFriend, revealFoe } from 'Client/actions';
 import { TEAM_NAMES } from 'Domain/teams';
 import {
 	PlayPhaseContainer,
@@ -18,6 +18,11 @@ import {
 	Action,
 	AlignmentWarningStyled,
 	AlignmentWarningMessage,
+	RevealContainer,
+	RevealMessage,
+	RevealActions,
+	RevealCancelButton,
+	RevealCard,
 } from './components';
 import HQ from './hq';
 import TableBoard from './tableBoard';
@@ -53,10 +58,75 @@ function useRenderTurn() {
 	return useCallback(() => `Player's turn: ${py.getTurn(players)}`, [players]);
 }
 
+function useNextTurn() {
+	const [{ hasTurnEnded }, dispatch] = useContext(StateContext);
+
+	const onNextTurn = useCallback(() => {
+		if (hasTurnEnded) {
+			dispatch(nextTurn());
+		}
+	}, [hasTurnEnded]);
+
+	return [hasTurnEnded, onNextTurn];
+}
+
 function useGameFinished() {
 	const [{ pieces }] = useContext(StateContext);
 
 	return pz.hasGameFinished(pieces);
+}
+
+function useReveal() {
+	const [{ players }] = useContext(StateContext);
+
+	const [isRevealShown, showReveal, hideReveal] = useBooleanState(false);
+
+	const isRevealActive = useMemo(() => py.isRevealActive(players), [players]);
+
+	const onReveal = useCallback(() => {
+		if (isRevealActive) {
+			showReveal();
+		}
+	});
+
+	return [isRevealShown, isRevealActive, onReveal, hideReveal];
+}
+
+function useSnipe() {
+	const [{ pieces }, dispatch] = useContext(StateContext);
+
+	const isSniperOnBoard = pz.isSniperOnBoard(pieces);
+
+	const onSnipe = useCallback(() => {
+		if (isSniperOnBoard) {
+			dispatch(snipe());
+		}
+	}, [isSniperOnBoard]);
+
+	return [isSniperOnBoard, onSnipe];
+}
+
+function RevealedAlignments() {
+	const [{ players }] = useContext(StateContext);
+	const player = useMemo(() => players.find(player => player.turn), [players]);
+
+	const showFriend = player.revealed.friend;
+	const showFoe = player.revealed.foe;
+
+	return (
+		<>
+			{showFriend && (
+				<AlignmentFriend small disabled player={player.name} team={player.alignment.friend}>
+					{TEAM_NAMES[player.alignment.friend]}
+				</AlignmentFriend>
+			)}
+			{showFoe && (
+				<AlignmentFoe small disabled player={player.name} team={player.alignment.foe}>
+					{TEAM_NAMES[player.alignment.foe]}
+				</AlignmentFoe>
+			)}
+		</>
+	);
 }
 
 function AlignmentWarning(props) {
@@ -83,16 +153,56 @@ function AlignmentReminder(props) {
 
 	return (
 		<Alignments small>
-			<AlignmentFriend small disabled player={player.name} team={player.friend}>
-				{TEAM_NAMES[player.friend]}
+			<AlignmentFriend small disabled player={player.name} team={player.alignment.friend}>
+				{TEAM_NAMES[player.alignment.friend]}
 			</AlignmentFriend>
-			<AlignmentFoe small disabled player={player.name} team={player.foe}>
-				{TEAM_NAMES[player.foe]}
+			<AlignmentFoe small disabled player={player.name} team={player.alignment.foe}>
+				{TEAM_NAMES[player.alignment.foe]}
 			</AlignmentFoe>
 			<Button small active onClick={onClose}>
 				HIDE
 			</Button>
 		</Alignments>
+	);
+}
+
+function RevealAlignment(props) {
+	const { onClose } = props;
+	const [{ players }, dispatch] = useContext(StateContext);
+
+	const player = useMemo(() => players.find(player => player.turn), [players]);
+
+	const isFriendRevealed = py.isFriendRevealed(players);
+	const isFoeRevealed = py.isFoeRevealed(players);
+
+	const onRevealFriend = useCallback(() => dispatch(revealFriend(players)), [players]);
+	const onRevealFoe = useCallback(() => dispatch(revealFoe(players)), [players]);
+
+	return (
+		<RevealContainer>
+			<RevealMessage>Reveal Alignment: </RevealMessage>
+			<RevealActions>
+				{isFriendRevealed ? (
+					<AlignmentFriend small disabled player={player.name} team={player.alignment.friend}>
+						{TEAM_NAMES[player.alignment.friend]}
+					</AlignmentFriend>
+				) : (
+					<RevealCard onClick={onRevealFriend}>Friend</RevealCard>
+				)}
+
+				{isFoeRevealed ? (
+					<AlignmentFoe small disabled player={player.name} team={player.alignment.foe}>
+						{TEAM_NAMES[player.alignment.foe]}
+					</AlignmentFoe>
+				) : (
+					<RevealCard onClick={onRevealFoe}>Foe</RevealCard>
+				)}
+
+				<RevealCancelButton small active onClick={onClose}>
+					CANCEL
+				</RevealCancelButton>
+			</RevealActions>
+		</RevealContainer>
 	);
 }
 
@@ -106,30 +216,24 @@ function PlayPhase() {
 	] = useAlignmentMessages();
 
 	const readyToPlay = useReadyToPlay();
-	const renderTurn = useRenderTurn();
 	const gameFinished = useGameFinished();
-	const [{ hasTurnEnded, pieces }, dispatch] = useContext(StateContext);
-
-	const isSniperOnBoard = pz.isSniperOnBoard(pieces);
-
-	const onSnipe = useCallback(() => {
-		if (isSniperOnBoard) {
-			dispatch(snipe());
-		}
-	}, [isSniperOnBoard]);
-
-	const onNextTurn = useCallback(() => {
-		if (hasTurnEnded) {
-			dispatch(nextTurn());
-		}
-	}, [hasTurnEnded]);
+	const renderTurn = useRenderTurn();
+	const [hasTurnEnded, onNextTurn] = useNextTurn();
+	const [isRevealShown, isRevealActive, onReveal, hideReveal] = useReveal();
+	const [isSniperOnBoard, onSnipe] = useSnipe();
 
 	return (
 		<PlayPhaseContainer>
 			{!readyToPlay && <Redirect to="/" />}
 			{gameFinished && <Redirect to="/end" />}
 
-			<Title>{renderTurn()}</Title>
+			<Title>
+				{renderTurn()}
+				{'  '}
+				<Button small id="next-turn" active={hasTurnEnded} onClick={onNextTurn}>
+					NEXT TURN
+				</Button>
+			</Title>
 
 			<Board>
 				<HQs>
@@ -145,14 +249,18 @@ function PlayPhase() {
 
 			<Actions>
 				<Action>
-					<Button id="snipe" mall active={isSniperOnBoard} onClick={onSnipe}>
+					<Button id="snipe" small active={isSniperOnBoard} onClick={onSnipe}>
 						SNIPE!
 					</Button>
 				</Action>
 				<Action>
-					<Button id="next-turn" active={hasTurnEnded} onClick={onNextTurn}>
-						NEXT TURN
-					</Button>
+					{!isRevealShown && <RevealedAlignments />}
+					{!isRevealShown && (
+						<Button id="reveal" active={isRevealActive} onClick={onReveal}>
+							REVEAL
+						</Button>
+					)}
+					{isRevealShown && <RevealAlignment onClose={hideReveal} />}
 				</Action>
 				<Action>
 					{!isAlignmentWarningShown && !isAlignmentShown && (

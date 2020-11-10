@@ -28,6 +28,7 @@ const size = ({ small }) => {
 		return css`
 			width: initial;
 			height: initial;
+			margin-right: 8px;
 		`;
 	}
 
@@ -42,12 +43,15 @@ const innerSize = ({ small }) => {
 		return css`
 			width: calc(100% - 16px);
 	    height: calc(100% - 16px);
+			margin: 6px 8px;
+    	padding: 2px 8px;
 		`;
 	}
 
 	return css`
-		width: 66%;
-		height: 33%;
+		min-width: 50%;
+		min-height: 20%;
+		padding: 8px;
 	`;
 };
 

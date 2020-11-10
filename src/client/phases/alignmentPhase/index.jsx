@@ -82,7 +82,7 @@ function useAlignmentCards(start) {
 		const currentPlayer = players.find(player => player.name === playerTurn);
 
 		if (currentPlayer) {
-			return currentPlayer.friend;
+			return currentPlayer.alignment.friend;
 		}
 
 		return null;
@@ -92,7 +92,7 @@ function useAlignmentCards(start) {
 		const currentPlayer = players.find(player => player.name === playerTurn);
 
 		if (currentPlayer) {
-			return currentPlayer.foe;
+			return currentPlayer.alignment.foe;
 		}
 
 		return null;

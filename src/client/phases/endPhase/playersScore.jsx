@@ -8,15 +8,15 @@ function PlayerScore(props) {
 	const { player } = props;
 	const [{ pieces }] = useContext(StateContext);
 
-	const friendPoints = teams.getPointsForTeam(player.friend, pieces);
-	const foePoints = teams.getPointsForTeam(player.foe, pieces);
+	const friendPoints = teams.getPointsForTeam(player.alignment.friend, pieces);
+	const foePoints = teams.getPointsForTeam(player.alignment.foe, pieces);
 
 	return (
 		<Row>
 			<Cell big>{player.name}:</Cell>
-			<Cell team={player.friend}>{friendPoints}</Cell>
+			<Cell team={player.alignment.friend}>{friendPoints}</Cell>
 			<Cell>-</Cell>
-			<Cell team={player.foe}>{foePoints}</Cell>
+			<Cell team={player.alignment.foe}>{foePoints}</Cell>
 			<Cell>=</Cell>
 			<Cell big>{py.getPoints(player, pieces)} pts.</Cell>
 		</Row>

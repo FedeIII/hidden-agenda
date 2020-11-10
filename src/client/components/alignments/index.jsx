@@ -6,7 +6,7 @@ function AlignmentCard(props) {
   const { children, team, small } = props;
   return (
     <AlignmentCardStyled {...props}>
-      {children && <AlignmentTeam small team={team}>{children}</AlignmentTeam>}
+      {children && <AlignmentTeam small={small} team={team}>{children}</AlignmentTeam>}
     </AlignmentCardStyled>
   );
 }

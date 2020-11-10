@@ -6,6 +6,7 @@ export const Title = styled.div`
   color: white;
   font-weight: bold;
   font-size: 16px;
+  width: 90vw;
 `;
 
 export const Subtitle = styled.div`

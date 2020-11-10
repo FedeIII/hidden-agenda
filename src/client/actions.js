@@ -67,3 +67,19 @@ export function cancelControl(team) {
 		type: CANCEL_CONTROL,
 	};
 }
+
+export const REVEAL_FRIEND = 'REVEAL_FRIEND';
+export function revealFriend(players) {
+	return {
+		payload: { players },
+		type: REVEAL_FRIEND,
+	};
+}
+
+export const REVEAL_FOE = 'REVEAL_FOE';
+export function revealFoe(players) {
+	return {
+		payload: { players },
+		type: REVEAL_FOE,
+	};
+}

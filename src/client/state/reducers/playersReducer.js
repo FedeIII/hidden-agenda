@@ -1,46 +1,22 @@
-import { START_GAME, NEXT_TURN, SET_ALIGNMENT } from 'Client/actions';
-
-function startGamePlayers(playerNames) {
-  return playerNames.map((name, i) => ({
-    name,
-    turn: i === 0,
-  }));
-}
-
-function nextTurnPlayers(players) {
-  const currentIndex = players.findIndex(player => player.turn);
-  const nextIndex = currentIndex + 1 >= players.length ? 0 : currentIndex + 1;
-  return players.map(({ name }, i) => ({
-    name,
-    turn: i === nextIndex,
-  }));
-}
-
-function setAlignmentPlayers(players, { name, friend, foe }) {
-  return players.map(player => {
-    if (player.name === name) {
-      return {
-        ...player,
-        friend: typeof friend === 'undefined' ? player.friend : friend,
-        foe: typeof foe === 'undefined' ? player.foe : foe,
-      };
-    }
-
-    return player;
-  });
-}
+import { START_GAME, NEXT_TURN, SET_ALIGNMENT, REVEAL_FRIEND, REVEAL_FOE } from 'Client/actions';
+import py from 'Domain/py';
 
 function playersReducer({ players }, action) {
-  switch (action.type) {
-    case START_GAME:
-      return startGamePlayers(action.payload);
-    case NEXT_TURN:
-      return nextTurnPlayers(players);
-    case SET_ALIGNMENT:
-      return setAlignmentPlayers(players, action.payload);
-    default:
-      return players;
-  }
+	switch (action.type) {
+		case START_GAME:
+			return py.init(action.payload);
+		case NEXT_TURN:
+			return py.nextTurn(players);
+		case SET_ALIGNMENT:
+			const { name, friend, foe } = action.payload;
+			return py.setAlignment(players, name, friend, foe);
+		case REVEAL_FRIEND:
+			return py.revealFriend(action.payload.players);
+		case REVEAL_FOE:
+			return py.revealFoe(action.payload.players);
+		default:
+			return players;
+	}
 }
 
 export default playersReducer;

@@ -6,7 +6,7 @@ export const PlayPhaseContainer = styled.div`
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	padding: 40px 40px 60px;
+	padding: 10px 40px 60px;
 	width: 100%;
 `;
 
@@ -34,6 +34,7 @@ export const Action = styled.div`
 
 export const AlignmentWarningStyled = styled.div`
 	color: white;
+	text-align: center;
 `;
 
 export const AlignmentWarningMessage = styled.span`
@@ -73,10 +74,44 @@ export const HqButton = styled(Button)`
 	position: absolute;
 	font-size: 16px;
 	width: calc(100% - 16px);
-`
+`;
 export const HqMessage = styled.span`
 	position: absolute;
 	font-size: 16px;
 	top: 40px;
 	letter-spacing: -0.5px;
+`;
+
+export const RevealContainer = styled.div`
+	display: flex;
+	flex-direction: column;
+	justify-content: space-evenly;
+	align-items: center;
+	margin: 0;
+`;
+
+export const RevealMessage = styled.span`
+	color: white;
+	margin-bottom: 8px;
+`;
+
+export const RevealCard = styled.div`
+	color: white;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: black;
+	cursor: pointer;
+	margin-right: 8px;
+	padding: 8px;
+	min-width: 30%;
+`;
+
+export const RevealActions = styled.div`
+	display: flex;
+	flex-direction: row;
+`;
+
+export const RevealCancelButton = styled(Button)`
+	margin-left: 8px;
 `;
