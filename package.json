@@ -6,7 +6,8 @@
 		"webpack": "webpack",
 		"go": "webpack-dev-server --open --mode development",
 		"do": "npm run webpack -- --mode production",
-		"test": "jest"
+		"test": "jest",
+		"smoke": "npm run test src/tests/smoke.test.js"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.5.5",
