@@ -12,7 +12,7 @@ function piecesPrevState(state, action) {
 		case TOGGLE_PIECE:
 			return teams.togglePieceForControl(action.payload.pieceId, state);
 		default:
-			return [...state.teamControl];
+			return state.teamControl;
 	}
 }
 

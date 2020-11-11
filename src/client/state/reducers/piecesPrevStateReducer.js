@@ -1,12 +1,12 @@
 import { NEXT_TURN } from 'Client/actions';
 
-function piecesPrevState(state, action) {
+function piecesPrevStateReducer(state, action) {
 	switch (action.type) {
 		case NEXT_TURN:
 			return [...state.pieces];
 		default:
-			return [...state.piecesPrevState];
+			return state.piecesPrevState;
 	}
 }
 
-export default piecesPrevState;
+export default piecesPrevStateReducer;

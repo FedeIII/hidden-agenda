@@ -56,7 +56,7 @@ function piecesReducer(state, action) {
 		case CANCEL_CONTROL:
 			return [...cancelControlState(action.payload, state)];
 		default:
-			return [...state.pieces];
+			return state.pieces;
 	}
 }
 
