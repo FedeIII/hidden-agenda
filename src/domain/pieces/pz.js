@@ -860,11 +860,13 @@ function isSamePosition(piece1, piece2) {
 	}
 }
 
-function isCeoInPosition(position, pieces) {
+function isOwnCeoInPosition(piece, position, pieces) {
 	const pieceAtPosition = getPieceAtPosition(position, pieces);
 
 	if (pieceAtPosition) {
-		return isCeo(pieceAtPosition.id);
+		const pieceTeam = getTeam(piece.id);
+		const ceoTeam = getTeam(pieceAtPosition.id);
+		return isCeo(pieceAtPosition.id) && pieceTeam == ceoTeam;
 	}
 
 	return false;
@@ -872,7 +874,7 @@ function isCeoInPosition(position, pieces) {
 
 function isNextToCeo(piece, pieces) {
 	return getSurroundingPositions(piece.position).reduce(
-		(isCeoPresent, position) => isCeoPresent || isCeoInPosition(position, pieces),
+		(isCeoPresent, position) => isCeoPresent || isOwnCeoInPosition(piece, position, pieces),
 		false,
 	);
 }
