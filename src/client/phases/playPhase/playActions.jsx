@@ -105,7 +105,7 @@ function RevealAlignment(props) {
 						{TEAM_NAMES[player.alignment.friend]}
 					</AlignmentFriend>
 				) : (
-					<RevealCard onClick={onRevealFriend}>Friend</RevealCard>
+					<RevealCard id="reveal-friend" onClick={onRevealFriend}>Friend</RevealCard>
 				)}
 
 				{isFoeRevealed ? (
@@ -113,7 +113,7 @@ function RevealAlignment(props) {
 						{TEAM_NAMES[player.alignment.foe]}
 					</AlignmentFoe>
 				) : (
-					<RevealCard onClick={onRevealFoe}>Foe</RevealCard>
+					<RevealCard id="reveal-foe" onClick={onRevealFoe}>Foe</RevealCard>
 				)}
 
 				<RevealCancelButton small active onClick={onClose}>

@@ -43,6 +43,9 @@
 	"author": "Federico Perez <fedelll@gmail.com>",
 	"jest": {
 		"setupFiles": [ "<rootDir>/jest.init.js" ],
-		"setupFilesAfterEnv": [ "<rootDir>src/tests/helpers/setupTests.js" ]
+		"setupFilesAfterEnv": [ "<rootDir>src/tests/helpers/setupTests.js" ],
+		"moduleNameMapper": {
+			"Domain/(.*)": "<rootDir>/src/domain/$1"
+		}
 	}
 }

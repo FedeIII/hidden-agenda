@@ -17,10 +17,10 @@ export const TEAM_NAMES = {
 
 function initControl() {
 	return [
-		{ player: null, enabled: true },
-		{ player: null, enabled: true },
-		{ player: null, enabled: true },
-		{ player: null, enabled: true },
+		{ player: null, prevPlayer: null, claimEnabled: true, controlling: false },
+		{ player: null, prevPlayer: null, claimEnabled: true, controlling: false },
+		{ player: null, prevPlayer: null, claimEnabled: true, controlling: false },
+		{ player: null, prevPlayer: null, claimEnabled: true, controlling: false },
 	];
 }
 
@@ -31,19 +31,19 @@ function claimControl(playerName, team, { pieces, teamControl }) {
 		return teamControl;
 	}
 
-	if (teamControl[team].player) {
-		return teamControl;
-	}
-
 	return teamControl.map(setControlFor(playerName, team, pieces));
 }
 
 function setControlFor(playerName, team, pieces) {
-	return function mapTeamControl({ player, enabled }, teamIndex) {
+	return function mapTeamControl(teamControl, teamIndex) {
+		const { player, controlling } = teamControl;
+
 		if (teamIndex == team) {
 			return {
 				player: playerName,
-				enabled: true,
+				prevPlayer: player,
+				claimEnabled: true,
+				controlling,
 			};
 		}
 
@@ -52,28 +52,33 @@ function setControlFor(playerName, team, pieces) {
 
 			return {
 				player: null,
-				enabled: !cells.inBoard(ceo.position),
+				prevPlayer: player,
+				claimEnabled: !cells.inBoard(ceo.position),
+				controlling: false,
 			};
 		}
 
-		return { player, enabled };
+		return teamControl;
 	};
 }
 
-function cancelControl(team, { pieces, teamControl }) {
-	return teamControl.map(removeControlFor(team, pieces));
+function cancelControl(team, { teamControl }) {
+	return teamControl.map(removeControlFor(team));
 }
 
-function removeControlFor(team, pieces) {
-	return function mapTeamControl({ player, enabled }, teamIndex) {
+function removeControlFor(team) {
+	return function mapTeamControl(teamControl, teamIndex) {
+		const { prevPlayer, controlling } = teamControl;
 		if (teamIndex == team) {
 			return {
-				player: null,
-				enabled: true,
+				player: prevPlayer,
+				prevPlayer: null,
+				claimEnabled: true,
+				controlling,
 			};
 		}
 
-		return { player, enabled };
+		return teamControl;
 	};
 }
 
@@ -109,43 +114,90 @@ function isCeoPlacement(pieceId, pieces) {
 function mapDeployedCeo(ceoId) {
 	const ceoTeam = pz.getTeam(ceoId);
 
-	return function setTeamControl({ player, enabled }, teamIndex) {
+	return function setTeamControl(teamControl, teamIndex) {
+		const { player, claimEnabled } = teamControl;
+
 		if (teamIndex == ceoTeam) {
 			return {
 				player,
-				enabled: false,
+				prevPlayer: null,
+				claimEnabled,
+				controlling: !!player,
 			};
 		}
 
-		return { player, enabled };
+		return teamControl;
 	};
 }
 
-function togglePieceForControl(pieceId, { teamControl, pieces }) {
-	if (isCeoDeselectionInStore(pieceId, pieces)) {
-		return teamControl.map(mapDeselectedCeo(pieceId));
-	}
+// function togglePieceForControl(pieceId, { teamControl, pieces }) {
+// 	if (isCeoDeselectionInStore(pieceId, pieces)) {
+// 		return teamControl.map(mapDeselectedCeo(pieceId));
+// 	}
 
-	return teamControl;
+// 	return teamControl;
+// }
+
+// function isCeoDeselectionInStore(pieceId, pieces) {
+// 	const ceo = pz.getPieceById(pieceId, pieces);
+// 	return pz.isCeo(pieceId) && !ceo.selected && !ceo.position;
+// }
+
+// function mapDeselectedCeo(ceoId) {
+// 	const ceoTeam = pz.getTeam(ceoId);
+
+// 	return function unsetTeamControl(teamControl, teamIndex) {
+// 		const { prevPlayer } = teamControl;
+
+// 		if (teamIndex == ceoTeam) {
+// 			return {
+// 				player: null,
+// 				prevPlayer,
+// 				claimEnabled: true,
+// 				controlling: false,
+// 			};
+// 		}
+
+// 		return teamControl;
+// 	};
+// }
+
+function revealFriend(players, { teamControl, pieces }) {
+	const player = players.find(p => p.turn);
+
+	return teamControl.map(controlRevealedTeam(player.name, player.alignment.friend, pieces));
 }
 
-function isCeoDeselectionInStore(pieceId, pieces) {
-	const ceo = pz.getPieceById(pieceId, pieces);
-	return pz.isCeo(pieceId) && !ceo.selected && !ceo.position;
+function revealFoe(players, { teamControl, pieces }) {
+	const player = players.find(p => p.turn);
+
+	return teamControl.map(controlRevealedTeam(player.name, player.alignment.foe, pieces));
 }
 
-function mapDeselectedCeo(ceoId) {
-	const ceoTeam = pz.getTeam(ceoId);
+function controlRevealedTeam(playerName, team, pieces) {
+	return function setControlledTeam(teamControl, teamIndex) {
+		const { player } = teamControl;
+		const ceo = pz.getCeo(pieces, team);
 
-	return function unsetTeamControl({ player, enabled }, teamIndex) {
-		if (teamIndex == ceoTeam) {
+		if (teamIndex == team) {
 			return {
-				player: null,
-				enabled: true,
+				player: playerName,
+				prevPlayer: null,
+				claimEnabled: !cells.inBoard(ceo.position),
+				controlling: true,
 			};
 		}
 
-		return { player, enabled };
+		if (player == playerName) {
+			return {
+				player: null,
+				prevPlayer: null,
+				claimEnabled: !cells.inBoard(ceo.position),
+				controlled: false,
+			};
+		}
+
+		return teamControl;
 	};
 }
 
@@ -155,5 +207,7 @@ export default {
 	cancelControl,
 	getPointsForTeam,
 	movePieceForControl,
-	togglePieceForControl,
+	// togglePieceForControl,
+	revealFriend,
+	revealFoe,
 };

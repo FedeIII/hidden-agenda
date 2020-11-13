@@ -36,7 +36,7 @@ function init() {
 //////////////
 
 function toggle(state, pieceId) {
-	const { hasTurnEnded, pieces, piecesPrevState, snipe, pieceState, teamControl } = state;
+	const { hasTurnEnded, pieces, piecesPrevState } = state;
 	if (hasTurnEnded) {
 		return pieces;
 	}
@@ -87,9 +87,9 @@ function hasToToggle(pieceId, selectedPiece, { players, snipe, pieceState, piece
 }
 
 function isToggledTeamControlled(pieceId, teamControl, piecesPrevState, players, pieces) {
-	if (isCeo(pieceId) && isCeoPlacement(pieceId, piecesPrevState)) {
-		return false;
-	}
+	// if (isCeo(pieceId) && isCeoPlacement(pieceId, piecesPrevState)) {
+	// 	return false;
+	// }
 
 	if (cells.inBoard(getPieceById(pieceId, pieces).position)) {
 		return false;
@@ -97,12 +97,13 @@ function isToggledTeamControlled(pieceId, teamControl, piecesPrevState, players,
 
 	const toggledTeam = getTeam(pieceId);
 	const controlledTeams = teamControl
-		.map(({ player, enabled }, teamIndex) => ({
-			controlled: !!(player && !enabled),
+		.map(({ player, prevPlayer, controlling }, teamIndex) => ({
+			controlling,
 			teamIndex,
+			prevPlayer,
 			player,
 		}))
-		.filter(({ controlled, player }) => controlled && py.getTurn(players) != player)
+		.filter(({ controlling, player, prevPlayer }) => controlling && py.getTurn(players) != (prevPlayer || player))
 		.map(({ teamIndex }) => String(teamIndex));
 
 	return controlledTeams.includes(toggledTeam);
@@ -756,10 +757,6 @@ function claimControlPieceMap(team, teamControl) {
 		}
 
 		if (getTeam(piece.id) != team) {
-			return piece;
-		}
-
-		if (teamControl[team].player) {
 			return piece;
 		}
 

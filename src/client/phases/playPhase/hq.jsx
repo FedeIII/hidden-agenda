@@ -16,11 +16,13 @@ function HQ({ team }) {
 	const [{ pieces, players, teamControl }, dispatch] = useContext(StateContext);
 
 	const playerName = teamControl[team].player;
-	const claimEnabled = teamControl[team].enabled;
+	const prevPlayerName = teamControl[team].prevPlayer;
+	const claimEnabled = teamControl[team].claimEnabled;
+	const controlling = teamControl[team].controlling;
 	const playerTurn = py.getTurn(players);
 
-  const isClaimingControl = playerName && claimEnabled;
-  const hasControl = playerName && !claimEnabled;
+	const isClaimingControl = (playerName && !controlling) || !!prevPlayerName;
+	const hasControl = (playerName || prevPlayerName) && controlling;
 
 	const onClaimClick = useCallback(() => {
 		if (isClaimingControl) {
@@ -35,7 +37,7 @@ function HQ({ team }) {
 			<HqButton id={`claim-${team}`} active={claimEnabled} small onClick={onClaimClick}>
 				{isClaimingControl ? 'Cancel' : 'Claim Control'}
 			</HqButton>
-			{hasControl && <HqMessage id={`controlled-${team}`}>Controlled by: {playerName}</HqMessage>}
+			{hasControl && <HqMessage id={`controlled-${team}`}>Controlled by: {prevPlayerName || playerName}</HqMessage>}
 			<HqStore id={`store-${team}`}>
 				{getNotStartedTeamPieces(pieces, team).map(piece => (
 					<Piece key={piece.id} {...piece} />
