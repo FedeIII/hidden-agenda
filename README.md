@@ -21,6 +21,9 @@ yarn go
 ```
 
 ## Changelog
+### v1.5.0
+* Added reveal and claim control by reveal
+
 ### v1.4.0
 * Added claim control by deploying CEO
 
@@ -106,11 +109,11 @@ yarn go
     * ~~piece score table~~
   * ~~player scores~~
 * ~~Alignment cards~~
-* Reveal mechanics
+* ~~Reveal mechanics
 * Accuse mechanics
-* Claim control mechanics
+* ~~Claim control mechanics~~
   * ~~deploying CEO~~
-  * revealing
+  * ~~revealing~~
 * UI revamp
 * 3D
 * Remote multiplayer
