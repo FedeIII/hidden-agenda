@@ -85,9 +85,9 @@ export function revealFoe(players) {
 }
 
 export const ACCUSE = 'ACCUSE';
-export function accuse({ player, alignment, team }) {
+export function accuse({ accuser, accusee, alignment, team }) {
 	return {
-		payload: { player, alignment, team },
+		payload: { accuser, accusee, alignment, team },
 		type: ACCUSE,
 	};
 }

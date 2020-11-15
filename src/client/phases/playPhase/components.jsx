@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 import { Button } from 'Client/components/button';
 import { TEAM_COLORS } from 'Domain/teams';
 
@@ -117,7 +117,16 @@ export const RevealActions = styled.div`
 	flex-direction: row;
 `;
 
+const onHide = ({ hide }) => {
+	if (hide) {
+		return css`
+			display: none;
+		`;
+	}
+};
+
 export const ActionButton = styled(Button)`
+	${onHide}
 	border-left: 1px solid darkgray !important;
 
 	&:first-of-type {

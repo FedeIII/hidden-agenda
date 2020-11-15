@@ -1,10 +1,10 @@
-import React, { useMemo, useContext, useCallback, useState } from 'react';
+import React, { useMemo, useContext, useCallback, useEffect } from 'react';
 import { StateContext } from 'State';
 import { pz } from 'Domain/pieces';
 import { TEAM_NAMES } from 'Domain/teams';
 import py from 'Domain/py';
 import useBooleanState from 'Hooks/useBooleanState';
-import { snipe, revealFriend, revealFoe, accuse } from 'Client/actions';
+import { snipe, revealFriend, revealFoe } from 'Client/actions';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
 import { Button } from 'Client/components/button';
 import {
@@ -18,8 +18,8 @@ import {
 	RevealMessage,
 	RevealActions,
 	RevealCard,
-	AccuseTeam,
 } from './components';
+import AccuseMenu from './accuseMenu';
 
 function useSnipe() {
 	const [{ pieces }, dispatch] = useContext(StateContext);
@@ -32,32 +32,48 @@ function useSnipe() {
 		}
 	}, [isSniperOnBoard]);
 
-	return [isSniperOnBoard, onSnipe];
+	return onSnipe;
 }
 
 function useAccuseMenu() {
-	return useBooleanState(false);
+	const [isAccusedShown, showAccuseMenu, hideAccuseMenu] = useBooleanState(false);
+	const [{ players }] = useContext(StateContext);
+	const playerName = py.getTurn(players);
+
+	useEffect(() => hideAccuseMenu(), [playerName]);
+
+	return [isAccusedShown, showAccuseMenu, hideAccuseMenu];
 }
 
 function useRevealMenu() {
+	const [isRevealShown, showRevealMenu, hideRevealMenu] = useBooleanState(false);
 	const [{ players }] = useContext(StateContext);
+	const playerName = py.getTurn(players);
 
-	const [isRevealShown, showReveal, hideReveal] = useBooleanState(false);
+	useEffect(() => hideRevealMenu(), [playerName]);
 
 	const isRevealActive = useMemo(() => py.isRevealActive(players), [players]);
 
 	const onReveal = useCallback(() => {
 		if (isRevealActive) {
-			showReveal();
+			showRevealMenu();
 		}
 	});
 
-	return [isRevealShown, isRevealActive, onReveal, hideReveal];
+	return [isRevealShown, isRevealActive, onReveal, hideRevealMenu];
 }
 
 function useAlignmentMessages() {
 	const [isAlignmentWarningShown, showWarning, hideWarning] = useBooleanState(false);
 	const [isAlignmentShown, showAlignment, hideAlignment] = useBooleanState(false);
+
+	const [{ players }] = useContext(StateContext);
+	const playerName = py.getTurn(players);
+
+	useEffect(() => {
+		hideWarning();
+		hideAlignment();
+	}, [playerName]);
 
 	const onWarningConfirm = useCallback(() => {
 		hideWarning();
@@ -65,45 +81,6 @@ function useAlignmentMessages() {
 	}, [hideWarning, showAlignment]);
 
 	return [isAlignmentWarningShown, isAlignmentShown, showWarning, onWarningConfirm, hideAlignment];
-}
-
-function useAccuseActions(onExit) {
-	const [{ players }, dispatch] = useContext(StateContext);
-	const [playerAccused, setPlayerAccused] = useState(null);
-	const [alignmentAccused, setAlignmentAccused] = useState(null);
-
-	const accuseActions = {
-		player: useMemo(() => players.map(player => () => setPlayerAccused(player.name)), [players, setPlayerAccused]),
-		alignment: {
-			friend: useCallback(() => setAlignmentAccused('friend'), [setAlignmentAccused]),
-			foe: useCallback(() => setAlignmentAccused('foe'), [setAlignmentAccused]),
-			back: useCallback(() => setPlayerAccused(null), [setPlayerAccused]),
-		},
-		team: useMemo(
-			() =>
-				Object.keys(TEAM_NAMES).map(team => () =>
-					dispatch(
-						accuse({
-							player: playerAccused,
-							alignment: alignmentAccused,
-							team,
-						}),
-					),
-				),
-			[dispatch, accuse, playerAccused, alignmentAccused],
-		),
-	};
-
-	accuseActions.player.back = useMemo(
-		() => () => {
-			setAlignmentAccused(null);
-			onExit();
-		},
-		[setAlignmentAccused, onExit],
-	);
-	accuseActions.team.back = useMemo(() => () => setAlignmentAccused(null), [setAlignmentAccused]);
-
-	return [playerAccused, alignmentAccused, accuseActions];
 }
 
 function RevealedAlignments() {
@@ -135,8 +112,8 @@ function RevealAlignmentMenu(props) {
 
 	const player = useMemo(() => players.find(player => player.turn), [players]);
 
-	const isFriendRevealed = py.isFriendRevealed(players);
-	const isFoeRevealed = py.isFoeRevealed(players);
+	const isFriendRevealed = py.isOwnFriendRevealed(players);
+	const isFoeRevealed = py.isOwnFoeRevealed(players);
 
 	const onRevealFriend = useCallback(() => dispatch(revealFriend(players)), [players]);
 	const onRevealFoe = useCallback(() => dispatch(revealFoe(players)), [players]);
@@ -170,73 +147,6 @@ function RevealAlignmentMenu(props) {
 				</ActionCancelButton>
 			</RevealActions>
 		</RevealContainer>
-	);
-}
-
-function AccuseMenu(props) {
-	const { onClose } = props;
-	const [{ players }] = useContext(StateContext);
-	const [playerAccused, alignmentAccused, accuseActions] = useAccuseActions(onClose);
-
-	const isPlayersShown = !playerAccused;
-	const isAlignmentsShown = !!playerAccused && !alignmentAccused;
-	const isTeamssShown = !!playerAccused && !!alignmentAccused;
-
-	return (
-		<RevealActions>
-			{isPlayersShown && (
-				<>
-					{players
-						.filter(player => py.getTurn(players) != player.name)
-						.map((player, index) => (
-							<ActionButton
-								active
-								id={`accuse-player-${index}`}
-								key={`accuse-player-${player.name}`}
-								onClick={accuseActions.player[index]}
-							>
-								{player.name}
-							</ActionButton>
-						))}
-					<ActionCancelButton small active onClick={accuseActions.player.back}>
-						CANCEL
-					</ActionCancelButton>
-				</>
-			)}
-
-			{isAlignmentsShown && (
-				<>
-					<ActionButton active id="accuse-friend" onClick={accuseActions.alignment.friend}>
-						Friend
-					</ActionButton>
-					<ActionButton active id="accuse-foe" onClick={accuseActions.alignment.foe}>
-						Foe
-					</ActionButton>
-					<ActionCancelButton small active onClick={accuseActions.alignment.back}>
-						CANCEL
-					</ActionCancelButton>
-				</>
-			)}
-
-			{isTeamssShown && (
-				<>
-					{Object.values(TEAM_NAMES).map((teamName, index) => (
-						<AccuseTeam
-							active
-							id={`accuse-team-${index}`}
-							key={`accuse-team-${teamName}`}
-							team={index}
-							onClick={accuseActions.team[index]}
-						>
-							{teamName}
-						</AccuseTeam>
-					))}
-					<ActionCancelButton small active onClick={accuseActions.team.back}>
-						CANCEL
-					</ActionCancelButton>
-				</>
-			)}
-		</RevealActions>
 	);
 }
 
@@ -278,7 +188,7 @@ function AlignmentReminder(props) {
 }
 
 function PlayActions() {
-	const [isSniperOnBoard, onSnipe] = useSnipe();
+	const onSnipe = useSnipe();
 	const [isAccusedShown, showAccuseMenu, hideAccuseMenu] = useAccuseMenu();
 	const [isRevealShown, isRevealActive, onReveal, hideReveal] = useRevealMenu();
 	const [
@@ -294,7 +204,7 @@ function PlayActions() {
 	return (
 		<Actions>
 			<Action>
-				<Button id="snipe" small active={isSniperOnBoard} onClick={onSnipe}>
+				<Button id="snipe" small active onClick={onSnipe}>
 					SNIPE!
 				</Button>
 			</Action>

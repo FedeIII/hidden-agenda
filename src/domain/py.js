@@ -15,6 +15,10 @@ function init(playerNames) {
 			friend: false,
 			foe: false,
 		},
+		allowedToAccuse: {
+			friend: true,
+			foe: true,
+		},
 	}));
 }
 
@@ -52,13 +56,13 @@ function isRevealActive(players) {
 	return !player.revealed.friend || !player.revealed.foe;
 }
 
-function isFriendRevealed(players) {
+function isOwnFriendRevealed(players) {
 	const player = players.find(player => player.turn);
 
 	return player.revealed.friend;
 }
 
-function isFoeRevealed(players) {
+function isOwnFoeRevealed(players) {
 	const player = players.find(player => player.turn);
 
 	return player.revealed.foe;
@@ -100,6 +104,49 @@ function revealFoe(players) {
 	});
 }
 
+function isPlayerTurn(players, player) {
+	return py.getTurn(players) == player.name;
+}
+
+function accuse({ accuser, accusee, alignment, team }, players) {
+	const accuserPlayer = players.find(player => player.name == accuser);
+	const accuseePlayer = players.find(player => player.name == accusee);
+
+	const isAccuserAllowed = accuserPlayer.allowedToAccuse[alignment];
+	if (!isAccuserAllowed) {
+		return players;
+	}
+
+	const isAccuserCorrect = accuseePlayer.alignment[alignment] == team;
+	const isAccuseeAlreadyRevealed = isAccuserCorrect && accuseePlayer.revealed[alignment];
+
+	if (isAccuseeAlreadyRevealed) {
+		return players;
+	}
+
+	return players.map(player => {
+		if (player.name == accuser) {
+			return {
+				...player,
+				allowedToAccuse: {
+					...player.allowedToAccuse,
+					[alignment]: accuseePlayer.alignment[alignment] == team,
+				},
+			};
+		}
+
+		if (player.name == accusee) {
+			return {
+				...player,
+				revealed: {
+					...player.revealed,
+					[alignment]: isAccuserCorrect,
+				},
+			};
+		}
+	});
+}
+
 function getPoints(player, pieces) {
 	const { friend, foe } = player.alignment;
 	const friendPoints = teams.getPointsForTeam(friend, pieces);
@@ -128,10 +175,12 @@ export default {
 	setAlignment,
 	getTurn,
 	isRevealActive,
-	isFriendRevealed,
-	isFoeRevealed,
+	isOwnFriendRevealed,
+	isOwnFoeRevealed,
 	revealFriend,
 	revealFoe,
+	isPlayerTurn,
+	accuse,
 	getPoints,
 	getWinner,
 };
