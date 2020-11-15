@@ -83,3 +83,11 @@ export function revealFoe(players) {
 		type: REVEAL_FOE,
 	};
 }
+
+export const ACCUSE = 'ACCUSE';
+export function accuse({ player, alignment, team }) {
+	return {
+		payload: { player, alignment, team },
+		type: ACCUSE,
+	};
+}

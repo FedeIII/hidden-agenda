@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import { Button } from 'Client/components/button';
+import { TEAM_COLORS } from 'Domain/teams';
 
 export const PlayPhaseContainer = styled.div`
 	position: relative;
@@ -30,6 +31,10 @@ export const Action = styled.div`
 	flex-basis: 33%;
 	display: flex;
 	justify-content: center;
+`;
+
+export const ActionCancelButton = styled(Button)`
+	margin-left: 8px;
 `;
 
 export const AlignmentWarningStyled = styled.div`
@@ -112,6 +117,14 @@ export const RevealActions = styled.div`
 	flex-direction: row;
 `;
 
-export const RevealCancelButton = styled(Button)`
-	margin-left: 8px;
+export const ActionButton = styled(Button)`
+	border-left: 1px solid darkgray !important;
+
+	&:first-of-type {
+		border-left: none !important;
+	}
+`;
+
+export const AccuseTeam = styled(ActionButton)`
+	color: ${({ team }) => (team == 0 ? 'darkgray' : TEAM_COLORS[team])};
 `;
