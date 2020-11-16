@@ -21,6 +21,10 @@ yarn go
 ```
 
 ## Changelog
+### v2.0.0
+* Complete accuse/reveal mechanics
+* Complete score system
+
 ### v1.5.0
 * Added reveal and claim control by reveal
 
@@ -110,7 +114,7 @@ yarn go
   * ~~player scores~~
 * ~~Alignment cards~~
 * ~~Reveal mechanics
-* Accuse mechanics
+* ~~Accuse mechanics~~
 * ~~Claim control mechanics~~
   * ~~deploying CEO~~
   * ~~revealing~~
