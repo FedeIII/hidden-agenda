@@ -34,7 +34,7 @@ export const PieceCountTitle = styled.span`
 	margin-bottom: 8px;
 `;
 
-export const Table = styled.div`
+export const PieceTable = styled.div`
 	background-color: lightslategray;
 	border: 2px solid gray;
 	display: flex;
@@ -45,7 +45,7 @@ export const Table = styled.div`
 	height: 36%;
 `;
 
-export const Row = styled.div`
+export const PieceRow = styled.div`
 	letter-spacing: -3px;
 	display: flex;
 	align-items: end;
@@ -55,7 +55,7 @@ export const Row = styled.div`
 
 const pointsColor = ({ team }) => TEAM_COLORS[team] || 'white';
 
-export const Cell = styled.span`
+export const PieceCell = styled.span`
 	display: flex;
 	color: ${pointsColor};
 	flex-flow: column;
@@ -72,6 +72,50 @@ export const Scores = styled.div`
 	display: flex;
 	flex-direction: column;
 	justify-content: space-around;
-	width: 33%;
+	width: 40%;
 	flex-shrink: 0;
+`;
+
+export const PointsTable = styled.div`
+	background-color: lightslategray;
+	border: 2px solid gray;
+	padding: 16px 8px;
+	margin-bottom: 20px;
+	height: 36%;
+	display: flex;
+	flex-direction: column;
+`;
+
+export const Row = styled.tr`
+	margin: 0 0 8px;
+	height: 30px;
+`;
+
+export const Cell = styled.td`
+	color: ${pointsColor};
+	filter: brightness(2) saturate(0.9);
+	letter-spacing: ${({ big }) => (big ? '-1px' : '-3px')};
+	font-size: 18px;
+	font-weight: bold;
+	text-align: end;
+	min-width: 13px;
+
+	&:first-of-type {
+		text-align: start;
+	}
+`;
+
+export const Winner = styled.div`
+	color: white;
+	align-self: center;
+	margin: 30px auto 10px;
+	font-size: 18px;
+	font-weight: bold;
+`;
+
+export const PlayerWinner = styled.div`
+	color: white;
+	align-self: center;
+	font-size: 32px;
+	font-weight: bold;
 `;

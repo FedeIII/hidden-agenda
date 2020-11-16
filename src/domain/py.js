@@ -149,10 +149,11 @@ function accuse({ accuser, accusee, alignment, team }, players) {
 
 function getPoints(player, pieces) {
 	const { friend, foe } = player.alignment;
+	const { friend: isFriendRevealed, foe: isFoeRevealed } = player.revealed;
 	const friendPoints = teams.getPointsForTeam(friend, pieces);
 	const foePoints = teams.getPointsForTeam(foe, pieces);
 
-	return friendPoints - foePoints;
+	return 100 - 50 * isFriendRevealed - 50 * isFoeRevealed + friendPoints - foePoints;
 }
 
 function getWinner(players, pieces) {
@@ -169,6 +170,10 @@ function getWinner(players, pieces) {
 	}, NO_PLAYER);
 }
 
+function sortByPoints(players, pieces) {
+	return players.slice().sort((player1, player2) => getPoints(player2, pieces) - getPoints(player1, pieces));
+}
+
 export default {
 	init,
 	nextTurn,
@@ -183,4 +188,5 @@ export default {
 	accuse,
 	getPoints,
 	getWinner,
+	sortByPoints,
 };

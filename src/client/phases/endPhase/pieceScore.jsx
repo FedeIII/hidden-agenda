@@ -1,6 +1,6 @@
 import React from 'react';
 import PieceStyled from 'Client/components/pieceStyled';
-import { Table, Row, Cell } from './components';
+import { PieceTable, PieceRow, PieceCell } from './components';
 
 function PieceType({ type }) {
   const image = `img/0-${type}.png`;
@@ -10,25 +10,25 @@ function PieceType({ type }) {
 
 function PieceScore() {
   return (
-    <Table>
-      <Row>
-        <Cell>
+    <PieceTable>
+      <PieceRow>
+        <PieceCell>
           <PieceType type="A" /> 5 pts
-        </Cell>
-        <Cell>
+        </PieceCell>
+        <PieceCell>
           <PieceType type="S" /> 10 pts
-        </Cell>
-      </Row>
+        </PieceCell>
+      </PieceRow>
 
-      <Row>
-        <Cell>
+      <PieceRow>
+        <PieceCell>
           <PieceType type="N" /> 10 pts
-        </Cell>
-        <Cell>
+        </PieceCell>
+        <PieceCell>
           <PieceType type="C" /> 20 pts
-        </Cell>
-      </Row>
-    </Table>
+        </PieceCell>
+      </PieceRow>
+    </PieceTable>
   );
 }
 
