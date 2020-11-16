@@ -15,6 +15,7 @@ export const Board = styled.div`
 	position: relative;
 	display: flex;
 	flex-direction: row;
+	justify-content: center;
 	margin-bottom: 20px;
 	width: 90vw;
 	height: 75vh;
@@ -25,16 +26,19 @@ export const Actions = styled.div`
 	display: flex;
 	justify-content: space-evenly;
 	padding: 0;
+	z-index: 10;
 `;
 
 export const Action = styled.div`
 	flex-basis: 33%;
 	display: flex;
 	justify-content: center;
+	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
 `;
 
 export const ActionCancelButton = styled(Button)`
 	margin-left: 8px;
+	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
 `;
 
 export const AlignmentWarningStyled = styled.div`
@@ -49,7 +53,7 @@ export const AlignmentWarningMessage = styled.span`
 
 export const TableBoardStyled = styled.div`
 	position: relative;
-	width: 100%;
+	width: 45%;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
@@ -106,7 +110,7 @@ export const RevealCard = styled.div`
 	align-items: center;
 	justify-content: center;
 	background-color: black;
-	cursor: pointer;
+	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
 	margin-right: 8px;
 	padding: 8px;
 	min-width: 30%;
@@ -128,6 +132,7 @@ const onHide = ({ hide }) => {
 export const ActionButton = styled(Button)`
 	${onHide}
 	border-left: 1px solid darkgray !important;
+	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
 
 	&:first-of-type {
 		border-left: none !important;

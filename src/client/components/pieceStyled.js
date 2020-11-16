@@ -119,6 +119,10 @@ const onSelected = ({ selected, highlight }) => {
   if (selected || highlight) {
     return css`
       filter: brightness(2);
+
+      &:hover {
+        filter: brightness(2);
+      }
     `;
   }
 };
@@ -133,6 +137,12 @@ const PieceStyled = styled.img`
   margin-left: 10%;
   margin-top: 13%;
   z-index: 2;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    filter: brightness(1.5);
+  }
 
   ${brightness}
   ${withDirection}

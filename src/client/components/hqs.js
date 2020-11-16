@@ -6,6 +6,7 @@ const HQs = styled.div`
   flex-direction: column;
   justify-content: space-around;
   width: 25%;
+  max-width: 230px;
   flex-shrink: 0;
 `;
 

@@ -42,9 +42,9 @@ const innerSize = ({ small }) => {
 	if (small) {
 		return css`
 			width: calc(100% - 16px);
-	    height: calc(100% - 16px);
+			height: calc(100% - 16px);
 			margin: 6px 8px;
-    	padding: 2px 8px;
+			padding: 2px 8px;
 		`;
 	}
 
@@ -91,7 +91,7 @@ export const AlignmentCardStyled = styled.div`
 	align-items: center;
 	justify-content: center;
 	background-color: ${cardColor};
-	cursor: pointer;
+	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
 
 	&:hover {
 		${brightness}

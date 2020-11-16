@@ -28,6 +28,7 @@ const hqColor = ({ team }) => {
 const HqStyled = styled.div`
   position: relative;
   height: 50%;
+  max-height: 223px;
   display: flex;
   flex-direction: column;
   border: 2px solid gray;

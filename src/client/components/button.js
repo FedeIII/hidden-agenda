@@ -40,7 +40,7 @@ export const Button = styled.button`
   background-color: lightgray;
   padding: 5px 10px;
   margin: -1px 0 0 -1px;
-  max-height: 30px;
+  cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
 
   ${size}
   ${onActive}
