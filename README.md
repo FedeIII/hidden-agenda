@@ -21,6 +21,8 @@ npm run go
 ```
 
 ## Changelog
+### v2.0.1
+* Fixed test suite
 ### v2.0.0
 * Complete accuse/reveal mechanics
 * Complete score system
