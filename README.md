@@ -10,14 +10,14 @@ npm install
 ```
 * Build dist folder
 ```
-yarn do
+npm run do
 ```
 * Open index.html in the dist folder
 
 ### Developer
 Watch for changes to build again the dist folder
 ```
-yarn go
+npm run go
 ```
 
 ## Changelog
@@ -118,12 +118,14 @@ yarn go
 * ~~Claim control mechanics~~
   * ~~deploying CEO~~
   * ~~revealing~~
+* Drag&Drop
 * UI revamp
 * 3D
 * Remote multiplayer
 * Port to electron
 
 ## Known Bugs
+* Claim control after turn ended
 * ~~Snipers turning don't update the `throughSniperLineOf` prop of pieces already in the board~~
 * ~~Snipers killing don't undo the consecuences~~
 * ~~Snipe broken~~

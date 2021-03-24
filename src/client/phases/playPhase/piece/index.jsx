@@ -16,6 +16,7 @@ function Piece({ id, selectedDirection, selected, highlight }) {
   return (
     <PieceStyled
       id={`pz-${id}`}
+      className="piece-styled"
       src={image}
       pieceId={id}
       selected={selected}
