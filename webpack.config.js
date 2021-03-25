@@ -3,6 +3,10 @@ var HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   entry: './src/client/index.js',
+  output: {
+    filename: 'main.js',
+    path: path.resolve(__dirname, 'docs'),
+  },
   devtool: 'source-map',
   resolve: {
     extensions: ['.js', '.jsx', '.scss'],
