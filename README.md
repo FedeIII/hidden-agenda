@@ -122,7 +122,8 @@ npm run go
 * ~~Claim control mechanics~~
   * ~~deploying CEO~~
   * ~~revealing~~
-* Drag&Drop
+* ~Drag&Drop~
+* Hosting
 * UI revamp
 * 3D
 * Remote multiplayer
