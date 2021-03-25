@@ -21,6 +21,8 @@ npm run go
 ```
 
 ## Changelog
+### v2.1.0
+* Drag and drop controls for pieces
 ### v2.0.1
 * Fixed test suite
 ### v2.0.0
