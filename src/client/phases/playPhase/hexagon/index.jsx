@@ -1,59 +1,65 @@
 import React, { useCallback, useContext } from 'react';
 import PropTypes from 'prop-types';
+import { useDrop } from 'react-dnd';
 import { StateContext } from 'State';
 import { pz } from 'Domain/pieces';
-import { areCoordsInList } from 'Domain/utils';
 import { togglePiece, movePiece } from 'Client/actions';
 import Piece from '../piece/index';
 
 import HexagonStyled from './styled';
 
 function useOnCellClick(coords) {
-  const [{ followMouse, pieces, pieceState}, dispatch] = useContext(StateContext);
+	const [{ followMouse, pieces, pieceState }, dispatch] = useContext(StateContext);
 
-  return useCallback(
-    event => {
-      event.preventDefault();
-      event.stopPropagation();
+	return useCallback(
+		event => {
+			event && event.preventDefault && event.preventDefault();
+			event && event.stopPropagation && event.stopPropagation();
 
-      const highlightedPositions = pz.getHighlightedPositions(pieces, pieceState);
       const selectedPiece = pz.getSelectedPiece(pieces);
 
-      if (followMouse) {
-        if (selectedPiece) {
-          dispatch(togglePiece(selectedPiece.id));
-        }
-      } else if (areCoordsInList(coords, highlightedPositions)) {
+      if (pz.isTogglePieceOnCellClick(followMouse, coords, pieces, pieceState)) {
+        dispatch(togglePiece(selectedPiece.id));
+      } else if (pz.isMovePieceOnCellClick(followMouse, coords, pieces, pieceState)) {
         dispatch(movePiece(selectedPiece.id, coords));
       }
-    },
-    [followMouse, pieces],
-  );
+		},
+		[followMouse, pieces],
+	);
 }
 
 function Hexagon({ row, cell, piece, highlighted, onMouseEnter, edge }) {
-  const onCellClick = useOnCellClick([row, cell]);
+	const onCellClick = useOnCellClick([row, cell]);
 
-  return (
-    <HexagonStyled
-      id={`hex-${row}-${cell}`}
-      highlighted={highlighted}
-      row={row}
-      cell={cell}
-      edge={edge}
-      onClick={onCellClick}
-      onMouseEnter={onMouseEnter}
-    >
-      {piece && <Piece {...piece} />}
-    </HexagonStyled>
-  );
+	const [{}, drop] = useDrop(
+		() => ({
+			accept: 'PIECE',
+			drop: onCellClick,
+		}),
+		[onCellClick],
+	);
+
+	return (
+		<HexagonStyled
+			id={`hex-${row}-${cell}`}
+			ref={drop}
+			highlighted={highlighted}
+			row={row}
+			cell={cell}
+			edge={edge}
+			onClick={onCellClick}
+			onMouseEnter={onMouseEnter}
+		>
+			{piece && <Piece {...piece} />}
+		</HexagonStyled>
+	);
 }
 
 Hexagon.propTypes = {
-  row: PropTypes.number.isRequired,
-  cell: PropTypes.number.isRequired,
-  // piece: PropTypes.object,
-  // highlighted: PropTypes.bool,
+	row: PropTypes.number.isRequired,
+	cell: PropTypes.number.isRequired,
+	// piece: PropTypes.object,
+	// highlighted: PropTypes.bool,
 };
 
 export default Hexagon;

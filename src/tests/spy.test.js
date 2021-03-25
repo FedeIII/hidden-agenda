@@ -247,10 +247,6 @@ describe('SPY', () => {
 		await page.click('#next-turn');
 
 		await clickOn.team(0).spy(1);
-		await clickOn.cell(2, 2);
-
-		const pieceId = await get.pieceIn(2, 2).id;
-		expect(pieceId).toEqual('pz-1-A1');
 
 		const isCell22Highlighted = await get.cell(2, 2).isHighlighted;
 		const isCell23Highlighted = await get.cell(2, 3).isHighlighted;

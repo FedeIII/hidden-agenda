@@ -912,6 +912,34 @@ function hasGameFinished(pieces) {
 	return pieces.filter(piece => isCeo(piece.id) && piece.killed).length >= NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END;
 }
 
+function isTogglePieceOnCellClick(followMouse, coords, pieces, pieceState) {
+	const highlightedPositions = getHighlightedPositions(pieces, pieceState);
+	const selectedPiece = getSelectedPiece(pieces);
+	const pieceAtCell = getPieceAtPosition(coords, pieces);
+
+	const isDirectingPiece = followMouse && selectedPiece;
+
+	if ((isDirectingPiece) || !areCoordsInList(coords, highlightedPositions)) {
+		if(!pieceAtCell || pieceAtCell.id !== selectedPiece.id) {
+			return true
+		}
+
+		return false;
+	}
+
+	return false;
+}
+
+function isMovePieceOnCellClick(followMouse, coords, pieces, pieceState) {
+	const highlightedPositions = pz.getHighlightedPositions(pieces, pieceState);
+
+	if (!followMouse && areCoordsInList(coords, highlightedPositions)) {
+		return true;
+	}
+
+	return false;
+}
+
 /////////////
 // GETTERS //
 /////////////
@@ -969,6 +997,7 @@ export const pz = {
 
 	// POSITIONS
 	getHighlightedPositions,
+	getPieceAtPosition,
 
 	// SNIPERS
 	removeIsThroughSniperLine,
@@ -996,6 +1025,8 @@ export const pz = {
 	isSniper,
 	isSniperOnBoard,
 	hasGameFinished,
+	isTogglePieceOnCellClick,
+	isMovePieceOnCellClick,
 
 	// GETTERS
 	getTeam,
