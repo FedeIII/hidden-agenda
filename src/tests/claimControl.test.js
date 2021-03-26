@@ -159,6 +159,17 @@ describe('CLAIM CONTROL', () => {
 			expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
 			expect(await get.cell(4, 3).isHighlighted).toBeFalsy();
 		});
+
+		it('can NOT take control of a company when the turn has ended', async () => {
+			await clickOn.team(0).agent(1);
+			await clickOn.cell(1, 1);
+			await clickOn.cell(2, 2);
+
+			await page.click('#claim-0');
+
+			expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
+			expect(await get.cell(3, 3).isHighlighted).toBeFalsy();
+		});
 	});
 
 	describe('claim control through "Reveal" button', () => {

@@ -24,8 +24,12 @@ function initControl() {
 	];
 }
 
-function claimControl(playerName, team, { pieces, teamControl }) {
+function claimControl(playerName, team, { pieces, teamControl, hasTurnEnded }) {
 	const ceo = pz.getCeo(pieces, team);
+
+	if (hasTurnEnded) {
+		return teamControl;
+	}
 
 	if (cells.inBoard(ceo.position)) {
 		return teamControl;

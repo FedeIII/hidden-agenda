@@ -124,15 +124,15 @@ npm run go
 * ~~Claim control mechanics~~
   * ~~deploying CEO~~
   * ~~revealing~~
-* ~Drag&Drop~
-* Hosting
+* ~~Drag&Drop~~
+* ~~Hosting~~
 * UI revamp
 * 3D
 * Remote multiplayer
 * Port to electron
 
 ## Known Bugs
-* Claim control after turn ended
+* ~~Claim control after turn ended~~
 * ~~Snipers turning don't update the `throughSniperLineOf` prop of pieces already in the board~~
 * ~~Snipers killing don't undo the consecuences~~
 * ~~Snipe broken~~

@@ -746,7 +746,11 @@ function isAnyPieceThroughSniperLine(pieces) {
 // CLAIM CONTROL //
 ///////////////////
 
-function claimControl(team, { pieces, teamControl }) {
+function claimControl(team, { pieces, teamControl, hasTurnEnded }) {
+	if (hasTurnEnded) {
+		return pieces;
+	}
+
 	return pieces.map(claimControlPieceMap(team, teamControl));
 }
 
