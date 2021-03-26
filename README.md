@@ -1,6 +1,8 @@
 # Hidden Agenda
 An abstract board game with psychology
 
+https://fedeiii.github.io/hidden-agenda/
+
 ## Getting Started
 
 ### Installing
