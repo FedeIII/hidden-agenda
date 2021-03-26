@@ -25,11 +25,13 @@ npm run go
 ## Changelog
 ### v2.1.0
 * Drag and drop controls for pieces
-### v2.0.1
-* Fixed test suite
+* **v2.1.1**
+  * Fixed Claim control after turn ended
 ### v2.0.0
 * Complete accuse/reveal mechanics
 * Complete score system
+* **v2.0.1**
+  * Fixed test suite
 
 ### v1.5.0
 * Added reveal and claim control by reveal
