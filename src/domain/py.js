@@ -144,6 +144,10 @@ function accuse({ accuser, accusee, alignment, team }, players) {
 				},
 			};
 		}
+
+		// Without this every uninvolved player became undefined. Invisible at 2 players,
+		// where accuser and accusee are the whole table, and fatal from 3 upwards.
+		return player;
 	});
 }
 

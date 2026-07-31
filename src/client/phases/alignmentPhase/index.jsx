@@ -7,46 +7,26 @@ import { Title, Subtitle } from 'Client/components/title';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
 import useTest from 'Hooks/useTest';
 import { TEAM_NAMES } from 'Domain/teams';
+import { dealAlignments } from 'Domain/deal';
 import { AlignmentPhaseContainer } from './components';
 
-const FRIEND_CARDS = ['0', '0', '1', '1', '2', '2', '3', '3'];
-const FOE_CARDS = ['0', '0', '1', '1', '2', '2', '3', '3'];
+// Dealt once for the whole table instead of a card at a time off a shared deck. Phase 1 of
+// MULTIPLAYER-PLAN.md moves this to the server, which sends each player only their own pair.
+function useDealtAlignments(players) {
+	const [dealt] = useState(() =>
+		dealAlignments(players.map(player => player.name)).reduce(
+			(byName, alignment) => ({ ...byName, [alignment.name]: alignment }),
+			{},
+		),
+	);
 
-function getCard(remainingCards, setRemainingCards, excludedCard) {
-	const randomIndex = Math.floor(Math.random() * remainingCards.length);
-	const card = remainingCards.splice(randomIndex, 1)[0];
-
-	if (excludedCard === card) {
-		remainingCards.push(card);
-		return getCard(remainingCards, setRemainingCards, excludedCard);
-	}
-
-	setRemainingCards(remainingCards);
-
-	return card;
-}
-
-function useSelectedCards() {
-	const [remainingFriends, setRemainingFriends] = useState(FRIEND_CARDS);
-	const [remainingFoes, setRemainingFoes] = useState(FOE_CARDS);
-
-	const getFriendCard = useCallback((foeCard) => getCard(remainingFriends, setRemainingFriends, foeCard), [
-		remainingFriends,
-		setRemainingFriends,
-	]);
-
-	const getFoeCard = useCallback(friendCard => getCard(remainingFoes, setRemainingFoes, friendCard), [
-		remainingFoes,
-		setRemainingFoes,
-	]);
-
-	return [getFriendCard, getFoeCard];
+	return dealt;
 }
 
 function useAlignmentCards(start) {
 	const [{ players }, dispatch] = useContext(StateContext);
 	const [playerTurn, setPlayerTurn] = useState(players[0].name);
-	const [getFriendCard, getFoeCard] = useSelectedCards();
+	const dealt = useDealtAlignments(players);
 	const [cardsRevealed, setCardsRevealed] = useState({
 		friend: false,
 		foe: false,
@@ -103,19 +83,19 @@ function useAlignmentCards(start) {
 			return;
 		}
 
-		dispatch(setAlignment({ name: playerTurn, friend: getFriendCard(currentFoe) }));
+		dispatch(setAlignment({ name: playerTurn, friend: dealt[playerTurn].friend }));
 		setCardsRevealed(reveals => ({ friend: true, foe: reveals.foe }));
-	}, [playerTurn, setCardsRevealed, cardsRevealed]);
+	}, [playerTurn, setCardsRevealed, cardsRevealed, dealt]);
 
 	const revealFoe = useCallback(() => {
 		if (cardsRevealed.foe) {
 			return;
 		}
 
-		dispatch(setAlignment({ name: playerTurn, foe: getFoeCard(currentFriend) }));
+		dispatch(setAlignment({ name: playerTurn, foe: dealt[playerTurn].foe }));
 
 		setCardsRevealed(reveals => ({ friend: reveals.friend, foe: true }));
-	}, [playerTurn, setCardsRevealed, cardsRevealed]);
+	}, [playerTurn, setCardsRevealed, cardsRevealed, dealt]);
 
 	return {
 		cardsRevealed,
