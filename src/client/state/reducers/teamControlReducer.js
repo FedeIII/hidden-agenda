@@ -1,4 +1,4 @@
-import { CLAIM_CONTROL, CANCEL_CONTROL, MOVE_PIECE, TOGGLE_PIECE, REVEAL_FRIEND, REVEAL_FOE } from 'Client/actions';
+import { CLAIM_CONTROL, CANCEL_CONTROL, MOVE_PIECE, REVEAL_FRIEND, REVEAL_FOE } from 'Client/actions';
 import teams from 'Domain/teams';
 
 function teamControlReducer(state, action) {
@@ -9,8 +9,6 @@ function teamControlReducer(state, action) {
 			return teams.cancelControl(action.payload.team, state);
 		case MOVE_PIECE:
 			return teams.movePieceForControl(action.payload.pieceId, state);
-		// case TOGGLE_PIECE:
-		// 	return teams.togglePieceForControl(action.payload.pieceId, state);
 		case REVEAL_FRIEND:
 			return teams.revealFriend(action.payload.players, state);
 		case REVEAL_FOE:

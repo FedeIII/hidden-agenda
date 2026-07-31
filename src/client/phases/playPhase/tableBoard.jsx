@@ -1,91 +1,66 @@
-import React, { useContext, useCallback } from 'react';
+import React, { useContext } from 'react';
 import { pz } from 'Domain/pieces';
-import { areCoordsEqual, areCoordsInList } from 'Domain/utils';
-import cells from 'Domain/cells';
-import { togglePiece, movePiece, directPiece } from 'Client/actions';
+import { areCoordsInList } from 'Domain/utils';
+import { CELLS_BY_ROW, ROW_NUMBERS } from 'Domain/cells';
 import { StateContext } from 'State';
 import { TableBoardStyled, BoardRow } from './components';
 import Hexagon from './hexagon';
 
-export const ROW_NUMBERS = [0, 1, 2, 3, 4, 5, 6];
-export const CELLS_BY_ROW = [4, 5, 6, 7, 6, 5, 4];
+// One cell either side of every row, plus a row above and below the board, so a piece on the
+// border can still be pointed outwards.
+const EDGE_ROW_CELLS = 3;
 
-function renderHexagon({ row, cell, edge }) {
-	const [{ pieces, followMouse, pieceState }, dispatch] = useContext(StateContext);
-	const highlightedPositions = pz.getHighlightedPositions(pieces, pieceState);
-	const selectedPiece = pz.getSelectedPiece(pieces);
+function renderRow(row, numberOfCells, board) {
+	const hexagons = [];
 
-	const piece = pieces.find(
-		({ position }) =>
-			position && position[0] >= 0 && position[1] >= 0 && position[0] === row && position[1] === cell,
-	);
-
-	const highlighted = !!highlightedPositions.find(coords => areCoordsEqual(coords, [row, cell]));
-
-	const onHexagonClick = useCallback(() => {
-		if (followMouse) {
-			const selectedPiece = pz.getSelectedPiece(pieces);
-			if (selectedPiece) {
-				dispatch(togglePiece(selectedPiece.id));
-			}
-		} else if (areCoordsInList([row, cell], highlightedPositions)) {
-			dispatch(movePiece(selectedPiece.id, [row, cell]));
-		}
-	}, [dispatch, pieces, followMouse, row, cell]);
-
-	const onMouseEnter = useCallback(() => {
-		if (!highlightedPositions.length && selectedPiece) {
-			const possibleDirections = pz.getPossibleDirections(selectedPiece, pieces, pieceState);
-			const intendedDirection = cells.getDirection(selectedPiece.position, [row, cell]);
-			if (areCoordsInList(intendedDirection, possibleDirections)) {
-				dispatch(directPiece(intendedDirection));
-			}
-		}
-	}, [pieces, followMouse, pieceState, row, cell]);
-
-	return (
-		<Hexagon
-			key={`hex-${row}-${cell}`}
-			row={row}
-			cell={cell}
-			piece={piece}
-			highlighted={highlighted}
-			edge={edge}
-			onClick={onHexagonClick}
-			onMouseEnter={onMouseEnter}
-		/>
-	);
-}
-
-function renderRow(row, numberOfCells) {
-	const cells = [renderHexagon({ row, cell: -1, edge: true })];
-
-	for (let cell = 0; cell < numberOfCells; cell++) {
-		cells.push(
-			renderHexagon({
-				row,
-				cell,
-				edge: row < 0 || row >= ROW_NUMBERS.length,
-			}),
+	for (let cell = -1; cell <= numberOfCells; cell++) {
+		hexagons.push(
+			<Hexagon
+				key={`hex-${row}-${cell}`}
+				row={row}
+				cell={cell}
+				edge={cell === -1 || cell === numberOfCells || row < 0 || row >= ROW_NUMBERS.length}
+				piece={pz.getPieceAtPosition([row, cell], board.pieces)}
+				highlighted={areCoordsInList([row, cell], board.highlightedPositions)}
+				aim={board.aim}
+			/>,
 		);
 	}
 
-	cells.push(renderHexagon({ row, cell: numberOfCells, edge: true }));
-
-	return <BoardRow key={`row-${row}`}>{cells}</BoardRow>;
+	return <BoardRow key={`row-${row}`}>{hexagons}</BoardRow>;
 }
 
 function TableBoard() {
+	const [{ pieces, pieceState }] = useContext(StateContext);
+
+	// Worked out once for the whole board. This used to live in a function called for each of
+	// the 53 cells, which recomputed the highlights every time and — because that function also
+	// held useContext and useCallback — called hooks in a loop.
+	const highlightedPositions = pz.getHighlightedPositions(pieces, pieceState);
+	const selectedPiece = pz.getSelectedPiece(pieces);
+
+	// Pointing is only offered once the selected piece has nowhere left to move, which is what
+	// keeps a hover from hijacking a move. A piece still in its HQ has no position to aim from.
+	const canAim = !!selectedPiece && !!selectedPiece.position && !highlightedPositions.length;
+
+	const board = {
+		pieces,
+		highlightedPositions,
+		aim: canAim
+			? {
+					from: selectedPiece.position,
+					directions: pz.getPossibleDirections(selectedPiece, pieces, pieceState),
+			  }
+			: null,
+	};
+
 	return (
 		<TableBoardStyled>
-			{renderRow(-1, 3)}
+			{renderRow(-1, EDGE_ROW_CELLS, board)}
 
-			{ROW_NUMBERS.map(row => {
-				const numberOfCells = CELLS_BY_ROW[row];
-				return renderRow(row, numberOfCells);
-			})}
+			{ROW_NUMBERS.map(row => renderRow(row, CELLS_BY_ROW[row], board))}
 
-			{renderRow(ROW_NUMBERS.length, 3)}
+			{renderRow(ROW_NUMBERS.length, EDGE_ROW_CELLS, board)}
 		</TableBoardStyled>
 	);
 }

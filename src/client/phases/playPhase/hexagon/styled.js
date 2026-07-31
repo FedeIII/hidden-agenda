@@ -1,5 +1,5 @@
 import styled, { css } from 'styled-components';
-import { ROW_NUMBERS, CELLS_BY_ROW } from 'Client/phases/playPhase/tableBoard';
+import { ROW_NUMBERS, CELLS_BY_ROW } from 'Domain/cells';
 import { getHexGradient } from './styledHelpers';
 
 const HEX_MARGIN = 4;

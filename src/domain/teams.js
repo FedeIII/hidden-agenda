@@ -134,14 +134,6 @@ function mapDeployedCeo(ceoId) {
 	};
 }
 
-// function togglePieceForControl(pieceId, { teamControl, pieces }) {
-// 	if (isCeoDeselectionInStore(pieceId, pieces)) {
-// 		return teamControl.map(mapDeselectedCeo(pieceId));
-// 	}
-
-// 	return teamControl;
-// }
-
 // function isCeoDeselectionInStore(pieceId, pieces) {
 // 	const ceo = pz.getPieceById(pieceId, pieces);
 // 	return pz.isCeo(pieceId) && !ceo.selected && !ceo.position;
@@ -211,7 +203,6 @@ export default {
 	cancelControl,
 	getPointsForTeam,
 	movePieceForControl,
-	// togglePieceForControl,
 	revealFriend,
 	revealFoe,
 };

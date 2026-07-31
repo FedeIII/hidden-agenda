@@ -8,7 +8,10 @@ import { areCoordsEqual } from 'Domain/utils';
 //        5,0  5,1  5,2  5,3  5,4
 //           6,0  6,1  6,2  6,3
 
-const cellsByRow = [4, 5, 6, 7, 6, 5, 4];
+// Board geometry. Lived in tableBoard too, which hexagon/styled.js imported from — a cycle
+// back through the component that renders it. Both consumers take it from here now.
+export const CELLS_BY_ROW = [4, 5, 6, 7, 6, 5, 4];
+export const ROW_NUMBERS = CELLS_BY_ROW.map((_numberOfCells, row) => row);
 const cells = [];
 export const OUT_POSITION = [null, null];
 
@@ -130,27 +133,13 @@ function goingRightIncreasesHorizontal(from, to) {
   return +(from[1] >= to[1]);
 }
 
-// function getAdjacentCells (r, c) {
-//     const upperCells = (r <= 3) ?
-//         [[r - 1, c - 1], [r - 1, c]] :
-//         [[r - 1, c], [r - 1, c + 1]];
-//     const rowCellLeft = [[r, c - 1]];
-//     const rowCellRight = [[r, c + 1]];
-//     const lowerCells = (r < 3) ?
-//         [[r + 1, c + 1], [r + 1, c]] :
-//         [[r + 1, c], [r + 1, c - 1]];
-//
-//     return [].concat(upperCells, rowCellRight, lowerCells, rowCellLeft);
-// };
-
 const allCells = [];
 
-cellsByRow.forEach(numberOfCells => {
+CELLS_BY_ROW.forEach(numberOfCells => {
   const row = [];
   for (let c = 0; c < numberOfCells; c++) {
     const r = cells.length;
     row.push({
-      // adjacentCells: getAdjacentCells(r, c),
       position: [r, c],
       getPositionInDirection: createGetPositionInDirection(r, c),
       getPositionsInDirections: createGetPositionsInDirections(r, c),
@@ -191,7 +180,7 @@ function getDirection(from, to) {
 
 function inBoard([r, c] = OUT_POSITION) {
   if (r >= 0 && r < 7) {
-    if (c >= 0 && c < cellsByRow[r]) {
+    if (c >= 0 && c < CELLS_BY_ROW[r]) {
       return true;
     }
   }

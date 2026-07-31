@@ -81,10 +81,6 @@ function hasToToggle(pieceId, selectedPiece, { players, snipe, pieceState, piece
 }
 
 function isToggledTeamControlled(pieceId, teamControl, piecesPrevState, players, pieces) {
-	// if (isCeo(pieceId) && isCeoPlacement(pieceId, piecesPrevState)) {
-	// 	return false;
-	// }
-
 	if (cells.inBoard(getPieceById(pieceId, pieces).position)) {
 		return false;
 	}
@@ -101,12 +97,6 @@ function isToggledTeamControlled(pieceId, teamControl, piecesPrevState, players,
 		.map(({ teamIndex }) => String(teamIndex));
 
 	return controlledTeams.includes(toggledTeam);
-}
-
-function isCeoPlacement(ceoId, piecesPrevState) {
-	const ceo = getPieceById(ceoId, piecesPrevState);
-
-	return !ceo.direction;
 }
 
 function toggledPiece(piece) {

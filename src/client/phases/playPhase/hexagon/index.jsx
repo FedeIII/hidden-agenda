@@ -1,11 +1,16 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useContext } from 'react';
+import { StateContext } from 'State';
+import cells from 'Domain/cells';
+import { areCoordsInList } from 'Domain/utils';
+import { directPiece } from 'Client/actions';
 import useCellAction from 'Hooks/useCellAction';
 import { useDragController } from 'Client/drag';
 import Piece from '../piece/index';
 
 import HexagonStyled from './styled';
 
-function Hexagon({ row, cell, piece, highlighted, onMouseEnter, edge }) {
+function Hexagon({ row, cell, piece, highlighted, edge, aim }) {
+	const [_state, dispatch] = useContext(StateContext);
 	const cellAction = useCellAction();
 	const { isClickSuppressed } = useDragController();
 
@@ -24,6 +29,20 @@ function Hexagon({ row, cell, piece, highlighted, onMouseEnter, edge }) {
 		},
 		[cellAction, isClickSuppressed, row, cell],
 	);
+
+	// Hovering a cell points the selected piece towards it. TableBoard passes aim as null unless
+	// the piece has finished moving, which is what stops a hover hijacking a move.
+	const onMouseEnter = useCallback(() => {
+		if (!aim) {
+			return;
+		}
+
+		const intendedDirection = cells.getDirection(aim.from, [row, cell]);
+
+		if (areCoordsInList(intendedDirection, aim.directions)) {
+			dispatch(directPiece(intendedDirection));
+		}
+	}, [aim, dispatch, row, cell]);
 
 	return (
 		<HexagonStyled
