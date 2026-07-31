@@ -61,6 +61,9 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random } = 
 			ready: false,
 			connected: true,
 			lastSeenAt: now(),
+			// Last action sequence number applied for this seat. The client replays anything
+			// still outstanding on top of each snapshot, so it has to know where the server got to.
+			ackSeq: 0,
 		};
 
 		room.seats.push(seat);

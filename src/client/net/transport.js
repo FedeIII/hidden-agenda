@@ -59,6 +59,8 @@ function createLocalSession(test) {
 		seats: [],
 		hostSeatId: null,
 		error: null,
+		// Local state is always present; there is nothing to wait for.
+		synced: true,
 	};
 
 	const listeners = new Set();

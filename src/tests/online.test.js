@@ -99,6 +99,41 @@ test.describe('ONLINE', () => {
 		}
 	});
 
+	// The server specs prove a seat is reclaimable by token. This is the half a player sees: hit
+	// reload mid-game and you are still in your room, still holding your own cards.
+	test('a refresh puts a player back in the same seat', async ({ browser }) => {
+		const { hostContext, guestContext, host, guest } = await twoPlayerGame(browser);
+
+		try {
+			await host.click('#alignments-btn');
+			await guest.click('#alignments-btn');
+			await expect(host.locator('#next-turn')).toBeVisible();
+
+			// A full placement: pick the piece, put it down, then point it. A piece that has been
+			// placed but not pointed is mid-move, and nothing else may happen until it is.
+			await host.click('#pz-0-A1');
+			await host.click('#hex-1-1');
+			await host.click('#hex-2-2');
+			await expect(host.locator('#hex-1-1 > *')).toHaveId('pz-0-A1');
+
+			await host.reload();
+
+			// Back on the board rather than at the lobby, with the piece still where it was.
+			await expect(host.locator('#next-turn')).toBeVisible();
+			await expect(host.locator('#hex-1-1 > *')).toHaveId('pz-0-A1');
+			await expect(host.locator('.game')).toContainText("Player's turn: ANA");
+
+			// The same seat rather than a new one: passing the turn is something only the seat on
+			// turn can do, and the effect has to reach the other player.
+			await host.click('#next-turn');
+			await expect(host.locator('.game')).toContainText("Player's turn: BEA");
+			await expect(guest.locator('.game')).toContainText("Player's turn: BEA");
+		} finally {
+			await hostContext.close();
+			await guestContext.close();
+		}
+	});
+
 	test('the player who is not on turn cannot move a piece', async ({ browser }) => {
 		const { hostContext, guestContext, host, guest } = await twoPlayerGame(browser);
 

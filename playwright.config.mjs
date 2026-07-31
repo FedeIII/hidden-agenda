@@ -10,7 +10,9 @@ export default defineConfig({
 	// start one by hand. The game server comes first because preview proxies /ws to it.
 	webServer: [
 		{
-			command: 'node dist-server/main.mjs',
+			// Built here rather than assumed: the suite runs the bundle, not the source, so testing
+			// against a stale dist-server is silently possible otherwise — and it cost real time.
+			command: 'npm run build:server && node dist-server/main.mjs',
 			env: { PORT: '3007', HA_STATE_DIR: '.playwright-rooms' },
 			url: 'http://127.0.0.1:3007/healthz',
 			reuseExistingServer: !process.env.CI,

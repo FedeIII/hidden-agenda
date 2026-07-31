@@ -59,6 +59,8 @@ Things worth knowing before touching the suite:
 - Helpers are factories over a `page`, wired up as fixtures in `src/tests/fixtures.js`. Most specs take `{ page, clickOn, get, drag, goToPlay }`.
 - An **uncaught page error fails the test that provoked it** (`failOnPageError` fixture). The suite was once fully green while clicking an empty cell threw a TypeError, because nothing watched for it.
 - Playwright bundles a pinned chromium on purpose: browser auto-updates are what caused the fixture rot above.
+- **Online specs share one game server and one IP.** The server refuses more than 10 room joins per minute per address; the online specs use 8. Playwright stops the server it started, so each *run* starts fresh — but adding another online spec that joins twice will trip the limit and fail in a way that looks nothing like a rate limit. Raise `JOINS_PER_IP_PER_MINUTE` for the test server rather than lowering the protection.
+- **The e2e suite runs `dist-server/main.mjs`, not `server/` source.** The playwright config rebuilds it before starting, because testing against a stale server bundle is otherwise silently possible — it cost real debugging time once.
 - `tsconfig.json` contains no TypeScript. It exists only so Playwright's resolver knows the import aliases, because the domain modules import each other as `Domain/*`. Keep its `paths` in step with `vite.config.mjs`.
 
 ### Skipping to a mid-game state

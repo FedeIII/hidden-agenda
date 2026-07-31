@@ -1,5 +1,14 @@
 import { createGameReducer, createInitialState } from 'Game/reducer';
-import { syncState, DIRECT_PIECE, REVEAL_FRIEND, REVEAL_FOE, ACCUSE, SET_ALIGNMENT } from 'Game/actions';
+import {
+	syncState,
+	TOGGLE_PIECE,
+	MOVE_PIECE,
+	DIRECT_PIECE,
+	SNIPE,
+	CLAIM_CONTROL,
+	CANCEL_CONTROL,
+	NEXT_TURN,
+} from 'Game/actions';
 
 // The online half of the transport seam. Satisfies the same getState/subscribe/dispatch contract
 // as the local store, so every game component works unchanged in both modes; what it adds is a
@@ -12,10 +21,32 @@ const PING_MS = 25_000;
 // DIRECT_PIECE is dispatched on hover, so it is applied locally at once and sent at this rate.
 const AIM_THROTTLE_MS = 50;
 
-// These four read secrets this client does not hold — an alignment it cannot see, or an
-// accusation resolved against one — so their outcome is not predictable locally. They are all
-// single clicks, so waiting for the authoritative snapshot costs nothing.
-const NOT_PREDICTABLE = new Set([SET_ALIGNMENT, REVEAL_FRIEND, REVEAL_FOE, ACCUSE]);
+// Only aiming is applied before the server agrees. Everything else waits for the snapshot.
+//
+// Optimistically applying discrete actions turned out to be actively wrong here, not just
+// redundant. A snapshot replaces the state wholesale, so a snapshot for action N arriving after
+// action N+1 was applied locally silently reverted N+1 — and since followMouse went back to
+// false with it, the next click was read as another move instead of a direction, and the server
+// rejected it. Doing it correctly needs the server to ack a sequence number and the client to
+// replay everything still outstanding on top of each snapshot.
+//
+// That machinery is not worth it for this game. A turn is a handful of discrete clicks, so one
+// round trip each is imperceptible, and it makes the client's state exactly the server's. Aiming
+// is the one continuous gesture — it fires on every hover — so it stays local, guarded by
+// keepLocalAim below.
+// Applied locally before the server agrees, then replayed on top of each snapshot until the
+// server acknowledges them. Everything here has to be predictable from state this client holds —
+// which is why the four actions that resolve against alignments it cannot see are absent: an
+// alignment reveal, an accusation, and dealing.
+const PREDICT_LOCALLY = new Set([
+	TOGGLE_PIECE,
+	MOVE_PIECE,
+	DIRECT_PIECE,
+	SNIPE,
+	CLAIM_CONTROL,
+	CANCEL_CONTROL,
+	NEXT_TURN,
+]);
 
 const STORAGE_PREFIX = 'ha:room:';
 
@@ -76,6 +107,10 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		seats: [],
 		hostSeatId: null,
 		error: null,
+		// Whether an authoritative snapshot has arrived. The server sends seat, room and snapshot
+		// as separate frames, so there is a window where the phase says "play" but the state is
+		// still the empty initial one — and rendering the board against no players throws.
+		synced: false,
 	});
 
 	// The last state the server told us about. Optimistic work is applied on top of it and
@@ -92,6 +127,8 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 	let pingTimer = null;
 	let aimTimer = null;
 	let pendingAim = null;
+	// Predicted actions the server has not acknowledged yet, oldest first.
+	let outstanding = [];
 	let closedByUs = false;
 
 	function send(message) {
@@ -112,6 +149,7 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 
 		if (pendingAim) {
 			seq += 1;
+			outstanding.push({ seq, action: pendingAim });
 			send({ type: 'action', seq, action: pendingAim });
 			pendingAim = null;
 		}
@@ -129,6 +167,21 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		} else if (intent.kind === 'rejoin') {
 			send({ type: 'rejoin', code: intent.code, token: intent.token });
 		}
+	}
+
+	// A snapshot is the truth as of the actions the server had seen. Anything this client has done
+	// since then is still real and has to go back on top, or the snapshot silently undoes it — and
+	// a half-undone move leaves the next click meaning something different from what the player
+	// intended. This is what makes prediction safe rather than merely fast.
+	function withOutstanding(base) {
+		let state = outstanding.reduce((next, entry) => reduce(next, entry.action), base);
+
+		if (pendingAim) {
+			// Not sent yet, so it has no sequence number, but the pointer is already there.
+			state = reduce(state, pendingAim);
+		}
+
+		return state;
 	}
 
 	function onMessage(raw) {
@@ -167,17 +220,22 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 
 				version = message.v;
 				authoritative = message.state;
+				outstanding = outstanding.filter(entry => entry.seq > (message.ack || 0));
 				// Through the reducer rather than straight into the observable, so every state
 				// change in the app goes through exactly one door. SYNC_STATE exists for this.
-				game.set(reduce(game.get(), syncState(message.state)));
-				session.update({ phase: message.phase });
+				game.set(reduce(game.get(), syncState(withOutstanding(message.state))));
+				session.update({ phase: message.phase, synced: true });
 				break;
 
-			case 'rejected':
-				// Roll optimism back to the last thing the server agreed to.
-				game.set(authoritative);
+			case 'rejected': {
+				// That action never happened, and anything predicted after it was predicated on
+				// it, so both go. What is left is replayed on the last state the server agreed to.
+				const at = outstanding.findIndex(entry => entry.seq === message.seq);
+				outstanding = at === -1 ? outstanding : outstanding.slice(0, at);
+				game.set(withOutstanding(authoritative));
 				session.update({ error: message.reason });
 				break;
+			}
 
 			case 'error':
 				session.update({ error: message.reason, status: session.get().status === 'connecting' ? 'ready' : undefined });
@@ -244,11 +302,13 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		// performed them.
 		flushAim();
 
-		if (!NOT_PREDICTABLE.has(action.type)) {
+		seq += 1;
+
+		if (PREDICT_LOCALLY.has(action.type)) {
 			game.set(reduce(game.get(), action));
+			outstanding.push({ seq, action });
 		}
 
-		seq += 1;
 		send({ type: 'action', seq, action });
 	}
 

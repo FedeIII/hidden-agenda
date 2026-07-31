@@ -182,6 +182,10 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 			return socket.send(JSON.stringify(errorMessage('seat_lost')));
 		}
 
+		// A reconnecting client is a fresh store counting from zero again, so the old high-water
+		// mark would wrongly discard its first actions.
+		seat.ackSeq = 0;
+
 		bind(socket, room, seat);
 		send(seat.id, seatMessage(room, seat));
 		broadcastRoom(room);
@@ -241,6 +245,10 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 
 			if (!result.ok) {
 				return send(seat.id, rejectedMessage({ seq: message.seq, reason: result.reason, version: result.version }));
+			}
+
+			if (Number.isInteger(message.seq)) {
+				seat.ackSeq = message.seq;
 			}
 
 			if (room.phase === PHASES.END) {

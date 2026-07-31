@@ -375,6 +375,33 @@ test.describe('turn authority over the wire', () => {
 	});
 });
 
+test.describe('join rate limiting', () => {
+	// 4-character codes are low entropy, so guessing at them has to be expensive. This is the
+	// control that makes it so, and it is worth an actual test rather than trust.
+	test('refuses more than ten room creations a minute from one address', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const outcomes = [];
+
+			for (let attempt = 0; attempt < 13; attempt++) {
+				const client = createClient(url);
+				await client.opened;
+				client.send({ type: 'create', name: `P${attempt}` });
+
+				const reply = await client.waitFor(message => message.type === 'seat' || message.type === 'error');
+				outcomes.push(reply.type === 'error' ? reply.reason : 'seat');
+				client.close();
+			}
+
+			expect(outcomes.slice(0, 10)).toEqual(Array(10).fill('seat'));
+			expect(outcomes.slice(10)).toEqual(['slow_down', 'slow_down', 'slow_down']);
+		} finally {
+			await server.close();
+		}
+	});
+});
+
 test.describe('surviving a restart', () => {
 	// Every deploy reloads the process. Without persistence that would end every game in
 	// progress, which is why a room is plain JSON in the first place.

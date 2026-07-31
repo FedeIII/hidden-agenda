@@ -1456,7 +1456,8 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random } = {}) {
 			token: createToken(),
 			ready: false,
 			connected: true,
-			lastSeenAt: now()
+			lastSeenAt: now(),
+			ackSeq: 0
 		};
 		room.seats.push(seat);
 		room.hostSeatId = room.hostSeatId || seat.id;
@@ -1807,6 +1808,7 @@ function snapshotMessage(room, seat) {
 		type: SERVER.SNAPSHOT,
 		v: room.version,
 		phase: room.phase,
+		ack: seat.ackSeq || 0,
 		state: redactFor(seat.name, room.state, room.phase)
 	};
 }
@@ -1915,6 +1917,7 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 		const room = rooms.get(message.code.toUpperCase());
 		const seat = room && typeof message.token === "string" ? rooms.seatByToken(room, message.token) : null;
 		if (!seat) return socket.send(JSON.stringify(errorMessage("seat_lost")));
+		seat.ackSeq = 0;
 		bind(socket, room, seat);
 		send(seat.id, seatMessage(room, seat));
 		broadcastRoom(room);
@@ -1958,6 +1961,7 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 				reason: result.reason,
 				version: result.version
 			}));
+			if (Number.isInteger(message.seq)) seat.ackSeq = message.seq;
 			if (room.phase === PHASES.END) broadcastRoom(room);
 			scheduleSnapshots(room);
 		});

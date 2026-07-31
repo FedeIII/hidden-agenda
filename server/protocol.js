@@ -71,6 +71,9 @@ export function snapshotMessage(room, seat) {
 		type: SERVER.SNAPSHOT,
 		v: room.version,
 		phase: room.phase,
+		// How far this seat's own actions have been applied, so the client can drop the ones it
+		// has confirmation for and re-apply the rest on top.
+		ack: seat.ackSeq || 0,
 		state: redactFor(seat.name, room.state, room.phase),
 	};
 }
