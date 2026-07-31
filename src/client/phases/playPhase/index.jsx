@@ -5,7 +5,7 @@ import { Title } from 'Client/components/title';
 import HQs from 'Client/components/hqs';
 import { Button } from 'Client/components/button';
 import py from 'Domain/py';
-import { nextTurn } from 'Client/actions';
+import { nextTurn } from 'Game/actions';
 import { PlayPhaseContainer, Board } from './components';
 import HQ from './hq';
 import TableBoard from './tableBoard';

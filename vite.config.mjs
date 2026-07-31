@@ -18,6 +18,7 @@ export default defineConfig({
 			State: fromRoot('src/client/state'),
 			Hooks: fromRoot('src/client/hooks'),
 			Domain: fromRoot('src/domain'),
+			Game: fromRoot('src/game'),
 		},
 	},
 

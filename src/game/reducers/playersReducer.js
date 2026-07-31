@@ -1,4 +1,4 @@
-import { START_GAME, NEXT_TURN, SET_ALIGNMENT, REVEAL_FRIEND, REVEAL_FOE, ACCUSE } from 'Client/actions';
+import { START_GAME, NEXT_TURN, SET_ALIGNMENT, REVEAL_FRIEND, REVEAL_FOE, ACCUSE } from 'Game/actions';
 import py from 'Domain/py';
 
 function playersReducer({ players }, action) {
@@ -12,9 +12,9 @@ function playersReducer({ players }, action) {
 			return py.setAlignment(players, name, friend, foe);
 		}
 		case REVEAL_FRIEND:
-			return py.revealFriend(action.payload.players);
+			return py.revealFriend(players);
 		case REVEAL_FOE:
-			return py.revealFoe(action.payload.players);
+			return py.revealFoe(players);
 		case ACCUSE:
 			return py.accuse(action.payload, players);
 		default:

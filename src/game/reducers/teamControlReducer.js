@@ -1,4 +1,4 @@
-import { CLAIM_CONTROL, CANCEL_CONTROL, MOVE_PIECE, REVEAL_FRIEND, REVEAL_FOE } from 'Client/actions';
+import { CLAIM_CONTROL, CANCEL_CONTROL, MOVE_PIECE, REVEAL_FRIEND, REVEAL_FOE } from 'Game/actions';
 import teams from 'Domain/teams';
 
 function teamControlReducer(state, action) {
@@ -10,9 +10,9 @@ function teamControlReducer(state, action) {
 		case MOVE_PIECE:
 			return teams.movePieceForControl(action.payload.pieceId, state);
 		case REVEAL_FRIEND:
-			return teams.revealFriend(action.payload.players, state);
+			return teams.revealFriend(state.players, state);
 		case REVEAL_FOE:
-			return teams.revealFoe(action.payload.players, state);
+			return teams.revealFoe(state.players, state);
 		default:
 			return state.teamControl;
 	}

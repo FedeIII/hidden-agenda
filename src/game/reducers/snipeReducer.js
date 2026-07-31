@@ -1,4 +1,4 @@
-import { SNIPE, NEXT_TURN } from 'Client/actions';
+import { SNIPE, NEXT_TURN } from 'Game/actions';
 import { pz } from 'Domain/pieces';
 
 function snipeState(pieces) {

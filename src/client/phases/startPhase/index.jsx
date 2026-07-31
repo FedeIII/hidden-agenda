@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useContext } from 'react';
-import { startGame } from 'Client/actions';
+import { startGame } from 'Game/actions';
 import { StateContext } from 'State';
 import { Button, Buttons } from 'Client/components/button';
 import {

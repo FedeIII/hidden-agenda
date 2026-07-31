@@ -4,7 +4,7 @@ import { pz } from 'Domain/pieces';
 import { TEAM_NAMES } from 'Domain/teams';
 import py from 'Domain/py';
 import useBooleanState from 'Hooks/useBooleanState';
-import { snipe, revealFriend, revealFoe } from 'Client/actions';
+import { snipe, revealFriend, revealFoe } from 'Game/actions';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
 import { Button } from 'Client/components/button';
 import {
@@ -115,8 +115,8 @@ function RevealAlignmentMenu(props) {
 	const isFriendRevealed = py.isOwnFriendRevealed(players);
 	const isFoeRevealed = py.isOwnFoeRevealed(players);
 
-	const onRevealFriend = useCallback(() => dispatch(revealFriend(players)), [players, dispatch]);
-	const onRevealFoe = useCallback(() => dispatch(revealFoe(players)), [players, dispatch]);
+	const onRevealFriend = useCallback(() => dispatch(revealFriend()), [dispatch]);
+	const onRevealFoe = useCallback(() => dispatch(revealFoe()), [dispatch]);
 
 	return (
 		<RevealContainer>

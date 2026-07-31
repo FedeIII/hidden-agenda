@@ -1,6 +1,6 @@
 import { useMemo, useContext, useCallback, useState, useEffect } from 'react';
 import { StateContext } from 'State';
-import { accuse } from 'Client/actions';
+import { accuse } from 'Game/actions';
 import { TEAM_NAMES } from 'Domain/teams';
 import py from 'Domain/py';
 import { AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';

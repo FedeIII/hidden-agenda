@@ -2,7 +2,7 @@ import { useContext, useCallback } from 'react';
 import { StateContext } from 'State';
 import { pz } from 'Domain/pieces';
 import py from 'Domain/py';
-import { claimControl, cancelControl } from 'Client/actions';
+import { claimControl, cancelControl } from 'Game/actions';
 import HqStyled from 'Client/components/hqStyled';
 import { Cementery } from 'Client/components/pieceCount';
 import { HqStore, HqButton, HqMessage } from './components';

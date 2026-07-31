@@ -1,13 +1,5 @@
 import { pz } from 'Domain/pieces';
-import {
-	TOGGLE_PIECE,
-	MOVE_PIECE,
-	DIRECT_PIECE,
-	NEXT_TURN,
-	SNIPE,
-	CLAIM_CONTROL,
-	CANCEL_CONTROL,
-} from 'Client/actions';
+import { TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE, NEXT_TURN, SNIPE, CLAIM_CONTROL, CANCEL_CONTROL } from 'Game/actions';
 
 function toggledPieceState(state, pieceId) {
 	return pz.toggle(state, pieceId);

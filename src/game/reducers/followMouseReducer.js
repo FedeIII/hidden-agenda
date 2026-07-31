@@ -1,4 +1,4 @@
-import { MOVE_PIECE, DIRECT_PIECE } from 'Client/actions';
+import { MOVE_PIECE, DIRECT_PIECE } from 'Game/actions';
 import { pz, TYPES, STATES } from 'Domain/pieces';
 
 const { AGENT, CEO, SPY, SNIPER } = TYPES;

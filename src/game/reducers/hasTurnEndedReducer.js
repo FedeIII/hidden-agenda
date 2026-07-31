@@ -1,4 +1,4 @@
-import { START_GAME, NEXT_TURN, TOGGLE_PIECE, MOVE_PIECE, SNIPE } from 'Client/actions';
+import { START_GAME, NEXT_TURN, TOGGLE_PIECE, MOVE_PIECE, SNIPE } from 'Game/actions';
 import { pz, TYPES, STATES } from 'Domain/pieces';
 
 const { AGENT, CEO, SPY, SNIPER } = TYPES;

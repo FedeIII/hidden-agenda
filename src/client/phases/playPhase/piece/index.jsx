@@ -1,7 +1,7 @@
 import { useContext, useCallback } from 'react';
 import { pz } from 'Domain/pieces';
 import { StateContext } from 'State';
-import { togglePiece } from 'Client/actions';
+import { togglePiece } from 'Game/actions';
 import { useDragController } from 'Client/drag';
 import PieceStyled from 'Client/components/pieceStyled';
 

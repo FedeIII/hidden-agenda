@@ -2,7 +2,7 @@ import { useCallback, useContext } from 'react';
 import { StateContext } from 'State';
 import cells from 'Domain/cells';
 import { areCoordsInList } from 'Domain/utils';
-import { directPiece } from 'Client/actions';
+import { directPiece } from 'Game/actions';
 import useCellAction from 'Hooks/useCellAction';
 import { useDragController } from 'Client/drag';
 import Piece from '../piece/index';

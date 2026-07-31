@@ -68,18 +68,20 @@ export function cancelControl(team) {
 	};
 }
 
+// These two used to carry the whole players array as their payload, and the reducers read the
+// players from there rather than from state. Over a network that payload is both redundant and
+// forgeable — a client whose view of the players is redacted would send the wrong one, and a
+// hostile one could send whatever it liked. They carry nothing now; the reducers use state.
 export const REVEAL_FRIEND = 'REVEAL_FRIEND';
-export function revealFriend(players) {
+export function revealFriend() {
 	return {
-		payload: { players },
 		type: REVEAL_FRIEND,
 	};
 }
 
 export const REVEAL_FOE = 'REVEAL_FOE';
-export function revealFoe(players) {
+export function revealFoe() {
 	return {
-		payload: { players },
 		type: REVEAL_FOE,
 	};
 }
@@ -89,5 +91,14 @@ export function accuse({ accuser, accusee, alignment, team }) {
 	return {
 		payload: { accuser, accusee, alignment, team },
 		type: ACCUSE,
+	};
+}
+
+// Replaces the entire state with a server snapshot. Handled above the slice reducers.
+export const SYNC_STATE = 'SYNC_STATE';
+export function syncState(state) {
+	return {
+		payload: state,
+		type: SYNC_STATE,
 	};
 }

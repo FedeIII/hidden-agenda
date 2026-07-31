@@ -1,5 +1,5 @@
 import { pz } from 'Domain/pieces';
-import { TOGGLE_PIECE, MOVE_PIECE, CLAIM_CONTROL, CANCEL_CONTROL } from 'Client/actions';
+import { TOGGLE_PIECE, MOVE_PIECE, CLAIM_CONTROL, CANCEL_CONTROL } from 'Game/actions';
 
 /**
  * undefined === in HQ

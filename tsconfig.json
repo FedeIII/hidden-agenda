@@ -12,7 +12,8 @@
 			"State": ["src/client/state"],
 			"State/*": ["src/client/state/*"],
 			"Hooks/*": ["src/client/hooks/*"],
-			"Domain/*": ["src/domain/*"]
+			"Domain/*": ["src/domain/*"],
+			"Game/*": ["src/game/*"]
 		}
 	},
 	"include": ["src", "playwright.config.mjs", "vite.config.mjs"]

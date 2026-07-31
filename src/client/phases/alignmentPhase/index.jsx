@@ -1,6 +1,6 @@
 import { useState, useCallback, useContext, useMemo } from 'react';
 import { StateContext } from 'State';
-import { setAlignment } from 'Client/actions';
+import { setAlignment } from 'Game/actions';
 import { Button, Buttons } from 'Client/components/button';
 import { Title, Subtitle } from 'Client/components/title';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';

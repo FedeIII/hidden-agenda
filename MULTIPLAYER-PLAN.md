@@ -148,14 +148,16 @@ styled-components stays on 4, which turned out to be fine under React 18.
 
 ---
 
-# Phase 0 — Make the reducer server-reusable
+# Phase 0 — Make the reducer server-reusable — **done**
 
-No behaviour change. With Phase −1 done, this is small.
+No behaviour change; 111 tests green.
 
-1. **Extract the reducer core.** New `src/game/reducer.js` exporting `gameReducer` + `createInitialState()`, with no React and no browser globals. `state/index.js:54` reads `window.location.search` at module scope, so today the reducer cannot be imported from Node at all. `state/index.js` keeps the `?test=play|endgame` mock wiring and imports the core.
-2. **Add `SYNC_STATE`**, handled *above* the slice composition (`if (action.type === SYNC_STATE) return action.payload`) — this is how snapshots land. Gate `gameReducer`'s `console.log` (`state/index.js:38`) behind a debug flag; it must not run per-action on the server.
-3. **Make actions self-contained.** `revealFriend(players)` / `revealFoe(players)` (`actions.js:71-85`) carry the entire players array, and `playersReducer` / `teamControlReducer` read it from the payload rather than from state. On a redacted client that payload is both wrong and forgeable. Reduce to `{type}` and read `state.players`.
-4. **Transport seam.** `src/client/net/transport.js` → `{ dispatch(action), subscribe(fn) }`, with `LocalTransport` (straight into the reducer, today's behaviour) and `SocketTransport`. The state provider picks by URL: room code present → socket, otherwise local. This is what keeps the existing specs alive.
+1. **The game core moved to `src/game/`** — `actions.js`, `reducers/`, plus a new `reducer.js` (`gameReducer` + `createInitialState()`) and `store.js`. This went further than the plan asked: it called only for `reducer.js`, but leaving the reducers under `src/client/state/` would have made `src/game` depend on `src/client` — the server importing from the client. `src/game` and `src/domain` are now verified free of every `Client/` import and every browser global.
+2. **`SYNC_STATE`** is handled above the slice composition, so a server snapshot is adopted wholesale rather than interpreted slice by slice. The per-action `console.log` sits behind a `debug` flag — on in dev, off otherwise.
+3. **`revealFriend()` / `revealFoe()` carry no payload.** They used to ship the entire players array, which the reducers read instead of state: redundant, and forgeable the moment a client's view is redacted. Both reducers now read `state.players`.
+4. **The transport seam** is `src/client/net/transport.js`. `createTransport()` returns a `{ getState, subscribe, dispatch }` store, reads `?test=` and any `#/r/CODE` at call time rather than at import, and today always returns the local store. `withState` consumes it through `useSyncExternalStore`, so Phase 2 swaps the store and no component changes.
+
+Proven rather than assumed: the core bundles for node through Vite SSR (**45.5 kB, 9.2 kB gzipped**) and runs turn order, piece initialisation and a payload-free reveal with no browser present. That is the Phase 1 server path working end to end before any server exists.
 
 # Phase 1 — Server (`server/`, built to `dist-server/`)
 

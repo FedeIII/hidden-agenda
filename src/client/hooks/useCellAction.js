@@ -1,7 +1,7 @@
 import { useCallback, useContext } from 'react';
 import { StateContext } from 'State';
 import { pz } from 'Domain/pieces';
-import { togglePiece, movePiece } from 'Client/actions';
+import { togglePiece, movePiece } from 'Game/actions';
 
 // What clicking a cell means. Dropping a piece on a cell means exactly the same thing, which
 // is why react-dnd's drop handler used to be this very callback — so it lives on its own now

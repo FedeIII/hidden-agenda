@@ -1,4 +1,4 @@
-import { NEXT_TURN } from 'Client/actions';
+import { NEXT_TURN } from 'Game/actions';
 
 function piecesPrevStateReducer(state, action) {
 	switch (action.type) {
