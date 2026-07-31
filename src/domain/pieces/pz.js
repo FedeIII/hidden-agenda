@@ -48,13 +48,7 @@ function toggle(state, pieceId) {
 	const selectedPiece = getSelectedPiece(pieces);
 
 	if (hasToToggle(pieceId, selectedPiece, state)) {
-		return pieces.map(piece => {
-			if (piece.id === pieceId) {
-				togglePiece(piece);
-			}
-
-			return piece;
-		});
+		return pieces.map(piece => (piece.id === pieceId ? toggledPiece(piece) : piece));
 	}
 
 	return pieces;
@@ -115,15 +109,21 @@ function isCeoPlacement(ceoId, piecesPrevState) {
 	return !ceo.direction;
 }
 
-function togglePiece(piece) {
+function toggledPiece(piece) {
 	if (piece.selected) {
-		piece.selected = false;
-		piece.showMoveCells = false;
-		piece.direction = piece.selectedDirection;
-	} else {
-		piece.selected = true;
-		piece.showMoveCells = true;
+		return {
+			...piece,
+			selected: false,
+			showMoveCells: false,
+			direction: piece.selectedDirection,
+		};
 	}
+
+	return {
+		...piece,
+		selected: true,
+		showMoveCells: true,
+	};
 }
 
 function togglePieceState(pieceId, { pieces, pieceState, followMouse }) {
@@ -149,7 +149,13 @@ function togglePieceState(pieceId, { pieces, pieceState, followMouse }) {
 
 	const toggledPiece = getPieceById(pieceId, pieces);
 
-	if (toggledPiece.selected) {
+	// `pieces` is the pre-action state, so the piece about to be selected is the one that is
+	// NOT selected yet. This used to test `.selected` directly and worked only by accident:
+	// piecesReducer runs before pieceStateReducer and used to mutate this very object in
+	// place, so the "old" state already carried the new flag.
+	const isBeingSelected = !toggledPiece.selected;
+
+	if (isBeingSelected) {
 		if (isSniper(toggledPiece.id) && !!toggledPiece.position) {
 			return MOVEMENT;
 		}
@@ -193,10 +199,13 @@ function movePieces(pieces, id, toPosition, pieceState) {
 }
 
 function getMovedPiece(pieces, piece, toPosition, pieceState) {
-	piece.moved = true;
-
 	const throughSniperLineOf = getSnipersInSight(piece, toPosition, pieces);
+	const movedPiece = moveByType(piece, toPosition, throughSniperLineOf, pieceState);
 
+	return movedPiece ? { ...movedPiece, moved: true } : piece;
+}
+
+function moveByType(piece, toPosition, throughSniperLineOf, pieceState) {
 	switch (getType(piece.id)) {
 		case AGENT:
 			return moveAgent(piece, toPosition, throughSniperLineOf);
@@ -207,13 +216,12 @@ function getMovedPiece(pieces, piece, toPosition, pieceState) {
 		case SNIPER:
 			return moveSniper(piece, toPosition, throughSniperLineOf);
 		default:
-			return;
+			return undefined;
 	}
 }
 
 function getNotMovedPiece(piece) {
-	piece.moved = false;
-	return piece;
+	return piece.moved ? { ...piece, moved: false } : piece;
 }
 
 function moveAgent(agent, toPosition, throughSniperLineOf) {
@@ -539,57 +547,61 @@ function getFreeCellsUntilPiece(positions, pieces) {
 // KILLING //
 /////////////
 
+// A move kills whatever else occupies the destination cell. The old double loop relied on
+// killPiece mutating position to OUT_POSITION mid-iteration so the reversed pair (victim,
+// killer) no longer matched — without that side effect it would have killed the mover too.
+// Keying off the moved piece states the same rule directly and needs no mutation.
 function killPieces(pieces, movedId) {
-	const killedPieces = pieces.slice(0);
+	const movedPiece = getPieceById(movedId, pieces);
 
-	killedPieces.forEach(piece1 => {
-		killedPieces.forEach(piece2 => {
-			if (isSamePosition(piece1, piece2)) {
-				if (piece1.id === movedId) {
-					killPiece({ killedPiece: piece2, killedById: piece1.id });
-				} else {
-					killPiece({ killedPiece: piece1, killedById: piece2.id });
-				}
-			}
-		});
-	});
+	if (!movedPiece || !cells.inBoard(movedPiece.position)) {
+		return pieces;
+	}
 
-	const killedCeo = killedPieces.find(piece => isCeo(piece.id) && piece.teamKilledBy);
+	const withKills = pieces.map(piece =>
+		isSamePosition(piece, movedPiece) ? killedPiece(piece, movedId) : piece,
+	);
+
+	const killedCeo = withKills.find(piece => isCeo(piece.id) && piece.teamKilledBy);
 
 	if (!killedCeo) {
-		return killedPieces;
+		return withKills;
 	}
 
-	return killWholeTeam(killedPieces, killedCeo);
+	return killWholeTeam(withKills, killedCeo);
 }
 
-function killPiece({ killedPiece, killedById }) {
-	killedPiece.killed = true;
-	killedPiece.position = OUT_POSITION;
-	killedPiece.killedById = killedById;
+function killedPiece(piece, killedById) {
+	const dead = {
+		...piece,
+		killed: true,
+		position: OUT_POSITION,
+		killedById,
+	};
 
-	if (isCeo(killedPiece.id)) {
-		killedPiece.teamKilledBy = killedById;
+	if (isCeo(piece.id)) {
+		// Transient marker: killPieces reads it to cascade the kill, then clears it.
+		dead.teamKilledBy = killedById;
 	}
 
-	return killedPiece;
+	return dead;
 }
 
 function killWholeTeam(pieces, killedCeo) {
-	const killedPieces = pieces.map(piece => setTeamKilledBy(piece, killedCeo));
-	killedCeo.teamKilledBy = undefined;
-	return killedPieces;
-}
+	const killedById = killedCeo.teamKilledBy;
 
-function setTeamKilledBy(piece, killedCeo) {
-	if (isSameTeam(piece, killedCeo) && !piece.position) {
-		return killPiece({
-			killedPiece: piece,
-			killedById: killedCeo.teamKilledBy,
-		});
-	}
+	return pieces.map(piece => {
+		if (piece.id === killedCeo.id) {
+			return { ...piece, teamKilledBy: undefined };
+		}
 
-	return piece;
+		// Only pieces still in the HQ; already-dead ones hold OUT_POSITION, not undefined.
+		if (isSameTeam(piece, killedCeo) && !piece.position) {
+			return killedPiece(piece, killedById);
+		}
+
+		return piece;
+	});
 }
 
 function addPieceToCount(pieceCount, piece) {
@@ -653,7 +665,7 @@ function removeIsThroughSniperLine(pieces) {
 function killSnipedPiece(pieces, prevPieces, sniperId) {
 	return pieces.map(piece => {
 		if (piece.throughSniperLineOf.length) {
-			return killPiece({ killedPiece: piece, killedById: sniperId });
+			return killedPiece(piece, sniperId);
 		}
 
 		if (piece.highlight) {
@@ -764,8 +776,7 @@ function claimControlPieceMap(team, teamControl) {
 			return piece;
 		}
 
-		togglePiece(piece);
-		return piece;
+		return toggledPiece(piece);
 	};
 }
 
@@ -792,7 +803,7 @@ function cancelControlPieceMap(team, teamControl) {
 		}
 
 		if (teamControl[team].player) {
-			togglePiece(piece);
+			return toggledPiece(piece);
 		}
 
 		return piece;
@@ -917,31 +928,32 @@ function hasGameFinished(pieces) {
 }
 
 function isTogglePieceOnCellClick(followMouse, coords, pieces, pieceState) {
-	const highlightedPositions = getHighlightedPositions(pieces, pieceState);
 	const selectedPiece = getSelectedPiece(pieces);
+
+	// Nothing selected means there is nothing to toggle. Without this the caller went on to
+	// read selectedPiece.id and threw on every click on an empty cell before picking a piece.
+	if (!selectedPiece) {
+		return false;
+	}
+
+	const highlightedPositions = getHighlightedPositions(pieces, pieceState);
 	const pieceAtCell = getPieceAtPosition(coords, pieces);
 
-	const isDirectingPiece = followMouse && selectedPiece;
-
-	if ((isDirectingPiece) || !areCoordsInList(coords, highlightedPositions)) {
-		if(!pieceAtCell || pieceAtCell.id !== selectedPiece.id) {
-			return true
-		}
-
-		return false;
+	if (followMouse || !areCoordsInList(coords, highlightedPositions)) {
+		return !pieceAtCell || pieceAtCell.id !== selectedPiece.id;
 	}
 
 	return false;
 }
 
 function isMovePieceOnCellClick(followMouse, coords, pieces, pieceState) {
-	const highlightedPositions = pz.getHighlightedPositions(pieces, pieceState);
-
-	if (!followMouse && areCoordsInList(coords, highlightedPositions)) {
-		return true;
+	if (!getSelectedPiece(pieces)) {
+		return false;
 	}
 
-	return false;
+	const highlightedPositions = getHighlightedPositions(pieces, pieceState);
+
+	return !followMouse && areCoordsInList(coords, highlightedPositions);
 }
 
 /////////////
