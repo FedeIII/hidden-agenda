@@ -142,7 +142,9 @@ The bundle is 82 KB rather than the ~75 KB projected, because React 18's `react-
 
 The mutation purge also exposed a reducer depending on cross-slice mutation leakage: `pieceStateReducer` was reading the already-toggled `selected` flag out of what is nominally the pre-action state. That is precisely the class of bug that would have been miserable to chase once a server shared and persisted that state, and it is now guarded by deep-freeze purity tests plus a full suite run under React StrictMode.
 
-Two things deliberately left undone, both filed rather than forgotten: there is **no linter** (eslint 6 and eslint-config-react-app 4 were version-incompatible, so it had never run — replacing it with eslint 9 flat config is outstanding), and styled-components stays on 4, which turned out to be fine under React 18.
+The linter is real for the first time. eslint 6 and eslint-config-react-app 4 were version-incompatible, so `eslint src` had never once run; the stack was replaced with eslint flat config plus the react-hooks rules, and `npm run lint` is clean. It immediately paid for itself, finding hooks called from plain functions in two phases, a ref written during render, a `useCallback` with no dependency array (so no memoisation at all), a stale-closure risk in the accuse menu, `useBooleanState` returning unstable setters, and sixteen dead `import React` lines left over from before the automatic JSX runtime.
+
+styled-components stays on 4, which turned out to be fine under React 18.
 
 ---
 

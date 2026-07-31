@@ -1,4 +1,4 @@
-import React, { useContext, useCallback } from 'react';
+import { useContext, useCallback } from 'react';
 import { StateContext } from 'State';
 
 import { Title } from 'Client/components/title';
@@ -24,7 +24,7 @@ function useNextTurn() {
 		if (hasTurnEnded) {
 			dispatch(nextTurn());
 		}
-	}, [hasTurnEnded]);
+	}, [hasTurnEnded, dispatch]);
 
 	return [hasTurnEnded, onNextTurn];
 }

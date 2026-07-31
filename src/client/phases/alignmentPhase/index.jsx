@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useContext, useMemo } from 'react';
+import { useState, useCallback, useContext, useMemo } from 'react';
 import { StateContext } from 'State';
 import { setAlignment } from 'Client/actions';
 import { Button, Buttons } from 'Client/components/button';
@@ -83,7 +83,7 @@ function useAlignmentCards(start) {
 
 		dispatch(setAlignment({ name: playerTurn, friend: dealt[playerTurn].friend }));
 		setCardsRevealed(reveals => ({ friend: true, foe: reveals.foe }));
-	}, [playerTurn, setCardsRevealed, cardsRevealed, dealt]);
+	}, [playerTurn, setCardsRevealed, cardsRevealed, dealt, dispatch]);
 
 	const revealFoe = useCallback(() => {
 		if (cardsRevealed.foe) {
@@ -93,7 +93,7 @@ function useAlignmentCards(start) {
 		dispatch(setAlignment({ name: playerTurn, foe: dealt[playerTurn].foe }));
 
 		setCardsRevealed(reveals => ({ friend: reveals.friend, foe: true }));
-	}, [playerTurn, setCardsRevealed, cardsRevealed, dealt]);
+	}, [playerTurn, setCardsRevealed, cardsRevealed, dealt, dispatch]);
 
 	return {
 		cardsRevealed,

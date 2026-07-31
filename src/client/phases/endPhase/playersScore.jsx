@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import { useContext } from 'react';
 import { StateContext } from 'State';
 import py from 'Domain/py';
 import teams from 'Domain/teams';

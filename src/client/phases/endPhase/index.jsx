@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import { useContext } from 'react';
 import { StateContext } from 'State';
 import teams from 'Domain/teams';
 import HQs from 'Client/components/hqs';
@@ -8,7 +8,9 @@ import { EndPhaseContainer, Score, Points, PieceCountTitle, PieceCountContainer,
 import PieceScore from './pieceScore';
 import PlayersScore from './playersScore';
 
-function renderScore(team) {
+// A component rather than a called function: it reads context, and a plain function that calls
+// hooks is only safe by accident.
+function TeamPoints({ team }) {
 	const [{ pieces }] = useContext(StateContext);
 
 	return (
@@ -22,7 +24,7 @@ function renderScore(team) {
 function TeamScore({ team }) {
 	return (
 		<HqStyled team={team}>
-			{renderScore(team)}
+			<TeamPoints team={team} />
 			<PieceCountContainer>
 				<PieceCountTitle>Killed:</PieceCountTitle>
 				<Cementery team={team} />

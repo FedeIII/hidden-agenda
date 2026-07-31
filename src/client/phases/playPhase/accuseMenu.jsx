@@ -1,4 +1,4 @@
-import React, { useMemo, useContext, useCallback, useState, useEffect } from 'react';
+import { useMemo, useContext, useCallback, useState, useEffect } from 'react';
 import { StateContext } from 'State';
 import { accuse } from 'Client/actions';
 import { TEAM_NAMES } from 'Domain/teams';
@@ -13,10 +13,15 @@ function useAccuseActions(onExit) {
 
 	const playerTurn = py.getTurn(players);
 
+	// Resets the menu when the turn changes. The idiomatic fix is a key on <AccuseMenu> so it
+	// remounts instead, but the accuse flow has no spec covering it, so that refactor waits for
+	// one rather than being done blind.
+	/* eslint-disable react-hooks/set-state-in-effect */
 	useEffect(() => {
 		setAccusedPlayer(null);
 		setAccusedAlignment(null);
 	}, [playerTurn, setAccusedPlayer, setAccusedAlignment]);
+	/* eslint-enable react-hooks/set-state-in-effect */
 
 	const accuseActions = {
 		player: useMemo(() => players.map(player => () => setAccusedPlayer(player.name)), [players, setAccusedPlayer]),
@@ -38,7 +43,11 @@ function useAccuseActions(onExit) {
 						}),
 					);
 				}),
-			[dispatch, accuse, accusedPlayer, accusedAlignment],
+			// playerTurn was missing, so these closures could have captured a stale accuser. It
+			// happened to be masked because the reset effect above changes accusedPlayer on every
+			// turn change, which invalidated the memo anyway. `accuse` is an imported action
+			// creator, not reactive, so it does not belong here.
+			[dispatch, accusedPlayer, accusedAlignment, playerTurn],
 		),
 	};
 
@@ -88,13 +97,13 @@ function AlignmentMenu(props) {
 		if (currentPlayer.allowedToAccuse.friend) {
 			accuseAlignment.friend();
 		}
-	}, [currentPlayer.name, accuseAlignment]);
+	}, [currentPlayer.allowedToAccuse.friend, accuseAlignment]);
 
 	const onFoeClick = useCallback(() => {
 		if (currentPlayer.allowedToAccuse.foe) {
 			accuseAlignment.foe();
 		}
-	}, [currentPlayer.name, accuseAlignment]);
+	}, [currentPlayer.allowedToAccuse.foe, accuseAlignment]);
 
 	return (
 		<>

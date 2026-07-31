@@ -302,9 +302,9 @@ function getPossibleDirections(piece, pieces, pieceState) {
 		case AGENT:
 			return getAgentDirections(piece, pieces, pieceState);
 		case CEO:
-			return getCeoDirections(piece, pieces);
+			return getCeoDirections(piece);
 		case SPY:
-			return getSpyDirections(piece, pieces);
+			return getSpyDirections(piece);
 		case SNIPER:
 			return getSniperDirections();
 		default:
@@ -324,7 +324,7 @@ function getAgentDirections(agent, pieces, pieceState) {
 	return [];
 }
 
-function getCeoDirections(ceo, pieces) {
+function getCeoDirections(ceo) {
 	if (!ceo.direction) {
 		return directions.getAll();
 	}
@@ -332,7 +332,7 @@ function getCeoDirections(ceo, pieces) {
 	return [ceo.direction];
 }
 
-function getSpyDirections(spy, pieces) {
+function getSpyDirections(spy) {
 	if (!spy.direction) {
 		return directions.getAll();
 	}
@@ -744,15 +744,15 @@ function isAnyPieceThroughSniperLine(pieces) {
 // CLAIM CONTROL //
 ///////////////////
 
-function claimControl(team, { pieces, teamControl, hasTurnEnded }) {
+function claimControl(team, { pieces, hasTurnEnded }) {
 	if (hasTurnEnded) {
 		return pieces;
 	}
 
-	return pieces.map(claimControlPieceMap(team, teamControl));
+	return pieces.map(claimControlPieceMap(team));
 }
 
-function claimControlPieceMap(team, teamControl) {
+function claimControlPieceMap(team) {
 	return function toggleCeo(piece) {
 		if (!isCeo(piece.id)) {
 			return piece;
@@ -841,10 +841,6 @@ function isAnyPieceAtPosition(position, pieces) {
 
 function isSameTeam(piece1, piece2) {
 	return getTeam(piece1.id) === getTeam(piece2.id);
-}
-
-function getSameTeamPieces(piece, pieces) {
-	return pieces.filter(eachPiece => isSameTeam(eachPiece, piece));
 }
 
 function isDifferentPiece(piece1, piece2) {

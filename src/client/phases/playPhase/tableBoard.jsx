@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import { useContext } from 'react';
 import { pz } from 'Domain/pieces';
 import { areCoordsInList } from 'Domain/utils';
 import { CELLS_BY_ROW, ROW_NUMBERS } from 'Domain/cells';

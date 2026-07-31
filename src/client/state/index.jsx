@@ -1,4 +1,4 @@
-import React, { createContext, useReducer } from 'react';
+import { createContext, useReducer } from 'react';
 import { pz } from 'Domain/pieces';
 import teams from 'Domain/teams';
 import getWrapperName from './getWrapperName';

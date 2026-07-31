@@ -1,4 +1,4 @@
-import React, { useMemo, useContext, useCallback, useEffect } from 'react';
+import { useMemo, useContext, useCallback, useEffect } from 'react';
 import { StateContext } from 'State';
 import { pz } from 'Domain/pieces';
 import { TEAM_NAMES } from 'Domain/teams';
@@ -30,7 +30,7 @@ function useSnipe() {
 		if (isSniperOnBoard) {
 			dispatch(snipe());
 		}
-	}, [isSniperOnBoard]);
+	}, [isSniperOnBoard, dispatch]);
 
 	return onSnipe;
 }
@@ -40,7 +40,7 @@ function useAccuseMenu() {
 	const [{ players }] = useContext(StateContext);
 	const playerName = py.getTurn(players);
 
-	useEffect(() => hideAccuseMenu(), [playerName]);
+	useEffect(() => hideAccuseMenu(), [playerName, hideAccuseMenu]);
 
 	return [isAccusedShown, showAccuseMenu, hideAccuseMenu];
 }
@@ -50,7 +50,7 @@ function useRevealMenu() {
 	const [{ players }] = useContext(StateContext);
 	const playerName = py.getTurn(players);
 
-	useEffect(() => hideRevealMenu(), [playerName]);
+	useEffect(() => hideRevealMenu(), [playerName, hideRevealMenu]);
 
 	const isRevealActive = useMemo(() => py.isRevealActive(players), [players]);
 
@@ -58,7 +58,7 @@ function useRevealMenu() {
 		if (isRevealActive) {
 			showRevealMenu();
 		}
-	});
+	}, [isRevealActive, showRevealMenu]);
 
 	return [isRevealShown, isRevealActive, onReveal, hideRevealMenu];
 }
@@ -73,7 +73,7 @@ function useAlignmentMessages() {
 	useEffect(() => {
 		hideWarning();
 		hideAlignment();
-	}, [playerName]);
+	}, [playerName, hideWarning, hideAlignment]);
 
 	const onWarningConfirm = useCallback(() => {
 		hideWarning();
@@ -115,8 +115,8 @@ function RevealAlignmentMenu(props) {
 	const isFriendRevealed = py.isOwnFriendRevealed(players);
 	const isFoeRevealed = py.isOwnFoeRevealed(players);
 
-	const onRevealFriend = useCallback(() => dispatch(revealFriend(players)), [players]);
-	const onRevealFoe = useCallback(() => dispatch(revealFoe(players)), [players]);
+	const onRevealFriend = useCallback(() => dispatch(revealFriend(players)), [players, dispatch]);
+	const onRevealFoe = useCallback(() => dispatch(revealFoe(players)), [players, dispatch]);
 
 	return (
 		<RevealContainer>

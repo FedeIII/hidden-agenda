@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useContext } from 'react';
+import { useState, useMemo, useCallback, useContext } from 'react';
 import { startGame } from 'Client/actions';
 import { StateContext } from 'State';
 import { Button, Buttons } from 'Client/components/button';
@@ -53,7 +53,8 @@ function useStartGame(players, onReady) {
 	}, [players, dispatch, onReady]);
 }
 
-function arePlayersReady(numberOfPlayers, players) {
+// Named as a hook because it is one — it calls useMemo.
+function useArePlayersReady(numberOfPlayers, players) {
 	return useMemo(
 		() => Object.values(players).filter(name => name).length === numberOfPlayers,
 		[numberOfPlayers, players],
@@ -103,6 +104,7 @@ function StartPhase({ onReady }) {
 	const { onNumberPlayersChange, onSelectPlayerOptions } = playerOptionsHandlers;
 
 	const onStart = useStartGame(players, onReady);
+	const playersReady = useArePlayersReady(numberOfPlayers, players);
 
 	return (
 		<StartPhaseContainer>
@@ -135,7 +137,7 @@ function StartPhase({ onReady }) {
 			</Options>
 
 			<Buttons>
-				<Button id="start-btn" active={arePlayersReady(numberOfPlayers, players)} onClick={onStart}>
+				<Button id="start-btn" active={playersReady} onClick={onStart}>
 					GET ALIGNMENTS
 				</Button>
 			</Buttons>

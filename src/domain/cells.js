@@ -53,7 +53,7 @@ function createGetPositionsInDirections(r, c) {
 	};
 }
 
-function createGetPositionAfterDirections(r, c) {
+function createGetPositionAfterDirections() {
 	return function getPositionAfterDirections(...directions) {
 		return this.getPositionsInDirections(...directions).slice(-1)[0];
 	};
@@ -141,7 +141,7 @@ CELLS_BY_ROW.forEach(numberOfCells => {
 			position: [r, c],
 			getPositionInDirection: createGetPositionInDirection(r, c),
 			getPositionsInDirections: createGetPositionsInDirections(r, c),
-			getPositionAfterDirections: createGetPositionAfterDirections(r, c),
+			getPositionAfterDirections: createGetPositionAfterDirections(),
 			getPositionsInDirection: createGetPositionsInDirection(r, c),
 		});
 

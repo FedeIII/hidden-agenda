@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import useCellAction from 'Hooks/useCellAction';
 
 // Replaces react-dnd + react-dnd-html5-backend + dnd-core + redux (67 kB of the bundle).
@@ -64,10 +64,15 @@ export function DragProvider({ children }) {
 	const cellAction = useCellAction();
 	const [ghost, setGhost] = useState(null);
 
-	// Held in refs so the window listeners can stay mounted once instead of resubscribing on
-	// every state change: cellAction's identity changes whenever pieces do.
+	// Held in a ref so the window listeners can stay mounted once instead of resubscribing on
+	// every state change: cellAction's identity changes whenever pieces do. Written in an effect
+	// rather than during render — the listeners only read it from a pointer event, which is
+	// always after commit, so there is nothing to gain from touching a ref mid-render.
 	const cellActionRef = useRef(cellAction);
-	cellActionRef.current = cellAction;
+
+	useEffect(() => {
+		cellActionRef.current = cellAction;
+	}, [cellAction]);
 
 	const gesture = useRef(null);
 	const suppressClick = useRef(false);

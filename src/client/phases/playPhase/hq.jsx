@@ -1,4 +1,4 @@
-import React, { useContext, useCallback } from 'react';
+import { useContext, useCallback } from 'react';
 import { StateContext } from 'State';
 import { pz } from 'Domain/pieces';
 import py from 'Domain/py';

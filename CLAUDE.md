@@ -31,7 +31,16 @@ npm run format        # prettier
 npm run format:check
 ```
 
-There is **no linter**. eslint 6 + eslint-config-react-app 4 were version-incompatible, so `eslint src` had never run; the stack was removed rather than left as dead weight. Replacing it with eslint 9 flat config is outstanding work.
+`npm run lint` is eslint flat config (`eslint.config.mjs`) with `js/recommended` plus the react-hooks plugin's full recommended set, which includes the React Compiler rules. **It is clean — keep it that way.** There are no stylistic rules; Prettier owns formatting.
+
+Two deliberate suppressions, both commented at the site:
+
+- `react-hooks/set-state-in-effect` on the turn-change reset in `accuseMenu.jsx`. The idiomatic fix is a `key` so the menu remounts, but the accuse flow has no spec, so that refactor waits for one.
+- `react-hooks/rules-of-hooks` for `src/tests/**`, because Playwright names a fixture's callback `use` and the rule reads it as React's `use()` hook.
+
+Also: `no-unused-vars` uses `args: 'none'` under `src/tests/**`, because a spec's destructured parameters are how it declares which fixtures to set up — a dependency list, not a usage.
+
+**Do not add `import React from 'react'`.** Vite uses the automatic JSX runtime, so it is dead weight and the linter will flag it. Import the named hooks you need.
 
 ### Tests
 

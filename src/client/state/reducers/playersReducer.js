@@ -7,9 +7,10 @@ function playersReducer({ players }, action) {
 			return py.init(action.payload);
 		case NEXT_TURN:
 			return py.nextTurn(players);
-		case SET_ALIGNMENT:
+		case SET_ALIGNMENT: {
 			const { name, friend, foe } = action.payload;
 			return py.setAlignment(players, name, friend, foe);
+		}
 		case REVEAL_FRIEND:
 			return py.revealFriend(action.payload.players);
 		case REVEAL_FOE:

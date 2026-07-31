@@ -1,4 +1,4 @@
-import React, { useContext, useCallback } from 'react';
+import { useContext, useCallback } from 'react';
 import styled from 'styled-components';
 import { StateContext } from 'State';
 import { pz } from 'Domain/pieces';
@@ -33,7 +33,7 @@ function PieceType({ type, team }) {
 
 function renderPieceCountList(pieces, team, getPieceCount) {
 	return getPieceCount(pieces, team)
-		.filter(([pieceType, pieceCount]) => pieceCount !== 0)
+		.filter(([, pieceCount]) => pieceCount !== 0)
 		.map(([pieceType, pieceCount]) => (
 			<PieceTypeCount key={`piece-count-${team}-${pieceType}`} id={`piece-count-${team}-${pieceType}`} team={team}>
 				<PieceType type={pieceType} team={team} /> x {pieceCount}

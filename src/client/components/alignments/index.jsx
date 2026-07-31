@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlignmentCardStyled, AlignmentTeam } from './components';
 export { Alignments } from './components';
 

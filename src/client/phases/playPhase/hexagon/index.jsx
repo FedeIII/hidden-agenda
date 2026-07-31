@@ -1,4 +1,4 @@
-import React, { useCallback, useContext } from 'react';
+import { useCallback, useContext } from 'react';
 import { StateContext } from 'State';
 import cells from 'Domain/cells';
 import { areCoordsInList } from 'Domain/utils';

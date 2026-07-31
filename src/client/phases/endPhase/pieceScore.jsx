@@ -1,4 +1,3 @@
-import React from 'react';
 import PieceStyled from 'Client/components/pieceStyled';
 import { PieceTable, PieceRow, PieceCell } from './components';
 
