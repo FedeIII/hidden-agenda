@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useCallback, useContext } from 'react';
-import { Redirect } from 'react-router-dom';
 import { startGame } from 'Client/actions';
 import { StateContext } from 'State';
-import useTest from 'Hooks/useTest';
 import { Button, Buttons } from 'Client/components/button';
 import {
   StartPhaseContainer,
@@ -57,16 +55,13 @@ function PlayerOptions({ n, onChange }) {
   );
 }
 
-function useReadyToStart(players) {
-  const [readyToStart, setReadyToStart] = useState(false);
+function useStartGame(players, onReady) {
   const [_state, dispatch] = useContext(StateContext);
 
-  const onStart = useCallback(() => {
-    setReadyToStart(true);
+  return useCallback(() => {
     dispatch(startGame(Object.values(players)));
-  }, [players]);
-
-  return [readyToStart, onStart];
+    onReady();
+  }, [players, dispatch, onReady]);
 }
 
 function arePlayersReady(numberOfPlayers, players) {
@@ -112,7 +107,7 @@ function usePlayerOptions(initialPlayers) {
   ];
 }
 
-function StartPhase() {
+function StartPhase({ onReady }) {
   const [playerOptions, playerOptionsHandlers] = usePlayerOptions({
     player1: undefined,
     player2: undefined,
@@ -124,14 +119,10 @@ function StartPhase() {
     onSelectPlayerOptions,
   } = playerOptionsHandlers;
 
-  const [readyToStart, onStart] = useReadyToStart(players);
-
-  const isTest = useTest()
-  const goToNextPhase = readyToStart || isTest;
+  const onStart = useStartGame(players, onReady);
 
   return (
     <StartPhaseContainer>
-      {goToNextPhase && <Redirect to="/alignment" />}
       <Options>
         <NumberPlayers>
           <MainTitle>1. NUMBER OF PLAYERS</MainTitle>

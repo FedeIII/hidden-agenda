@@ -41,9 +41,7 @@
 		"react": "^16.8.6",
 		"react-dnd": "^14.0.2",
 		"react-dnd-html5-backend": "^14.0.0",
-		"react-dom": "^16.8.6",
-		"react-router": "^5.0.1",
-		"react-router-dom": "^5.0.1"
+		"react-dom": "^16.8.6"
 	},
 	"author": "Federico Perez <fedelll@gmail.com>",
 	"jest": {

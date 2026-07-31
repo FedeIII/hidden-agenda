@@ -1,23 +1,52 @@
-import React from 'react';
-import { HashRouter as Router, Route } from 'react-router-dom';
-import { DndProvider } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
+import React, { useState, useContext } from 'react';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 
 import GlobalStyle from './globalStyle';
-import { withState } from 'State';
+import { withState, StateContext } from 'State';
+import { pz } from 'Domain/pieces';
+import { PHASES } from 'Domain/phases';
+import useTest from 'Hooks/useTest';
 import StartPhase from 'Phases/startPhase';
 import AlignmentPhase from 'Phases/alignmentPhase';
 import PlayPhase from 'Phases/playPhase';
 import EndPhase from 'Phases/endPhase';
 
-export default withState(() => (
-  <DndProvider backend={HTML5Backend}>
-    <GlobalStyle />
-    <Router>
-      <Route exact path="/" component={StartPhase} />
-      <Route exact path="/alignment" component={AlignmentPhase} />
-      <Route exact path="/play" component={PlayPhase} />
-      <Route exact path="/end" component={EndPhase} />
-    </Router>
-  </DndProvider>
-));
+const { START, ALIGNMENT, PLAY, END } = PHASES;
+
+// The ?test= mocks used to reach their phase by falling through two <Redirect>s.
+function initialPhase(test) {
+	if (test === 'play') {
+		return PLAY;
+	}
+
+	if (test === 'endgame') {
+		return END;
+	}
+
+	return START;
+}
+
+// There are no routes to navigate, so there is no router: phases are a value, and each phase
+// hands control on when it is done. Phase 2 replaces this useState with the phase the server
+// reports, leaving the switch below untouched.
+function Game() {
+	const [{ pieces }] = useContext(StateContext);
+	const test = useTest();
+	const [phase, setPhase] = useState(() => initialPhase(test));
+
+	// Was a <Redirect> inside PlayPhase. Deriving it keeps it idempotent.
+	const activePhase = pz.hasGameFinished(pieces) ? END : phase;
+
+	return (
+		<DndProvider backend={HTML5Backend}>
+			<GlobalStyle />
+			{activePhase === START && <StartPhase onReady={() => setPhase(ALIGNMENT)} />}
+			{activePhase === ALIGNMENT && <AlignmentPhase onReady={() => setPhase(PLAY)} />}
+			{activePhase === PLAY && <PlayPhase />}
+			{activePhase === END && <EndPhase />}
+		</DndProvider>
+	);
+}
+
+export default withState(Game);

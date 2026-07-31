@@ -1,11 +1,9 @@
 import React, { useState, useCallback, useContext, useMemo } from 'react';
-import { Redirect } from 'react-router-dom';
 import { StateContext } from 'State';
 import { setAlignment } from 'Client/actions';
 import { Button, Buttons } from 'Client/components/button';
 import { Title, Subtitle } from 'Client/components/title';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
-import useTest from 'Hooks/useTest';
 import { TEAM_NAMES } from 'Domain/teams';
 import { dealAlignments } from 'Domain/deal';
 import { AlignmentPhaseContainer } from './components';
@@ -108,14 +106,6 @@ function useAlignmentCards(start) {
 	};
 }
 
-function useReadyToStart() {
-	const [readyToStart, setReadyToStart] = useState(false);
-
-	const start = useCallback(() => setReadyToStart(true));
-
-	return [readyToStart, start];
-}
-
 function renderTitle(playerTurn) {
 	if (playerTurn) {
 		return (
@@ -129,9 +119,7 @@ function renderTitle(playerTurn) {
 	return <Title>You are all ready to start!</Title>;
 }
 
-function AlignmentPhase() {
-	const [readyToStart, start] = useReadyToStart();
-
+function AlignmentPhase({ onReady }) {
 	const {
 		cardsRevealed,
 		revealFriend,
@@ -140,15 +128,12 @@ function AlignmentPhase() {
 		currentFriend,
 		currentFoe,
 		nextTurn,
-	} = useAlignmentCards(start);
+	} = useAlignmentCards(onReady);
 
 	const isButtonActive = Object.values(cardsRevealed).every(revealed => revealed) || !playerTurn;
 
-	const goToNextPhase = readyToStart || useTest();
-
 	return (
 		<AlignmentPhaseContainer>
-			{goToNextPhase && <Redirect to="/play" />}
 			{renderTitle(playerTurn)}
 
 			{playerTurn && (
