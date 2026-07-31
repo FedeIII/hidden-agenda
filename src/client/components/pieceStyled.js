@@ -129,6 +129,11 @@ const onSelected = ({ selected, highlight }) => {
 
 const PieceStyled = styled.img`
   position: absolute;
+  /* Without this a touch drag scrolls the page instead of emitting pointermove, so pieces
+     cannot be dragged on a phone. user-drag stops the browser's own image drag on desktop. */
+  touch-action: none;
+  -webkit-user-drag: none;
+  user-select: none;
   width: 92%;
   top: -43%;
   bottom: 0;

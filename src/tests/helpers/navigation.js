@@ -37,8 +37,10 @@ export async function goToPlay(numPlayers) {
 // file was the one that failed, because the rest ran with a warm HTTP cache.
 async function waitForPiecesToRender() {
 	await page.waitForFunction(() => {
-		const piece = document.querySelector('#pz-0-A1');
+		const images = Array.from(document.images);
 
-		return !!piece && piece.getBoundingClientRect().height > 0;
+		// Every piece type is a separate PNG, so waiting on one of them is not enough: the
+		// agent specs passed while the sniper and spy specs raced their own images.
+		return images.length > 0 && images.every(image => image.complete && image.naturalWidth > 0);
 	});
 }

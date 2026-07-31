@@ -1,8 +1,7 @@
 import React, { useState, useContext } from 'react';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 
 import GlobalStyle from './globalStyle';
+import { DragProvider } from './drag';
 import { withState, StateContext } from 'State';
 import { pz } from 'Domain/pieces';
 import { PHASES } from 'Domain/phases';
@@ -39,13 +38,13 @@ function Game() {
 	const activePhase = pz.hasGameFinished(pieces) ? END : phase;
 
 	return (
-		<DndProvider backend={HTML5Backend}>
+		<DragProvider>
 			<GlobalStyle />
 			{activePhase === START && <StartPhase onReady={() => setPhase(ALIGNMENT)} />}
 			{activePhase === ALIGNMENT && <AlignmentPhase onReady={() => setPhase(PLAY)} />}
 			{activePhase === PLAY && <PlayPhase />}
 			{activePhase === END && <EndPhase />}
-		</DndProvider>
+		</DragProvider>
 	);
 }
 
