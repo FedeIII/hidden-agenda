@@ -4,9 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Hidden Agenda: a hex board game with hidden information (React 18 + styled-components + Vite, no backend yet). 2–6 players share one screen and command four teams (0–3 = black/red/white/yellow) of 5 agents + CEO + spy + sniper. Each player secretly holds a *friend* and a *foe* team; the psychology is that everyone moves everyone's pieces. Published at https://fedeiii.github.io/hidden-agenda/ from the committed `docs/` build.
+Hidden Agenda: a hex board game with hidden information (React 18 + styled-components + Vite, plus a `ws` server). 2–6 players command four teams (0–3 = black/red/white/yellow) of 5 agents + CEO + spy + sniper. Each player secretly holds a *friend* and a *foe* team; the psychology is that everyone moves everyone's pieces. Published at https://fedeiii.github.io/hidden-agenda/ from the committed `docs/` build.
 
-`MULTIPLAYER-PLAN.md` is the live plan for making it playable over the internet and deploying it to a VPS. Phase −1 (housekeeping) is done; Phase 0 onwards is not. Read it before any structural change — several decisions below exist to serve it.
+`MULTIPLAYER-PLAN.md` is the live plan for making it playable over the internet and deploying it to a VPS. **Phases −1, 0 and 1 are done; the client is not yet wired to the server.** Read the plan before any structural change — several decisions below exist to serve it.
+
+Right now the game still plays hot-seat in one tab: the server exists and is tested, but `createTransport()` always returns the local store. Phase 2 connects them.
 
 ## Commands
 
@@ -46,7 +48,7 @@ Also: `no-unused-vars` uses `args: 'none'` under `src/tests/**`, because a spec'
 
 Playwright is the only runner, with two projects:
 
-- **`domain`** — pure game-rules specs in `src/tests/unit/`. They never request a `page` fixture, so no browser starts and they finish in ~2s. This is where reducer-purity guards live (they deep-freeze inputs and assert the reducer doesn't throw), and where a `redact` test belongs in Phase 1.
+- **`domain`** — pure game-rules specs in `src/tests/unit/`. They never request a `page` fixture, so no browser starts and they finish in ~2s. This is where the reducer-purity guards live (they deep-freeze inputs and assert the reducer does not throw), and where the server specs live too — redaction, validation and the in-process two-client socket tests all run here, with no browser.
 - **`e2e`** — everything else in `src/tests/`, driving chromium.
 
 Things worth knowing before touching the suite:
@@ -86,9 +88,9 @@ Things not to undo:
 
 Build with `npm run build:server` → `dist-server/main.mjs` (committed, like `docs/`). Note the **`.mjs`** extension, and that `vite.server.config.mjs` needs `publicDir: false` or the bundle acquires all 116 piece images.
 
-### Two layers inside the core
+### Inside the shared core
 
-`src/domain/` is pure game rules — plain functions, no React, no state container. `src/client/` is React UI and the reducer wiring. Rules belong in `domain`; components should call into it rather than re-deriving geometry or legality.
+`src/domain/` is the game rules — plain functions, no state container. `src/game/` is the reducer, the actions and the store built on top of them. Rules belong in `domain`; components call into it rather than re-deriving geometry or legality.
 
 | Module | Responsibility |
 | --- | --- |
