@@ -5,6 +5,7 @@ import { Button, Buttons } from 'Client/components/button';
 import { Title, Subtitle } from 'Client/components/title';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
 import { TEAM_NAMES } from 'Domain/teams';
+import useSession from 'Hooks/useSession';
 import { dealAlignments } from 'Domain/deal';
 import { AlignmentPhaseContainer } from './components';
 
@@ -119,7 +120,58 @@ function renderTitle(playerTurn) {
 	return <Title>You are all ready to start!</Title>;
 }
 
-function AlignmentPhase({ onReady }) {
+// Online there is no ceremony to perform: the server dealt the cards and each client only ever
+// received its own, so a player simply looks at their screen and says they are ready.
+function OnlineAlignment({ onReady }) {
+	const [{ players }] = useContext(StateContext);
+	const session = useSession();
+	const [ready, setReady] = useState(false);
+
+	const me = players.find(player => player.name === session.name);
+
+	const confirm = useCallback(() => {
+		setReady(true);
+		onReady();
+	}, [onReady]);
+
+	if (!me) {
+		return (
+			<AlignmentPhaseContainer>
+				<Title>Waiting for the table…</Title>
+			</AlignmentPhaseContainer>
+		);
+	}
+
+	const readyCount = session.seats.filter(seat => seat.ready).length;
+
+	return (
+		<AlignmentPhaseContainer>
+			<Title>{me.name}, these are yours</Title>
+			<Subtitle>Nobody else can see them</Subtitle>
+
+			<Alignments>
+				<AlignmentFriend id="alingnment-card-friend" disabled player={me.name} team={me.alignment.friend}>
+					{TEAM_NAMES[me.alignment.friend]}
+				</AlignmentFriend>
+				<AlignmentFoe id="alingnment-card-foe" disabled player={me.name} team={me.alignment.foe}>
+					{TEAM_NAMES[me.alignment.foe]}
+				</AlignmentFoe>
+			</Alignments>
+
+			<Buttons>
+				<Button id="alignments-btn" active={!ready} onClick={confirm}>
+					{ready ? 'WAITING…' : 'READY'}
+				</Button>
+			</Buttons>
+
+			<Subtitle id="alignment-ready-count">
+				{readyCount}/{session.seats.length} ready
+			</Subtitle>
+		</AlignmentPhaseContainer>
+	);
+}
+
+function HotSeatAlignment({ onReady }) {
 	const { cardsRevealed, revealFriend, revealFoe, playerTurn, currentFriend, currentFoe, nextTurn } =
 		useAlignmentCards(onReady);
 
@@ -159,6 +211,10 @@ function AlignmentPhase({ onReady }) {
 			</Buttons>
 		</AlignmentPhaseContainer>
 	);
+}
+
+function AlignmentPhase({ online, onReady }) {
+	return online ? <OnlineAlignment onReady={onReady} /> : <HotSeatAlignment onReady={onReady} />;
 }
 
 export default AlignmentPhase;

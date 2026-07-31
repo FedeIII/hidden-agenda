@@ -1,6 +1,6 @@
 # Hidden Agenda — housekeeping, online multiplayer, VPS deployment
 
-Target: `https://agenda.azyr.io` — 2–6 players, one room, each on their own device, alignments genuinely hidden.
+Target: `https://hidden-agenda.azyr.io` — 2–6 players, one room, each on their own device, alignments genuinely hidden.
 
 Phases run in order. `-1` is prerequisite cleanup, `0` is the refactor that makes the reducer reusable server-side, `1`–`2` are the feature, `3` ships it, `4` protects it.
 
@@ -204,7 +204,7 @@ Worth recording:
 
 - **Bundle**: Vite already emits content-hashed filenames, so this reduces to *verifying* it and serving `index.html` with `no-store`. Non-negotiable, because the box's asset location sets `expires 1y; Cache-Control "public, immutable"` for `*.js` — a fixed `main.js` would stay pinned in returning browsers for a year, a failure already documented on that server.
 - **Server bundle**: second Vite config, `build.ssr: 'server/index.js'`, `build.outDir: 'dist-server'`, `ws` left external. Same alias resolution as the client, so the shared reducer core needs no import churn, and the box needs only `npm ci --omit=dev` — no devDependencies and no Babel step on 2 vCPUs. Commit `dist-server/` next to `docs/`, matching this repo's existing committed-build convention.
-- **nginx** `/etc/nginx/sites-available/agenda.azyr.io` — clone the **journal** subdomain config, not the osler one (osler's includes the Cloudflare mTLS snippet, which would 400 every non-Cloudflare client):
+- **nginx** `/etc/nginx/sites-available/hidden-agenda.azyr.io` — clone the **journal** subdomain config, not the osler one (osler's includes the Cloudflare mTLS snippet, which would 400 every non-Cloudflare client):
   - `root /opt/hidden-agenda/docs; try_files $uri /index.html;`
   - `location = /index.html { add_header Cache-Control "no-store"; }`
   - `location /ws { proxy_pass http://127.0.0.1:3007; proxy_http_version 1.1; Upgrade/Connection headers; proxy_read_timeout 3600s; }`
@@ -214,7 +214,7 @@ Worth recording:
 - **Cloudflare**: proxied A record `agenda` → box IP; WebSockets enabled; SSL is already Full (strict) globally. Do not apply a "Cache Everything" rule to `/ws`.
 - **PM2, not Docker**: `pm2 start dist-server/server.js --name hidden-agenda --env PORT=3007 && pm2 save`. Every other Node app on the box is PM2, and that box's Docker daemon runs userns-remap, which breaks bind-mounted paths.
 - **Deploy script** mirroring house-md's pattern — there is no webhook on this box, a push ships nothing. Laptop builds, commits, pushes; then over SSH: `cd /opt/hidden-agenda && git pull --ff-only && npm ci --omit=dev && pm2 reload hidden-agenda && curl -sf localhost:3007/healthz`.
-- **Smoke**: `curl -s 127.0.0.1:3007/healthz`; `curl -sk https://127.0.0.1/ -H 'Host: agenda.azyr.io'` (this works here, unlike osler — no mTLS on this site); then a real two-device room, one of them a phone.
+- **Smoke**: `curl -s 127.0.0.1:3007/healthz`; `curl -sk https://127.0.0.1/ -H 'Host: hidden-agenda.azyr.io'` (this works here, unlike osler — no mTLS on this site); then a real two-device room, one of them a phone.
 
 # Phase 4 — Tests and hardening
 

@@ -1,5 +1,5 @@
-import { createContext, useMemo, useSyncExternalStore } from 'react';
-import createTransport from 'Client/net/transport';
+import { createContext, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import createTransport, { readRoomCode } from 'Client/net/transport';
 import getWrapperName from './getWrapperName';
 
 // React glue only. The reducer, the initial state and the store all live in src/game, which the
@@ -7,21 +7,40 @@ import getWrapperName from './getWrapperName';
 
 export const StateContext = createContext(null);
 export const TestContext = createContext(null);
+export const SessionContext = createContext(null);
+
+// A room code in the URL means somebody followed a shared link, so start online.
+function detectMode() {
+	return readRoomCode() ? 'online' : 'local';
+}
 
 export function withState(WrappedComponent) {
 	function WithState(props) {
-		// One transport per mount. useSyncExternalStore is React 18's primitive for exactly this,
-		// and it is what lets phase 2 feed the same tree from server snapshots.
-		const { store, test } = useMemo(() => createTransport(), []);
+		// Switching mode rebuilds the transport, which is how the start screen turns a local game
+		// into an online one without the rest of the tree knowing anything changed.
+		const [mode, setMode] = useState(detectMode);
+		const transport = useMemo(() => createTransport({ mode }), [mode]);
 
-		const state = useSyncExternalStore(store.subscribe, store.getState);
-		const value = useMemo(() => [state, store.dispatch], [state, store.dispatch]);
+		useEffect(() => transport.close, [transport]);
+
+		const state = useSyncExternalStore(transport.store.subscribe, transport.store.getState);
+		const session = useSyncExternalStore(transport.session.subscribe, transport.session.get);
+
+		const goOnline = useCallback(() => setMode('online'), []);
+
+		const stateValue = useMemo(() => [state, transport.store.dispatch], [state, transport.store.dispatch]);
+		const sessionValue = useMemo(
+			() => ({ ...session, actions: { ...transport.actions, goOnline } }),
+			[session, transport.actions, goOnline],
+		);
 
 		return (
-			<TestContext.Provider value={test}>
-				<StateContext.Provider value={value}>
-					<WrappedComponent {...props} />
-				</StateContext.Provider>
+			<TestContext.Provider value={transport.test}>
+				<SessionContext.Provider value={sessionValue}>
+					<StateContext.Provider value={stateValue}>
+						<WrappedComponent {...props} />
+					</StateContext.Provider>
+				</SessionContext.Provider>
 			</TestContext.Provider>
 		);
 	}

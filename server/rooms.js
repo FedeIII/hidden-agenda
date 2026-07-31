@@ -1,5 +1,6 @@
 import { PHASES } from 'Domain/phases';
 import { dealAlignments } from 'Domain/deal';
+import { MIN_PLAYERS, MAX_PLAYERS } from 'Domain/py';
 import { createInitialState, gameReducer } from 'Game/reducer';
 import { startGame, setAlignment } from 'Game/actions';
 import { createCode, createToken } from './codes';
@@ -7,9 +8,9 @@ import { createCode, createToken } from './codes';
 // Rooms hold no sockets. A room is plain JSON so it can be written to disk and read back after a
 // deploy restart; live connections are tracked separately in index.js by seat id.
 
-export const MIN_PLAYERS = 2;
-export const MAX_PLAYERS = 6;
 export const MAX_ROOMS = 200;
+
+export { MIN_PLAYERS, MAX_PLAYERS };
 
 export function createRoomStore({ now = () => Date.now(), rng = Math.random } = {}) {
 	const rooms = new Map();

@@ -3,6 +3,11 @@ import py from 'Domain/py';
 
 const NO_PLAYER = { name: null, score: 0 };
 
+// Table size. Lives here rather than in the server or the lobby because it is a rule of the
+// game, and both of those need to agree with it.
+export const MIN_PLAYERS = 2;
+export const MAX_PLAYERS = 6;
+
 function init(playerNames) {
 	return playerNames.map((name, i) => ({
 		name,

@@ -4,6 +4,7 @@ import { pz } from 'Domain/pieces';
 import { TEAM_NAMES } from 'Domain/teams';
 import py from 'Domain/py';
 import useBooleanState from 'Hooks/useBooleanState';
+import { useCanAct } from 'Hooks/useSession';
 import { snipe, revealFriend, revealFoe } from 'Game/actions';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
 import { Button } from 'Client/components/button';
@@ -188,6 +189,7 @@ function AlignmentReminder(props) {
 }
 
 function PlayActions() {
+	const canAct = useCanAct();
 	const onSnipe = useSnipe();
 	const [isAccusedShown, showAccuseMenu, hideAccuseMenu] = useAccuseMenu();
 	const [isRevealShown, isRevealActive, onReveal, hideReveal] = useRevealMenu();
@@ -199,18 +201,18 @@ function PlayActions() {
 	return (
 		<Actions>
 			<Action>
-				<Button id="snipe" small active onClick={onSnipe}>
+				<Button id="snipe" small active={canAct} onClick={onSnipe}>
 					SNIPE!
 				</Button>
 			</Action>
 			<Action>
 				{isMainActions && (
 					<>
-						<ActionButton active id="accuse" onClick={showAccuseMenu}>
+						<ActionButton active={canAct} id="accuse" onClick={showAccuseMenu}>
 							ACCUSE
 						</ActionButton>{' '}
 						<RevealedAlignments />{' '}
-						<ActionButton id="reveal" active={isRevealActive} onClick={onReveal}>
+						<ActionButton id="reveal" active={isRevealActive && canAct} onClick={onReveal}>
 							REVEAL
 						</ActionButton>
 					</>

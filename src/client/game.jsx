@@ -1,11 +1,13 @@
-import { useState, useContext } from 'react';
+import { useContext } from 'react';
 
 import GlobalStyle from './globalStyle';
 import { DragProvider } from './drag';
 import { withState, StateContext } from 'State';
 import { pz } from 'Domain/pieces';
 import { PHASES } from 'Domain/phases';
-import useTest from 'Hooks/useTest';
+import useSession from 'Hooks/useSession';
+import ConnectionBanner from 'Client/components/connectionBanner';
+import LobbyPhase from 'Phases/lobbyPhase';
 import StartPhase from 'Phases/startPhase';
 import AlignmentPhase from 'Phases/alignmentPhase';
 import PlayPhase from 'Phases/playPhase';
@@ -13,37 +15,37 @@ import EndPhase from 'Phases/endPhase';
 
 const { START, ALIGNMENT, PLAY, END } = PHASES;
 
-// The ?test= mocks used to reach their phase by falling through two <Redirect>s.
-function initialPhase(test) {
-	if (test === 'play') {
-		return PLAY;
-	}
-
-	if (test === 'endgame') {
-		return END;
-	}
-
-	return START;
-}
-
-// There are no routes to navigate, so there is no router: phases are a value, and each phase
-// hands control on when it is done. Phase 2 replaces this useState with the phase the server
-// reports, leaving the switch below untouched.
+// Phases are a value, not a route. Locally the session owns it and each phase hands control on
+// when it is done; online the server reports it and this switch is untouched — which was the
+// whole point of dropping the router in phase −1.
 function Game() {
 	const [{ pieces }] = useContext(StateContext);
-	const test = useTest();
-	const [phase, setPhase] = useState(() => initialPhase(test));
+	const session = useSession();
+	const online = session.mode === 'online';
 
-	// Was a <Redirect> inside PlayPhase. Deriving it keeps it idempotent.
-	const activePhase = pz.hasGameFinished(pieces) ? END : phase;
+	// Was a <Redirect> inside PlayPhase. Deriving it keeps it idempotent. Online the server says
+	// so instead, since it is the one that knows the game is over.
+	const finished = online ? session.phase === END : pz.hasGameFinished(pieces);
+	const phase = finished ? END : session.phase;
+
+	// Online, everything before the game starts is the lobby: making a room, sharing a code and
+	// waiting for players. Locally it is the hot-seat name form.
+	const preGame = online ? <LobbyPhase /> : <StartPhase onReady={() => session.actions.advance(ALIGNMENT)} />;
 
 	return (
 		<DragProvider>
 			<GlobalStyle />
-			{activePhase === START && <StartPhase onReady={() => setPhase(ALIGNMENT)} />}
-			{activePhase === ALIGNMENT && <AlignmentPhase onReady={() => setPhase(PLAY)} />}
-			{activePhase === PLAY && <PlayPhase />}
-			{activePhase === END && <EndPhase />}
+			<ConnectionBanner />
+
+			{(phase === START || phase === null) && preGame}
+			{phase === ALIGNMENT && (
+				<AlignmentPhase
+					online={online}
+					onReady={() => (online ? session.actions.ready() : session.actions.advance(PLAY))}
+				/>
+			)}
+			{phase === PLAY && <PlayPhase />}
+			{phase === END && <EndPhase />}
 		</DragProvider>
 	);
 }

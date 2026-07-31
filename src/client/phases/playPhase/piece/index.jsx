@@ -3,6 +3,7 @@ import { pz } from 'Domain/pieces';
 import { StateContext } from 'State';
 import { togglePiece } from 'Game/actions';
 import { useDragController } from 'Client/drag';
+import { useCanAct } from 'Hooks/useSession';
 import PieceStyled from 'Client/components/pieceStyled';
 
 function previewSrc(team, type, [v, h] = []) {
@@ -20,14 +21,15 @@ function Piece({ id, selectedDirection, selected, highlight }) {
 
 	const [_state, dispatch] = useContext(StateContext);
 	const { startDrag, isClickSuppressed } = useDragController();
+	const canAct = useCanAct();
 
 	const onClick = useCallback(() => {
-		if (isClickSuppressed()) {
+		if (isClickSuppressed() || !canAct) {
 			return;
 		}
 
 		dispatch(togglePiece(id));
-	}, [dispatch, id, isClickSuppressed]);
+	}, [dispatch, id, isClickSuppressed, canAct]);
 
 	const onPointerDown = useCallback(
 		event =>
@@ -37,12 +39,12 @@ function Piece({ id, selectedDirection, selected, highlight }) {
 				// it. Unlike the old item() callback this will not deselect an already selected
 				// piece, which used to leave the drop with nothing to move.
 				onStart: () => {
-					if (!selected) {
+					if (!selected && canAct) {
 						dispatch(togglePiece(id));
 					}
 				},
 			}),
-		[startDrag, team, type, selectedDirection, selected, dispatch, id],
+		[startDrag, team, type, selectedDirection, selected, dispatch, id, canAct],
 	);
 
 	return (

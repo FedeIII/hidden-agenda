@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useContext } from 'react';
 import { startGame } from 'Game/actions';
 import { StateContext } from 'State';
+import useSession from 'Hooks/useSession';
 import { Button, Buttons } from 'Client/components/button';
 import {
 	StartPhaseContainer,
@@ -105,6 +106,7 @@ function StartPhase({ onReady }) {
 
 	const onStart = useStartGame(players, onReady);
 	const playersReady = useArePlayersReady(numberOfPlayers, players);
+	const session = useSession();
 
 	return (
 		<StartPhaseContainer>
@@ -139,6 +141,13 @@ function StartPhase({ onReady }) {
 			<Buttons>
 				<Button id="start-btn" active={playersReady} onClick={onStart}>
 					GET ALIGNMENTS
+				</Button>
+			</Buttons>
+
+			{/* Everything above plays hot-seat in this tab. This is the way out to a real room. */}
+			<Buttons>
+				<Button id="play-online-btn" small active onClick={session.actions.goOnline}>
+					PLAY ONLINE INSTEAD
 				</Button>
 			</Buttons>
 		</StartPhaseContainer>

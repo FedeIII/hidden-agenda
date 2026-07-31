@@ -3,7 +3,7 @@ import { aliases } from './aliases.mjs';
 
 export default defineConfig({
 	// Relative asset URLs, so one build works both under the GitHub Pages subpath
-	// (fedeiii.github.io/hidden-agenda/) and at the root of agenda.azyr.io.
+	// (fedeiii.github.io/hidden-agenda/) and at the root of hidden-agenda.azyr.io.
 	base: './',
 
 	resolve: { alias: aliases },
@@ -13,11 +13,25 @@ export default defineConfig({
 		// another port and leave the tests pointing at nothing.
 		port: 8081,
 		strictPort: true,
+		// Mirrors what nginx does on the VPS: the page and the websocket share an origin, so
+		// the client can always talk to /ws on its own host. Keeps dev, preview and production
+		// the same shape.
+		proxy: {
+			'/ws': { target: 'ws://127.0.0.1:3007', ws: true },
+			'/healthz': { target: 'http://127.0.0.1:3007' },
+		},
 	},
 
 	preview: {
 		port: 8081,
 		strictPort: true,
+		// Mirrors what nginx does on the VPS: the page and the websocket share an origin, so
+		// the client can always talk to /ws on its own host. Keeps dev, preview and production
+		// the same shape.
+		proxy: {
+			'/ws': { target: 'ws://127.0.0.1:3007', ws: true },
+			'/healthz': { target: 'http://127.0.0.1:3007' },
+		},
 	},
 
 	build: {

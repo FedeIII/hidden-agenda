@@ -6,14 +6,23 @@ export default defineConfig({
 	fullyParallel: true,
 	reporter: [['list']],
 
-	// Starts the preview server and waits for it. The suite used to fail wholesale if you
-	// forgot to start a server first.
-	webServer: {
-		command: 'npm run serve',
-		url: `http://localhost:${PORT}`,
-		reuseExistingServer: !process.env.CI,
-		timeout: 60_000,
-	},
+	// Starts both servers and waits for them. The suite used to fail wholesale if you forgot to
+	// start one by hand. The game server comes first because preview proxies /ws to it.
+	webServer: [
+		{
+			command: 'node dist-server/main.mjs',
+			env: { PORT: '3007', HA_STATE_DIR: '.playwright-rooms' },
+			url: 'http://127.0.0.1:3007/healthz',
+			reuseExistingServer: !process.env.CI,
+			timeout: 30_000,
+		},
+		{
+			command: 'npm run serve',
+			url: `http://localhost:${PORT}`,
+			reuseExistingServer: !process.env.CI,
+			timeout: 60_000,
+		},
+	],
 
 	use: {
 		baseURL: `http://localhost:${PORT}`,
