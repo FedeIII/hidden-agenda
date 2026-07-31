@@ -13,33 +13,30 @@
 		"test:unit": "jest --selectProjects unit",
 		"test:e2e": "jest --selectProjects e2e",
 		"smoke": "jest src/tests/smoke.test.js",
-		"predeploy": "npm run do",
-		"deploy": "gh-pages -d docs"
+		"lint": "eslint src"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.5.5",
 		"@babel/preset-env": "^7.5.5",
 		"@babel/preset-react": "^7.0.0",
 		"babel-eslint": "^10.0.2",
-		"babel-plugin-styled-components": "^1.10.6",
 		"eslint": "^6.1.0",
 		"eslint-config-react-app": "^4.0.1",
 		"eslint-plugin-import": "^2.18.2",
 		"eslint-plugin-jsx-a11y": "^6.2.3",
 		"eslint-plugin-react": "^7.14.3",
 		"eslint-plugin-react-hooks": "^1.6.1",
-		"gh-pages": "^3.1.0",
+		"jest": "^26.6.3",
 		"polished": "^3.4.1",
 		"prettier": "^1.18.2",
+		"puppeteer-core": "^22.15.0",
+		"react": "^16.8.6",
+		"react-dom": "^16.8.6",
 		"styled-components": "^4.3.2",
 		"vite": "^8.2.0"
 	},
-	"dependencies": {
-		"babel-polyfill": "^6.26.0",
-		"jest": "^26.6.3",
-		"puppeteer": "^8.0.0",
-		"react": "^16.8.6",
-		"react-dom": "^16.8.6"
+	"comments": {
+		"dependencies": "Everything the browser needs is compiled into the committed docs/ bundle, so nothing here is required at runtime by the app. `dependencies` is reserved for what the multiplayer server process itself needs (ws, from phase 1), which keeps `npm ci --omit=dev` on the VPS down to almost nothing."
 	},
 	"author": "Federico Perez <fedelll@gmail.com>",
 	"jest": {
@@ -59,9 +56,6 @@
 				"displayName": "e2e",
 				"testMatch": [
 					"<rootDir>/src/tests/*.test.js"
-				],
-				"setupFiles": [
-					"<rootDir>/jest.init.js"
 				],
 				"setupFilesAfterEnv": [
 					"<rootDir>/src/tests/helpers/setupTests.js"
