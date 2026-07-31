@@ -85,7 +85,19 @@ Rule for this repo: **`dependencies` = what the server process needs at runtime*
 
 **7. React 16.8 → 18**, after item 1 only. Gives `useSyncExternalStore`, precisely the primitive for subscribing to server snapshots, plus automatic batching for snapshot bursts. `ReactDOM.render` → `createRoot`. Skip React 19: it removes propTypes and legacy context for no gain here.
 
-**8. Pin the runtime.** `.nvmrc` + `engines` so laptop and box agree, and regenerate `package-lock.json` (currently v2).
+**8. Puppeteer → Playwright, as the only test runner.** Jest, babel-jest and the Babel presets all go with it. Two projects: `domain` (no browser — the specs simply never request a page fixture, so they stay ~2s and keep the deep-freeze reducer-purity guards) and `e2e` (chromium).
+
+Three reasons beyond taste:
+
+- **It unblocks the version wall.** Puppeteer is ESM-only from v23, and Jest's CJS runtime cannot load an ESM-only package at any Jest version, which is why `puppeteer-core@22` is currently the ceiling.
+- **It deletes two hand-written race fixes.** Playwright's actionability check waits for an element to have a *stable bounding box* before clicking — precisely the unloaded-piece-image race that `waitForPiecesToRender` works around, and the click/render interleaving that `settleAfterClicks` works around.
+- **`config.webServer`** starts `npm run serve` and waits for port 8081, removing the "start a server first or the entire suite fails" footgun. Traces and video on failure replace the single overwritten `test.png`.
+
+Conversion is mostly mechanical: `describe`/`it` → `test.describe`/`test`, and Playwright's `expect` is a fork of Jest's so the matchers survive. Prefer locators over `page.$eval` so auto-waiting applies. Keep the uncaught-page-error guard, as a fixture. Touch drag still needs a CDP session, since `page.touchscreen` only taps.
+
+One trap: `babel-eslint` depends on `@babel/core`, so dropping Babel may force the eslint flat-config migration. Check before uninstalling.
+
+**9. Pin the runtime.** `.nvmrc` + `engines` so laptop and box agree, and regenerate `package-lock.json` (currently v2).
 
 ## Tier 2 — cheap, same pass
 
@@ -104,9 +116,23 @@ Rule for this repo: **`dependencies` = what the server process needs at runtime*
 
 ## Order and outcome
 
-Mutation purge → Vite → react-dnd → react-router → dep hygiene → React 18, Tier 2 folded in, each step landing with the existing suite green. Mutation must precede React 18, because StrictMode turns those double-applied toggles into visible bugs.
+Mutation purge → Vite → react-dnd → react-router → dep hygiene → React 18 → Playwright, Tier 2 folded in, each step landing with the suite green. Mutation must precede React 18, because StrictMode turns those double-applied toggles into visible bugs.
 
-Outcome: 30 declared deps → ~12, bundle ~75 KB gz, a build that works on Node 22, and a game playable on a phone.
+### Progress
+
+Items 1–6 and most of Tier 2 have landed on master, one commit each.
+
+| | Baseline | Now |
+| --- | --- | --- |
+| Bundle, gzipped | 97.9 KB | **73.8 KB** |
+| Declared dependencies | 30 | **18**, none at runtime |
+| Tests passing | 72 of 81 | **102 of 102** |
+| Dependabot alerts | 136 (16 critical) | 60 (5 critical) |
+| Build on Node 22 | impossible | ~300 ms |
+
+Three live bugs were fixed on the way: a crash on clicking any empty cell before selecting a piece, `py.accuse` corrupting every uninvolved player from 3 players up, and the alignment deck depleting across games in one page load. The mutation purge also exposed a reducer that depended on cross-slice mutation leakage — `pieceStateReducer` was reading the already-toggled `selected` flag out of what is nominally the pre-action state, which is exactly the class of bug that would have been miserable to chase once a server shared and persisted that state.
+
+Still open: React 18, the Playwright migration, the Hexagon component and dead-code sweep, Prettier, and pinning the runtime. `CLAUDE.md` needs a pass at the end — it still describes webpack, react-dnd and the `img/` duplication, with a warning block standing in for now.
 
 ---
 
@@ -180,8 +206,8 @@ One caveat that bites at the end of the game: `py.getPoints` needs *every* playe
 
 # Phase 4 — Tests and hardening
 
-- The 5 existing Puppeteer specs must pass **unchanged** in local mode, throughout. The port mismatch is already fixed by the Vite dev server port in Phase −1.
-- New tests, in value order: `redact.test.js` (node-only — the one test that actually protects the game's premise; assert no other seat's alignment appears in any outbound frame), `validate.test.js` (non-turn seat rejected, off-highlight coords rejected), the 3-player `accuse` regression from Phase −1, and one two-context Puppeteer test (two pages in one room: B can't act on A's turn, B never receives A's alignment).
+- The existing browser specs must keep passing in local mode throughout. The port mismatch is already fixed by the Vite dev server port in Phase −1.
+- New tests, in value order: `redact` (in the no-browser `domain` project — the one test that actually protects the game's premise; assert no other seat's alignment appears in any outbound frame), `validate` (non-turn seat rejected, off-highlight coords rejected), and a two-context browser test. That last one is markedly easier under Playwright: two `browser.newContext()` instances are two independent players in one room, so "B cannot act on A's turn" and "B never receives A's alignment" become ordinary assertions rather than a puppeteer contortion.
 - Hardening: 4-char codes are low entropy → rate-limit `join` per IP (10/min) and cap total rooms (200). Cap name length, cap message size at 8 KB. Nothing else here is secret, so there are no credentials to manage — a real simplification versus the other apps on that box.
 
 ---
@@ -201,7 +227,7 @@ The VPS docs are readable from here but nothing on the box has been run. Unconfi
 
 | Phase | Effort |
 | --- | --- |
-| −1 Housekeeping | 2–2.5 days |
+| −1 Housekeeping | 2–3 days (items 1–6 done) |
 | 0 Reducer core | half a day |
 | 1 Server | 1 day |
 | 2 Client | 1–1.5 days |
