@@ -1,3 +1,4 @@
+import { test, expect } from '@playwright/test';
 import py from 'Domain/py';
 import { dealAlignments } from 'Domain/deal';
 
@@ -12,10 +13,10 @@ function player(name, friend, foe, overrides = {}) {
 	};
 }
 
-describe('py.accuse', () => {
+test.describe('py.accuse', () => {
 	// Regression: the map had no fallback return, so anyone who was neither accuser nor
 	// accusee came back undefined. Two players masked it; three or more is a crash.
-	it('leaves uninvolved players intact in a 3 player game', () => {
+	test('leaves uninvolved players intact in a 3 player game', () => {
 		const players = [
 			player('ANA', '1', '0', { turn: true }),
 			player('BEA', '0', '3'),
@@ -30,7 +31,7 @@ describe('py.accuse', () => {
 		expect(result[2]).toEqual(players[2]);
 	});
 
-	it('reveals the accusee and keeps the accuser allowed when the accusation is right', () => {
+	test('reveals the accusee and keeps the accuser allowed when the accusation is right', () => {
 		const players = [player('ANA', '1', '0', { turn: true }), player('BEA', '0', '3')];
 
 		const result = py.accuse({ accuser: 'ANA', accusee: 'BEA', alignment: 'friend', team: '0' }, players);
@@ -39,7 +40,7 @@ describe('py.accuse', () => {
 		expect(result[0].allowedToAccuse.friend).toBe(true);
 	});
 
-	it('bars the accuser from accusing again when the accusation is wrong', () => {
+	test('bars the accuser from accusing again when the accusation is wrong', () => {
 		const players = [player('ANA', '1', '0', { turn: true }), player('BEA', '0', '3')];
 
 		const result = py.accuse({ accuser: 'ANA', accusee: 'BEA', alignment: 'friend', team: '2' }, players);
@@ -49,10 +50,10 @@ describe('py.accuse', () => {
 	});
 });
 
-describe('dealAlignments', () => {
+test.describe('dealAlignments', () => {
 	const names = ['ANA', 'BEA', 'CAI', 'DAN', 'EVA', 'FAY'];
 
-	it('never deals a player the same team as friend and foe', () => {
+	test('never deals a player the same team as friend and foe', () => {
 		// Deterministic sweep rather than one lucky draw.
 		for (let seed = 0; seed < 200; seed++) {
 			let n = seed + 1;
@@ -67,7 +68,7 @@ describe('dealAlignments', () => {
 		}
 	});
 
-	it('deals every player a pair', () => {
+	test('deals every player a pair', () => {
 		const dealt = dealAlignments(names);
 
 		expect(dealt).toHaveLength(6);
@@ -80,7 +81,7 @@ describe('dealAlignments', () => {
 
 	// The old module-level decks were spliced in place, so a second game in one page load
 	// started depleted and eventually dealt undefined.
-	it('starts from a full deck on every call', () => {
+	test('starts from a full deck on every call', () => {
 		const first = dealAlignments(names);
 		const second = dealAlignments(names);
 

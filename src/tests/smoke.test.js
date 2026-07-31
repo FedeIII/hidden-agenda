@@ -1,15 +1,15 @@
-import { goToPlay } from './helpers/navigation.js';
+import { test, expect } from './fixtures';
 
-describe('Smoke', () => {
-	it('renders players form', async () => {
-		const text = await page.$eval('.game', el => el.innerText)
+test.describe('Smoke', () => {
+	test('renders players form', async ({ page, clickOn, get, drag, goToPlay }) => {
+		const text = await page.locator('.game').innerText()
 		
 		expect(text).toContain('NUMBER OF PLAYERS');
 	});
 
-	it('reaches play phase', async () => {
+	test('reaches play phase', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await goToPlay(2);
 
-		expect(await page.$eval('#next-turn', el => el.innerText)).toEqual('NEXT TURN');
+		await expect(page.locator('#next-turn')).toHaveText('NEXT TURN');
 	});
 });

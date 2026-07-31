@@ -26,13 +26,18 @@ npm run go
 ```
 
 ### Tests
-The end-to-end specs drive a real Chrome against http://localhost:8081, so start a server
-first (`npm run go` or `npm run serve`), then:
+Playwright runs everything. One-time browser install:
 ```
-npm test              # everything
-npm run test:unit     # domain only, no browser, ~2s
-npm run test:e2e      # browser specs
+npx playwright install chromium
 ```
+Then, from anywhere — the config starts and waits for the preview server itself:
+```
+npm test                # everything
+npm run test:domain     # game rules only, no browser, ~2s
+npm run test:e2e        # browser specs
+npm run test:ui         # interactive runner
+```
+On failure Playwright keeps a trace, video and screenshot under `test-results/`.
 
 ## Changelog
 ### v2.1.0

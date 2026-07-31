@@ -1,0 +1,19 @@
+{
+	"//": "There is no TypeScript here. This file exists so playwright's module resolver knows the same import aliases vite.config.mjs defines — the domain modules import each other as Domain/*, so specs cannot load them without it. Keep the two lists in step.",
+	"compilerOptions": {
+		"allowJs": true,
+		"checkJs": false,
+		"baseUrl": ".",
+		"paths": {
+			"Src/*": ["src/*"],
+			"Client/*": ["src/client/*"],
+			"Components/*": ["src/client/components/*"],
+			"Phases/*": ["src/client/phases/*"],
+			"State": ["src/client/state"],
+			"State/*": ["src/client/state/*"],
+			"Hooks/*": ["src/client/hooks/*"],
+			"Domain/*": ["src/domain/*"]
+		}
+	},
+	"include": ["src", "playwright.config.mjs", "vite.config.mjs"]
+}

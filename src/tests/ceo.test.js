@@ -1,13 +1,11 @@
-import { goToPlay } from './helpers/navigation.js';
-import clickOn from './helpers/clickOn';
-import get, { DIRECTION } from './helpers/get';
+import { test, expect, DIRECTION } from './fixtures';
 
-describe('CEO', () => {
-	beforeEach(async () => {
+test.describe('CEO', () => {
+	test.beforeEach(async ({ page, clickOn, get, drag, goToPlay }) => {
 		await goToPlay(2);
 	});
 
-	it('can be placed in the board', async () => {
+	test('can be placed in the board', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).ceo();
 		await clickOn.cell(1, 1);
 		await clickOn.cell(2, 2);
@@ -19,7 +17,7 @@ describe('CEO', () => {
 		expect(pieceDirection).toEqual(DIRECTION.down.right);
 	});
 
-	it('can be placed in the border of the board', async () => {
+	test('can be placed in the border of the board', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).ceo();
 		await clickOn.cell(0, 0);
 		await clickOn.cell(1, 1);
@@ -31,7 +29,7 @@ describe('CEO', () => {
 		expect(pieceDirection).toEqual(DIRECTION.down.right);
 	});
 
-	it('can be placed in the border of the board facing outwards', async () => {
+	test('can be placed in the border of the board facing outwards', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).ceo();
 		await clickOn.cell(0, 0);
 		await clickOn.cell(-1, -1);
@@ -43,7 +41,7 @@ describe('CEO', () => {
 		expect(pieceDirection).toEqual(DIRECTION.up.left);
 	});
 
-	it('can NOT be placed in cell with another piece', async () => {
+	test('can NOT be placed in cell with another piece', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).agent(1);
 		await clickOn.cell(1, 1);
 		await clickOn.cell(2, 2);
@@ -56,7 +54,7 @@ describe('CEO', () => {
 		expect(isHighlighted).toBeFalsy();
 	});
 
-	it('can be placed directed towards any direction', async () => {
+	test('can be placed directed towards any direction', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).ceo();
 		await clickOn.cell(1, 1);
 		await clickOn.cell(0, 1);
@@ -90,7 +88,7 @@ describe('CEO', () => {
 		expect(direction4).toEqual(DIRECTION.down.left);
 	});
 
-	it('moves in any direction any distance', async () => {
+	test('moves in any direction any distance', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).ceo();
 		await clickOn.cell(3, 3);
 		await clickOn.cell(2, 2);
@@ -129,7 +127,7 @@ describe('CEO', () => {
 		expect(await get.cell(4, 1).isHighlighted).toBeFalsy();
 	});
 
-	it('is blocked by any piece', async () => {
+	test('is blocked by any piece', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).ceo();
 		await clickOn.cell(3, 3);
 		await clickOn.cell(2, 2);
@@ -204,7 +202,7 @@ describe('CEO', () => {
 		expect(await get.cell(4, 1).isHighlighted).toBeFalsy();
 	});
 
-	it('faces in the direction of the movement', async () => {
+	test('faces in the direction of the movement', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).ceo();
 		await clickOn.cell(3, 3);
 		await clickOn.cell(2, 2);

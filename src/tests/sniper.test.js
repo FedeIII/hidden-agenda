@@ -1,13 +1,11 @@
-import { goToPlay } from './helpers/navigation.js';
-import clickOn from './helpers/clickOn';
-import get, { DIRECTION } from './helpers/get';
+import { test, expect, DIRECTION } from './fixtures';
 
-describe('SNIPER', () => {
-	beforeEach(async () => {
+test.describe('SNIPER', () => {
+	test.beforeEach(async ({ page, clickOn, get, drag, goToPlay }) => {
 		await goToPlay(2);
 	});
 
-	it('can be placed in the board', async () => {
+	test('can be placed in the board', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).sniper();
 		await clickOn.cell(1, 1);
 		await clickOn.cell(2, 2);
@@ -19,7 +17,7 @@ describe('SNIPER', () => {
 		expect(pieceDirection).toEqual(DIRECTION.down.right);
 	});
 
-	it('can be placed in the border of the board', async () => {
+	test('can be placed in the border of the board', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).sniper();
 		await clickOn.cell(0, 0);
 		await clickOn.cell(1, 1);
@@ -31,7 +29,7 @@ describe('SNIPER', () => {
 		expect(pieceDirection).toEqual(DIRECTION.down.right);
 	});
 
-	it('can be placed in the border of the board facing outwards', async () => {
+	test('can be placed in the border of the board facing outwards', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).sniper();
 		await clickOn.cell(0, 0);
 		await clickOn.cell(-1, -1);
@@ -43,7 +41,7 @@ describe('SNIPER', () => {
 		expect(pieceDirection).toEqual(DIRECTION.up.left);
 	});
 
-	it('can NOT be placed in cell with another piece', async () => {
+	test('can NOT be placed in cell with another piece', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).agent(1);
 		await clickOn.cell(1, 1);
 		await clickOn.cell(2, 2);
@@ -56,7 +54,7 @@ describe('SNIPER', () => {
 		expect(isHighlighted).toBeFalsy();
 	});
 
-	it('can be placed directed towards any direction', async () => {
+	test('can be placed directed towards any direction', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).sniper();
 		await clickOn.cell(1, 1);
 		await clickOn.cell(0, 1);
@@ -90,7 +88,7 @@ describe('SNIPER', () => {
 		expect(direction4).toEqual(DIRECTION.down.left);
 	});
 
-	it('can NOT move', async () => {
+	test('can NOT move', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).sniper();
 		await clickOn.cell(3, 3);
 		await clickOn.cell(2, 2);
@@ -138,7 +136,7 @@ describe('SNIPER', () => {
 		expect(cell2Over12).toBeFalsy();
 	});
 
-	it('can turn into any direction', async () => {
+	test('can turn into any direction', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(1).agent(1);
 		await clickOn.cell(1, 1);
 		await clickOn.cell(2, 2);
@@ -198,7 +196,7 @@ describe('SNIPER', () => {
 		expect(direction).toEqual(DIRECTION.up.right);
 	});
 
-	it('blocks line of sight for other pieces placement', async () => {
+	test('blocks line of sight for other pieces placement', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).sniper();
 		await clickOn.cell(2, 0);
 		await clickOn.cell(2, 1);
@@ -220,8 +218,8 @@ describe('SNIPER', () => {
 		expect(cell5).toBeFalsy();
 	});
 
-	describe('kill', () => {
-		it('kills on "snipe!" button when a piece moves through the line of sight', async () => {
+	test.describe('kill', () => {
+		test('kills on "snipe!" button when a piece moves through the line of sight', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(2, 1);
 			await clickOn.cell(1, 1);
@@ -249,7 +247,7 @@ describe('SNIPER', () => {
 			expect(agentCount).toEqual('x 1');
 		});
 
-		it('kills on "snipe!" button when a piece moves out of the line of sight', async () => {
+		test('kills on "snipe!" button when a piece moves out of the line of sight', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(2, 1);
 			await clickOn.cell(1, 1);
@@ -277,7 +275,7 @@ describe('SNIPER', () => {
 			expect(agentCount).toEqual('x 1');
 		});
 
-		it('kills on "snipe!" button when a piece moves into the line of sight', async () => {
+		test('kills on "snipe!" button when a piece moves into the line of sight', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(2, 1);
 			await clickOn.cell(1, 1);
@@ -305,7 +303,7 @@ describe('SNIPER', () => {
 			expect(agentCount).toEqual('x 1');
 		});
 
-		it('kills to avoid consecuences', async () => {
+		test('kills to avoid consecuences', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(2, 1);
 			await clickOn.cell(1, 1);
@@ -336,7 +334,7 @@ describe('SNIPER', () => {
 			expect(pieceId).toEqual('pz-0-A1');
 		});
 
-		it('does NOT kill if the moving piece is from the same team', async () => {
+		test('does NOT kill if the moving piece is from the same team', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).agent(1);
 			await clickOn.cell(2, 1);
 			await clickOn.cell(1, 1);
@@ -359,7 +357,7 @@ describe('SNIPER', () => {
 			expect(isHighlighted).toBeFalsy();
 		});
 
-		it('does NOT kill if vision is blocked', async () => {
+		test('does NOT kill if vision is blocked', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(2).agent(1);
 			await clickOn.cell(2, 2);
 			await clickOn.cell(1, 1);
@@ -389,8 +387,8 @@ describe('SNIPER', () => {
 		});
 	});
 
-	describe('CEO buff', () => {
-		beforeEach(async () => {
+	test.describe('CEO buff', () => {
+		test.beforeEach(async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).ceo();
 			await clickOn.cell(6, 2);
 			await clickOn.cell(2, 2);
@@ -398,7 +396,7 @@ describe('SNIPER', () => {
 			await page.click('#next-turn');
 		});
 
-		it('can kill through other pieces', async () => {
+		test('can kill through other pieces', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(2).agent(1);
 			await clickOn.cell(2, 2);
 			await clickOn.cell(1, 1);

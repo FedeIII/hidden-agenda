@@ -1,13 +1,11 @@
-import { goToPlay } from './helpers/navigation.js';
-import clickOn from './helpers/clickOn';
-import get, { DIRECTION } from './helpers/get';
+import { test, expect, DIRECTION } from './fixtures';
 
-describe('SPY', () => {
-	beforeEach(async () => {
+test.describe('SPY', () => {
+	test.beforeEach(async ({ page, clickOn, get, drag, goToPlay }) => {
 		await goToPlay(2);
 	});
 
-	it('can be placed in the board', async () => {
+	test('can be placed in the board', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).spy();
 		await clickOn.cell(1, 1);
 		await clickOn.cell(2, 2);
@@ -19,7 +17,7 @@ describe('SPY', () => {
 		expect(pieceDirection).toEqual(DIRECTION.down.right);
 	});
 
-	it('can be placed in the border of the board', async () => {
+	test('can be placed in the border of the board', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).spy();
 		await clickOn.cell(0, 0);
 		await clickOn.cell(1, 1);
@@ -31,7 +29,7 @@ describe('SPY', () => {
 		expect(pieceDirection).toEqual(DIRECTION.down.right);
 	});
 
-	it('can be placed in the border of the board facing outwards', async () => {
+	test('can be placed in the border of the board facing outwards', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).spy();
 		await clickOn.cell(0, 0);
 		await clickOn.cell(-1, -1);
@@ -43,7 +41,7 @@ describe('SPY', () => {
 		expect(pieceDirection).toEqual(DIRECTION.up.left);
 	});
 
-	it('can NOT be placed in cell with another piece', async () => {
+	test('can NOT be placed in cell with another piece', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).agent(1);
 		await clickOn.cell(1, 1);
 		await clickOn.cell(2, 2);
@@ -56,7 +54,7 @@ describe('SPY', () => {
 		expect(isHighlighted).toBeFalsy();
 	});
 
-	it('can be placed directed towards any direction', async () => {
+	test('can be placed directed towards any direction', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).spy();
 		await clickOn.cell(1, 1);
 		await clickOn.cell(0, 1);
@@ -90,7 +88,7 @@ describe('SPY', () => {
 		expect(direction4).toEqual(DIRECTION.down.left);
 	});
 
-	it('firstly moves one cell in any direction', async () => {
+	test('firstly moves one cell in any direction', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).spy();
 		await clickOn.cell(3, 3);
 		await clickOn.cell(2, 2);
@@ -140,7 +138,7 @@ describe('SPY', () => {
 		expect(cell2Over12).toBeFalsy();
 	});
 
-	it('secondly moves another cell in any direction', async () => {
+	test('secondly moves another cell in any direction', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).spy();
 		await clickOn.cell(2, 2);
 		await clickOn.cell(3, 3);
@@ -191,7 +189,7 @@ describe('SPY', () => {
 		expect(cell2Over12).toBeFalsy();
 	});
 
-	it('can NOT be deselected during movement', async () => {
+	test('can NOT be deselected during movement', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).spy();
 		await clickOn.cell(2, 2);
 		await clickOn.cell(3, 3);
@@ -208,7 +206,7 @@ describe('SPY', () => {
 		expect(await get.cell(4, 3).isHighlighted).toBeTruthy();
 	});
 
-	it('stays in the moving direction after moving', async () => {
+	test('stays in the moving direction after moving', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).spy();
 		await clickOn.cell(2, 2);
 		await clickOn.cell(3, 3);
@@ -233,7 +231,7 @@ describe('SPY', () => {
 		expect(direction).toEqual(DIRECTION.up.right);
 	});
 
-	it('can NOT move if there is a piece in the next cell', async () => {
+	test('can NOT move if there is a piece in the next cell', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(1).agent(1);
 		await clickOn.cell(2, 2);
 		await clickOn.cell(1, 1);
@@ -264,8 +262,8 @@ describe('SPY', () => {
 		expect(isCell43Highlighted).toBeTruthy();
 	});
 
-	describe('kill', () => {
-		it('can kill if the enemy piece is in the second movement cell AND the spy comes from the back', async () => {
+	test.describe('kill', () => {
+		test('can kill if the enemy piece is in the second movement cell AND the spy comes from the back', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(1, 1);
 			await clickOn.cell(0, 0);
@@ -289,7 +287,7 @@ describe('SPY', () => {
 			expect(agentCount).toEqual('x 1');
 		});
 
-		it('can kill if the enemy piece is in the second movement cell AND the spy comes from the back-left', async () => {
+		test('can kill if the enemy piece is in the second movement cell AND the spy comes from the back-left', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(1, 2);
 			await clickOn.cell(0, 1);
@@ -313,7 +311,7 @@ describe('SPY', () => {
 			expect(agentCount).toEqual('x 1');
 		});
 
-		it('can kill if the enemy piece is in the second movement cell AND the spy comes from the back-right', async () => {
+		test('can kill if the enemy piece is in the second movement cell AND the spy comes from the back-right', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(1, 2);
 			await clickOn.cell(0, 2);
@@ -337,7 +335,7 @@ describe('SPY', () => {
 			expect(agentCount).toEqual('x 1');
 		});
 
-		it('can NOT kill if the enemy piece is in the second movement cell BUT the spy comes from the front', async () => {
+		test('can NOT kill if the enemy piece is in the second movement cell BUT the spy comes from the front', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(1, 1);
 			await clickOn.cell(2, 2);
@@ -358,7 +356,7 @@ describe('SPY', () => {
 			expect(pieceId).toEqual('pz-1-A1');
 		});
 
-		it('can NOT kill if the enemy piece is in the second movement cell BUT the spy comes from the front-left', async () => {
+		test('can NOT kill if the enemy piece is in the second movement cell BUT the spy comes from the front-left', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(1, 2);
 			await clickOn.cell(2, 2);
@@ -379,7 +377,7 @@ describe('SPY', () => {
 			expect(pieceId).toEqual('pz-1-A1');
 		});
 
-		it('can NOT kill if the enemy piece is in the second movement cell BUT the spy comes from the right-left', async () => {
+		test('can NOT kill if the enemy piece is in the second movement cell BUT the spy comes from the right-left', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(1, 2);
 			await clickOn.cell(2, 3);
@@ -400,7 +398,7 @@ describe('SPY', () => {
 			expect(pieceId).toEqual('pz-1-A1');
     });
     
-    it('can NOT kill if the piece is from the same team', async () => {
+    test('can NOT kill if the piece is from the same team', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).agent(1);
 			await clickOn.cell(1, 1);
 			await clickOn.cell(0, 0);
@@ -422,8 +420,8 @@ describe('SPY', () => {
 		});
 	});
 
-	describe('CEO buff', () => {
-		beforeEach(async () => {
+	test.describe('CEO buff', () => {
+		test.beforeEach(async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).ceo();
 			await clickOn.cell(1, 1);
 			await clickOn.cell(2, 2);
@@ -431,7 +429,7 @@ describe('SPY', () => {
 			await page.click('#next-turn');
 		});
 
-		it('moves 3 cells', async () => {
+		test('moves 3 cells', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).spy();
 			await clickOn.cell(2, 2);
 			await clickOn.cell(3, 3);
@@ -447,7 +445,7 @@ describe('SPY', () => {
 			expect(pieceId).toEqual('pz-0-S');
 		});
 
-		it('can NOT be deselected during movement', async () => {
+		test('can NOT be deselected during movement', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).spy();
 			await clickOn.cell(2, 2);
 			await clickOn.cell(3, 3);
@@ -468,7 +466,7 @@ describe('SPY', () => {
 			expect(await get.cell(5, 3).isHighlighted).toBeTruthy();
 		});
 
-		it('does NOT kill on the first cell', async () => {
+		test('does NOT kill on the first cell', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(3, 3);
 			await clickOn.cell(4, 3);
@@ -486,7 +484,7 @@ describe('SPY', () => {
 			expect(pieceId).toEqual('pz-1-A1');
 		});
 
-		it('does NOT kill on the second cell', async () => {
+		test('does NOT kill on the second cell', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(4, 3);
 			await clickOn.cell(5, 3);
@@ -505,7 +503,7 @@ describe('SPY', () => {
 			expect(pieceId).toEqual('pz-1-A1');
 		});
 
-		it('kills on the third cell', async () => {
+		test('kills on the third cell', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(5, 3);
       await clickOn.cell(6, 3);
@@ -530,7 +528,7 @@ describe('SPY', () => {
 			expect(agentCount).toEqual('x 1');
 		});
 
-		it('does NOT move 3 cells if the CEO is next to the SPY after the first move', async () => {
+		test('does NOT move 3 cells if the CEO is next to the SPY after the first move', async ({ page, clickOn, get, drag, goToPlay }) => {
       await clickOn.team(0).spy();
 			await clickOn.cell(0, 2);
       await clickOn.cell(1, 2);

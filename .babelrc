@@ -1,8 +1,0 @@
-{
-  // Babel is only used by jest now; vite compiles the app. Targeting the running node means
-  // no regenerator transform, which is the only thing babel-polyfill was there to support.
-  "presets": [
-    ["@babel/preset-env", { "targets": { "node": "current" } }],
-    "@babel/preset-react"
-  ]
-}

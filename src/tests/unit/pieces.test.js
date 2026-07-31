@@ -1,3 +1,4 @@
+import { test, expect } from '@playwright/test';
 import { pz, STATES } from 'Domain/pieces';
 
 const { SELECTION, MOVEMENT } = STATES;
@@ -14,8 +15,8 @@ function onBoard(pieces, id, position, direction = [1, 0]) {
 	});
 }
 
-describe('spy movement', () => {
-	it('keeps its move cells after the first of two moves', () => {
+test.describe('spy movement', () => {
+	test('keeps its move cells after the first of two moves', () => {
 		let pieces = pz.init();
 		pieces = onBoard(pieces, '0-S', [3, 3]);
 		pieces = withPiece(pieces, '0-S', { selected: true, showMoveCells: true });
@@ -27,7 +28,7 @@ describe('spy movement', () => {
 		expect(spy.showMoveCells).toBe(true);
 	});
 
-	it('stops showing move cells after the second move', () => {
+	test('stops showing move cells after the second move', () => {
 		let pieces = pz.init();
 		pieces = onBoard(pieces, '0-S', [3, 3]);
 		pieces = withPiece(pieces, '0-S', { selected: true, showMoveCells: true });
@@ -39,40 +40,40 @@ describe('spy movement', () => {
 	});
 });
 
-describe('togglePieceState', () => {
+test.describe('togglePieceState', () => {
 	// Regression: this read `.selected` off the pre-action state and relied on piecesReducer
 	// having already mutated it. Selecting a piece must report SELECTION, not DESELECTION.
 	function stateWith(pieces) {
 		return { pieces, pieceState: undefined, followMouse: false };
 	}
 
-	it('reports SELECTION when a piece is being selected', () => {
+	test('reports SELECTION when a piece is being selected', () => {
 		const pieces = onBoard(pz.init(), '0-S', [2, 2]);
 
 		expect(pz.togglePieceState('0-S', stateWith(pieces))).toEqual(SELECTION);
 	});
 
-	it('reports DESELECTION when a selected piece is being deselected', () => {
+	test('reports DESELECTION when a selected piece is being deselected', () => {
 		let pieces = onBoard(pz.init(), '0-S', [2, 2]);
 		pieces = withPiece(pieces, '0-S', { selected: true, showMoveCells: true });
 
 		expect(pz.togglePieceState('0-S', stateWith(pieces))).toEqual('deselection');
 	});
 
-	it('reports MOVEMENT when selecting a sniper already on the board', () => {
+	test('reports MOVEMENT when selecting a sniper already on the board', () => {
 		const pieces = onBoard(pz.init(), '0-N', [2, 2]);
 
 		expect(pz.togglePieceState('0-N', stateWith(pieces))).toEqual(MOVEMENT);
 	});
 });
 
-describe('reducer purity', () => {
+test.describe('reducer purity', () => {
 	function deepFreeze(pieces) {
 		pieces.forEach(piece => Object.freeze(piece));
 		return Object.freeze(pieces);
 	}
 
-	it('pz.move does not mutate the pieces it is given', () => {
+	test('pz.move does not mutate the pieces it is given', () => {
 		let pieces = pz.init();
 		pieces = onBoard(pieces, '0-A1', [3, 3]);
 		pieces = onBoard(pieces, '1-A1', [1, 1]);
@@ -81,7 +82,7 @@ describe('reducer purity', () => {
 		expect(() => pz.move(frozen, '0-A1', [2, 3], SELECTION)).not.toThrow();
 	});
 
-	it('pz.toggle does not mutate the pieces it is given', () => {
+	test('pz.toggle does not mutate the pieces it is given', () => {
 		const frozen = deepFreeze(pz.init());
 		const state = {
 			hasTurnEnded: false,
@@ -102,7 +103,7 @@ describe('reducer purity', () => {
 		expect(pz.getPieceById('0-A1', frozen).selected).toBe(false);
 	});
 
-	it('a kill does not reach back into a previous-turn snapshot', () => {
+	test('a kill does not reach back into a previous-turn snapshot', () => {
 		let pieces = pz.init();
 		pieces = onBoard(pieces, '0-A1', [3, 1]);
 		pieces = onBoard(pieces, '1-A1', [3, 3]);

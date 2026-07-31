@@ -1,13 +1,11 @@
-import { goToPlay } from './helpers/navigation.js';
-import clickOn from './helpers/clickOn';
-import get, { DIRECTION } from './helpers/get';
+import { test, expect, DIRECTION } from './fixtures';
 
-describe('AGENT', () => {
-	beforeEach(async () => {
+test.describe('AGENT', () => {
+	test.beforeEach(async ({ page, clickOn, get, drag, goToPlay }) => {
 		await goToPlay(2);
 	});
 
-	it('can be placed in the board', async () => {
+	test('can be placed in the board', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).agent(1);
 		await clickOn.cell(1, 1);
 		await clickOn.cell(2, 2);
@@ -19,7 +17,7 @@ describe('AGENT', () => {
 		expect(pieceDirection).toEqual(DIRECTION.down.right);
 	});
 
-	it('can be placed in the border of the board', async () => {
+	test('can be placed in the border of the board', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).agent(1);
 		await clickOn.cell(0, 0);
 		await clickOn.cell(1, 1);
@@ -31,7 +29,7 @@ describe('AGENT', () => {
 		expect(pieceDirection).toEqual(DIRECTION.down.right);
 	});
 
-	it('can be placed in the border of the board facing outwards', async () => {
+	test('can be placed in the border of the board facing outwards', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).agent(1);
 		await clickOn.cell(0, 0);
 		await clickOn.cell(-1, -1);
@@ -43,7 +41,7 @@ describe('AGENT', () => {
 		expect(pieceDirection).toEqual(DIRECTION.up.left);
 	});
 
-	it('can NOT be placed in cell with another piece', async () => {
+	test('can NOT be placed in cell with another piece', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).agent(1);
 		await clickOn.cell(1, 1);
 		await clickOn.cell(2, 2);
@@ -56,13 +54,13 @@ describe('AGENT', () => {
 
 		await clickOn.cell(1, 1);
 
-		const firstStoredPieceId = await get.pieceIn.store(0).id;
+		const firstStoredPieceId = await get.storedPieceIn(0).id;
 		expect(firstStoredPieceId).toEqual('pz-0-A2');
 
 		expect(await get.cell(1, 1).isHighlighted).toBeFalsy();
 	});
 
-	it('can be placed directed towards any direction', async () => {
+	test('can be placed directed towards any direction', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).agent(1);
 		await clickOn.cell(1, 1);
 		await clickOn.cell(0, 1);
@@ -112,7 +110,7 @@ describe('AGENT', () => {
 		expect(direction6).toEqual(DIRECTION.up.left);
 	});
 
-	it('moves two cells in front of it', async () => {
+	test('moves two cells in front of it', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).agent(1);
 		await clickOn.cell(1, 1);
 		await clickOn.cell(2, 2);
@@ -128,7 +126,7 @@ describe('AGENT', () => {
 		expect(is2NextCellsHighlighted).toBeTruthy();
 	});
 
-	it('can NOT move if there is a piece in the next cell', async () => {
+	test('can NOT move if there is a piece in the next cell', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(1).agent(1);
 		await clickOn.cell(2, 2);
 		await clickOn.cell(3, 3);
@@ -154,8 +152,8 @@ describe('AGENT', () => {
 		expect(is2NextCellsHighlighted).toBeFalsy();
 	});
 
-	describe('direction after moving', () => {
-		beforeEach(async () => {
+	test.describe('direction after moving', () => {
+		test.beforeEach(async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).agent(1);
 			await clickOn.cell(1, 1);
 			await clickOn.cell(2, 2);
@@ -163,7 +161,7 @@ describe('AGENT', () => {
 			await page.click('#next-turn');
 		});
 
-		it('can face straight', async () => {
+		test('can face straight', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).agent(1);
 
 			await clickOn.cell(3, 3);
@@ -173,7 +171,7 @@ describe('AGENT', () => {
 			expect(direction).toEqual(DIRECTION.down.right);
 		});
 
-		it('can face left angle', async () => {
+		test('can face left angle', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).agent(1);
 
 			await clickOn.cell(3, 3);
@@ -183,7 +181,7 @@ describe('AGENT', () => {
 			expect(direction).toEqual(DIRECTION.right);
 		});
 
-		it('can face right angle', async () => {
+		test('can face right angle', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).agent(1);
 
 			await clickOn.cell(3, 3);
@@ -193,7 +191,7 @@ describe('AGENT', () => {
 			expect(direction).toEqual(DIRECTION.down.left);
 		});
 
-		it('can NOT face backwards', async () => {
+		test('can NOT face backwards', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).agent(1);
 
 			await clickOn.cell(3, 3);
@@ -203,7 +201,7 @@ describe('AGENT', () => {
 			expect(direction).not.toEqual(DIRECTION.up.left);
 		});
 
-		it('can NOT face backwards left angle', async () => {
+		test('can NOT face backwards left angle', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).agent(1);
 
 			await clickOn.cell(3, 3);
@@ -213,7 +211,7 @@ describe('AGENT', () => {
 			expect(direction).not.toEqual(DIRECTION.left);
 		});
 
-		it('can NOT face backwards right angle', async () => {
+		test('can NOT face backwards right angle', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).agent(1);
 
 			await clickOn.cell(3, 3);
@@ -224,7 +222,7 @@ describe('AGENT', () => {
 		});
 	});
 
-	it('can kill if there is a piece 2 cells in front of it', async () => {
+	test('can kill if there is a piece 2 cells in front of it', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(1).agent(1);
 		await clickOn.cell(3, 3);
 		await clickOn.cell(4, 3);
@@ -247,7 +245,7 @@ describe('AGENT', () => {
 		expect(agentCount).toEqual('x 1');
 	});
 
-	it('can NOT kill if the piece is from the same team', async () => {
+	test('can NOT kill if the piece is from the same team', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).agent(2);
 		await clickOn.cell(3, 3);
 		await clickOn.cell(4, 3);
@@ -271,7 +269,7 @@ describe('AGENT', () => {
 		expect(pieceId).toEqual('pz-0-A2');
 	});
 
-	it('can return to any position except the same when moving outside the board', async () => {
+	test('can return to any position except the same when moving outside the board', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(1).agent(1);
 		await clickOn.cell(5, 3);
 		await clickOn.cell(6, 3);
@@ -299,8 +297,8 @@ describe('AGENT', () => {
 		expect(is53Highlighted).toBeFalsy();
 	});
 
-	describe('CEO buff', () => {
-		beforeEach(async () => {
+	test.describe('CEO buff', () => {
+		test.beforeEach(async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).ceo();
 			await clickOn.cell(0, 0);
 			await clickOn.cell(1, 1);
@@ -308,7 +306,7 @@ describe('AGENT', () => {
 			await page.click('#next-turn');
 		});
 
-		it('moves one OR two cells in front of it', async () => {
+		test('moves one OR two cells in front of it', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).agent(1);
 			await clickOn.cell(1, 1);
 			await clickOn.cell(2, 2);
@@ -324,7 +322,7 @@ describe('AGENT', () => {
 			expect(is2NextCellsHighlighted).toBeTruthy();
 		});
 
-		it('can kill a piece right in front of it', async () => {
+		test('can kill a piece right in front of it', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(2, 2);
 			await clickOn.cell(3, 3);

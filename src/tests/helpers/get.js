@@ -25,87 +25,89 @@ const DIRECTION = {
 	left: 'matrix(0, -1, 1, 0, 0, 0)',
 };
 
-const get = {
-	pieceIn(row, cell) {
-		return {
-			get id() {
-				return page.$eval(`#hex-${row}-${cell}`, el => el.children[0].id);
-			},
-			get direction() {
-				return page
-					.$eval(`#hex-${row}-${cell}`, el => getComputedStyle(el.children[0]).transform)
-					.then(normalizeMatrix);
-			},
-			get isHighlighted() {
-				return page.$eval(
-					`#hex-${row}-${cell}`,
-					el => getComputedStyle(el.children[0]).filter === 'brightness(2)',
-				);
-			},
-		};
-	},
+export default function createGet(page) {
+	// Reading through a locator rather than page.$eval means playwright waits for the element
+	// to exist instead of throwing on a board that has not rendered yet.
+	const occupantOf = selector => page.locator(`${selector} > *`).first();
 
-	cell(row, cell) {
-		return {
-			get isHighlighted() {
-				return page.$eval(
-					`#hex-${row}-${cell}`,
-					el => getComputedStyle(el)['border-left'] === '2px solid rgb(255, 0, 0)',
-				);
-			},
-		};
-	},
+	const isBrightened = locator => locator.evaluate(el => getComputedStyle(el).filter === 'brightness(2)');
 
-	cementery(team) {
-		return {
-			get agent() {
-				return page.$eval(`#piece-count-${team}-${AGENT}`, el => el.innerText);
-			},
-			get spy() {
-				return page.$eval(`#piece-count-${team}-${SPY}`, el => el.innerText);
-			},
-			get sniper() {
-				return page.$eval(`#piece-count-${team}-${SNIPER}}`, el => el.innerText);
-			},
-			get ceo() {
-				return page.$eval(`#piece-count-${team}-${CEO}`, el => el.innerText);
-			},
-		};
-	},
-
-	team(teamNumber) {
-		return {
-			agent(agentNumber) {
-				return {
-					get isHighlighted() {
-						return page.$eval(
-							`#pz-${teamNumber}-${AGENT}${agentNumber}`,
-							el => getComputedStyle(el).filter === 'brightness(2)',
-						);
-					},
-				};
-			},
-			ceo() {
-				return {
-					get isHighlighted() {
-						return page.$eval(
-							`#pz-${teamNumber}-${CEO}`,
-							el => getComputedStyle(el).filter === 'brightness(2)',
-						);
-					},
-				};
-			},
-		};
-	},
-};
-
-get.pieceIn.store = function store(team) {
 	return {
-		get id() {
-			return page.$eval(`#store-${team}`, el => el.children[0].id);
+		pieceIn(row, cell) {
+			const piece = occupantOf(`#hex-${row}-${cell}`);
+
+			return {
+				get id() {
+					return piece.evaluate(el => el.id);
+				},
+				get direction() {
+					return piece.evaluate(el => getComputedStyle(el).transform).then(normalizeMatrix);
+				},
+				get isHighlighted() {
+					return isBrightened(piece);
+				},
+			};
+		},
+
+		cell(row, cell) {
+			return {
+				get isHighlighted() {
+					return page
+						.locator(`#hex-${row}-${cell}`)
+						.evaluate(el => getComputedStyle(el)['border-left'] === '2px solid rgb(255, 0, 0)');
+				},
+				get isEmpty() {
+					return page.locator(`#hex-${row}-${cell} > *`).count().then(count => count === 0);
+				},
+			};
+		},
+
+		cementery(team) {
+			const count = type => page.locator(`#piece-count-${team}-${type}`).innerText();
+
+			return {
+				get agent() {
+					return count(AGENT);
+				},
+				get spy() {
+					return count(SPY);
+				},
+				get sniper() {
+					return count(SNIPER);
+				},
+				get ceo() {
+					return count(CEO);
+				},
+			};
+		},
+
+		team(teamNumber) {
+			return {
+				agent(agentNumber) {
+					return {
+						get isHighlighted() {
+							return isBrightened(page.locator(`#pz-${teamNumber}-${AGENT}${agentNumber}`));
+						},
+					};
+				},
+				ceo() {
+					return {
+						get isHighlighted() {
+							return isBrightened(page.locator(`#pz-${teamNumber}-${CEO}`));
+						},
+					};
+				},
+			};
+		},
+
+		storedPieceIn(team) {
+			return {
+				get id() {
+					return occupantOf(`#store-${team}`).evaluate(el => el.id);
+				},
+			};
 		},
 	};
-};
+}
 
-export default get;
 export { DIRECTION };
