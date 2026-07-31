@@ -219,7 +219,13 @@ test.describe('SNIPER', () => {
 	});
 
 	test.describe('kill', () => {
-		test('kills on "snipe!" button when a piece moves through the line of sight', async ({ page, clickOn, get, drag, goToPlay }) => {
+		test('kills on "snipe!" button when a piece moves through the line of sight', async ({
+			page,
+			clickOn,
+			get,
+			drag,
+			goToPlay,
+		}) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(2, 1);
 			await clickOn.cell(1, 1);
@@ -247,7 +253,13 @@ test.describe('SNIPER', () => {
 			expect(agentCount).toEqual('x 1');
 		});
 
-		test('kills on "snipe!" button when a piece moves out of the line of sight', async ({ page, clickOn, get, drag, goToPlay }) => {
+		test('kills on "snipe!" button when a piece moves out of the line of sight', async ({
+			page,
+			clickOn,
+			get,
+			drag,
+			goToPlay,
+		}) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(2, 1);
 			await clickOn.cell(1, 1);
@@ -275,7 +287,13 @@ test.describe('SNIPER', () => {
 			expect(agentCount).toEqual('x 1');
 		});
 
-		test('kills on "snipe!" button when a piece moves into the line of sight', async ({ page, clickOn, get, drag, goToPlay }) => {
+		test('kills on "snipe!" button when a piece moves into the line of sight', async ({
+			page,
+			clickOn,
+			get,
+			drag,
+			goToPlay,
+		}) => {
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(2, 1);
 			await clickOn.cell(1, 1);

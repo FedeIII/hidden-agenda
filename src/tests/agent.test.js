@@ -269,7 +269,13 @@ test.describe('AGENT', () => {
 		expect(pieceId).toEqual('pz-0-A2');
 	});
 
-	test('can return to any position except the same when moving outside the board', async ({ page, clickOn, get, drag, goToPlay }) => {
+	test('can return to any position except the same when moving outside the board', async ({
+		page,
+		clickOn,
+		get,
+		drag,
+		goToPlay,
+	}) => {
 		await clickOn.team(1).agent(1);
 		await clickOn.cell(5, 3);
 		await clickOn.cell(6, 3);

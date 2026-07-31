@@ -120,15 +120,8 @@ function renderTitle(playerTurn) {
 }
 
 function AlignmentPhase({ onReady }) {
-	const {
-		cardsRevealed,
-		revealFriend,
-		revealFoe,
-		playerTurn,
-		currentFriend,
-		currentFoe,
-		nextTurn,
-	} = useAlignmentCards(onReady);
+	const { cardsRevealed, revealFriend, revealFoe, playerTurn, currentFriend, currentFoe, nextTurn } =
+		useAlignmentCards(onReady);
 
 	const isButtonActive = Object.values(cardsRevealed).every(revealed => revealed) || !playerTurn;
 
@@ -139,7 +132,7 @@ function AlignmentPhase({ onReady }) {
 			{playerTurn && (
 				<Alignments>
 					<AlignmentFriend
-            id="alingnment-card-friend"
+						id="alingnment-card-friend"
 						player={playerTurn}
 						team={currentFriend}
 						disabled={cardsRevealed.friend}
@@ -148,7 +141,7 @@ function AlignmentPhase({ onReady }) {
 						{TEAM_NAMES[currentFriend]}
 					</AlignmentFriend>
 					<AlignmentFoe
-            id="alingnment-card-foe"
+						id="alingnment-card-foe"
 						player={playerTurn}
 						disabled={cardsRevealed.foe}
 						team={currentFoe}

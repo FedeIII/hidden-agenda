@@ -191,13 +191,8 @@ function PlayActions() {
 	const onSnipe = useSnipe();
 	const [isAccusedShown, showAccuseMenu, hideAccuseMenu] = useAccuseMenu();
 	const [isRevealShown, isRevealActive, onReveal, hideReveal] = useRevealMenu();
-	const [
-		isAlignmentWarningShown,
-		isAlignmentShown,
-		showWarning,
-		onWarningConfirm,
-		hideAlignment,
-	] = useAlignmentMessages();
+	const [isAlignmentWarningShown, isAlignmentShown, showWarning, onWarningConfirm, hideAlignment] =
+		useAlignmentMessages();
 
 	const isMainActions = !isAccusedShown && !isRevealShown;
 

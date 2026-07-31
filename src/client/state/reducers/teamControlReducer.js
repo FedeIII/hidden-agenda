@@ -12,7 +12,7 @@ function teamControlReducer(state, action) {
 		case REVEAL_FRIEND:
 			return teams.revealFriend(action.payload.players, state);
 		case REVEAL_FOE:
-		return teams.revealFoe(action.payload.players, state);
+			return teams.revealFoe(action.payload.players, state);
 		default:
 			return state.teamControl;
 	}

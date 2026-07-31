@@ -104,21 +104,23 @@ const getRight = (row, cell) => {
 	return `${getSeparation(row)}%`;
 };
 
-const getHexagonProperties = cellState => ({ row, cell, edge }) => {
-	if (edge) {
-		return css`
-			background: none;
-			position: ${getPosition(row, cell, cellState)};
-			left: ${getLeft(row, cell)};
-			right: ${getRight(row, cell)};
-			z-index: 1;
-		`;
-	}
+const getHexagonProperties =
+	cellState =>
+	({ row, cell, edge }) => {
+		if (edge) {
+			return css`
+				background: none;
+				position: ${getPosition(row, cell, cellState)};
+				left: ${getLeft(row, cell)};
+				right: ${getRight(row, cell)};
+				z-index: 1;
+			`;
+		}
 
-	return css`
-		background: ${getHexGradient(cellState)({ row, cell })};
-	`;
-};
+		return css`
+			background: ${getHexGradient(cellState)({ row, cell })};
+		`;
+	};
 
 const HexagonStyled = styled.div`
 	width: calc((100% - ${TOTAL_MARGIN}px) / ${MAX_NUMBER_OF_CELLS});

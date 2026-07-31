@@ -64,7 +64,13 @@ test.describe('CLAIM CONTROL', () => {
 		expect(await get.cell(0, 2).isHighlighted).toBeTruthy();
 	});
 
-	test('can NOT place a piece from a company controlled by other player', async ({ page, clickOn, get, drag, goToPlay }) => {
+	test('can NOT place a piece from a company controlled by other player', async ({
+		page,
+		clickOn,
+		get,
+		drag,
+		goToPlay,
+	}) => {
 		await page.click('#claim-0');
 
 		await clickOn.cell(3, 3);
@@ -81,7 +87,7 @@ test.describe('CLAIM CONTROL', () => {
 	test.describe('claim control through "Claim Control" button', () => {
 		test('selects CEO when "Claim Control" is clicked', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await page.click('#claim-0');
-	
+
 			expect(await get.cell(3, 3).isHighlighted).toBeTruthy();
 			expect(await get.team(0).ceo().isHighlighted).toBeTruthy();
 			await expect(page.locator('#claim-0')).toHaveText('Cancel');
@@ -91,7 +97,7 @@ test.describe('CLAIM CONTROL', () => {
 		test('deselects CEO when "Cancel" is clicked', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await page.click('#claim-0');
 			await page.click('#claim-0');
-	
+
 			expect(await get.cell(3, 3).isHighlighted).toBeFalsy();
 			expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
 			await expect(page.locator('#claim-0')).toHaveText('Claim Control');
@@ -100,10 +106,10 @@ test.describe('CLAIM CONTROL', () => {
 
 		test('sets control when placing CEO', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await page.click('#claim-0');
-	
+
 			await clickOn.cell(3, 3);
 			await clickOn.cell(3, 3);
-	
+
 			expect(await get.pieceIn(3, 3).id).toEqual('pz-0-C');
 			expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
 			await expect(page.locator('#controlled-0')).toHaveText('Controlled by: FEDE');
@@ -111,55 +117,61 @@ test.describe('CLAIM CONTROL', () => {
 
 		test('changes control when claiming another company', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await page.click('#claim-0');
-	
+
 			await clickOn.cell(3, 3);
 			await clickOn.cell(3, 3);
-	
+
 			await page.click('#next-turn');
-	
+
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(2, 2);
 			await clickOn.cell(2, 2);
-	
+
 			await page.click('#next-turn');
-	
+
 			await page.click('#claim-1');
-	
+
 			await clickOn.cell(4, 4);
 			await clickOn.cell(4, 4);
-	
+
 			await expect(page.locator('#controlled-0')).toHaveCount(0);
 			await expect(page.locator('#controlled-1')).toHaveText('Controlled by: FEDE');
 		});
 
 		test('can NOT take control of a company with its CEO deployed', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await page.click('#claim-0');
-	
+
 			await clickOn.cell(3, 3);
 			await clickOn.cell(3, 3);
-	
+
 			await page.click('#next-turn');
-	
+
 			await clickOn.team(1).agent(1);
 			await clickOn.cell(2, 2);
 			await clickOn.cell(2, 2);
-	
+
 			await page.click('#next-turn');
-	
+
 			await page.click('#claim-1');
-	
+
 			await clickOn.cell(4, 4);
 			await clickOn.cell(4, 4);
-	
+
 			await page.click('#next-turn');
-	
+
 			await page.click('#claim-0');
-	
+
 			expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
 			expect(await get.cell(4, 3).isHighlighted).toBeFalsy();
 		});
 
-		test('can NOT take control of a company when the turn has ended', async ({ page, clickOn, get, drag, goToPlay }) => {
+		test('can NOT take control of a company when the turn has ended', async ({
+			page,
+			clickOn,
+			get,
+			drag,
+			goToPlay,
+		}) => {
 			await clickOn.team(0).agent(1);
 			await clickOn.cell(1, 1);
 			await clickOn.cell(2, 2);
@@ -175,25 +187,25 @@ test.describe('CLAIM CONTROL', () => {
 		test('sets control when revealing friend', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await page.click('#reveal');
 			await page.click('#reveal-friend');
-	
+
 			await expect(page.locator(`#controlled-${player(0).friend}`)).toHaveText('Controlled by: FEDE');
 		});
 
 		test('sets control when revealing foe', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await page.click('#reveal');
 			await page.click('#reveal-foe');
-	
+
 			await expect(page.locator(`#controlled-${player(0).foe}`)).toHaveText('Controlled by: FEDE');
 		});
 
 		test('changes control when revealing the second alignment', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await page.click('#reveal');
 			await page.click('#reveal-friend');
-	
+
 			await expect(page.locator(`#controlled-${player(0).friend}`)).toHaveText('Controlled by: FEDE');
 
 			await page.click('#reveal-foe');
-	
+
 			await expect(page.locator(`#controlled-${player(0).foe}`)).toHaveText('Controlled by: FEDE');
 		});
 	});
@@ -210,9 +222,7 @@ test.describe('CLAIM CONTROL', () => {
 			await page.click('#reveal');
 			await page.click('#reveal-friend');
 
-			expect(await page.locator(`#controlled-${player(1).friend}`).innerText()).toEqual(
-				'Controlled by: SARA',
-			);
+			expect(await page.locator(`#controlled-${player(1).friend}`).innerText()).toEqual('Controlled by: SARA');
 		});
 
 		test('replaces reveal control with ceo', async ({ page, clickOn, get, drag, goToPlay }) => {
@@ -229,12 +239,16 @@ test.describe('CLAIM CONTROL', () => {
 			await clickOn.cell(4, 4);
 			await clickOn.cell(4, 4);
 
-			expect(await page.locator(`#controlled-${player(0).friend}`).innerText()).toEqual(
-				'Controlled by: SARA',
-			);
+			expect(await page.locator(`#controlled-${player(0).friend}`).innerText()).toEqual('Controlled by: SARA');
 		});
 
-		test('can NOT remove control by claiming and cancelling control', async ({ page, clickOn, get, drag, goToPlay }) => {
+		test('can NOT remove control by claiming and cancelling control', async ({
+			page,
+			clickOn,
+			get,
+			drag,
+			goToPlay,
+		}) => {
 			await page.click('#reveal');
 			await page.click('#reveal-friend');
 

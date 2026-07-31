@@ -251,8 +251,7 @@ function moveSpy(spy, toPosition, throughSniperLineOf, pieceState) {
 		position: toPosition,
 		direction: spyDirection,
 		selectedDirection: spySelectedDirection,
-		showMoveCells:
-			(spy.position && pieceState === SELECTION) || (spy.buffed && pieceState === MOVEMENT) ? true : false,
+		showMoveCells: (spy.position && pieceState === SELECTION) || (spy.buffed && pieceState === MOVEMENT) ? true : false,
 		throughSniperLineOf,
 	};
 }
@@ -424,8 +423,7 @@ function getCeoPositions(ceo, pieces) {
 	return directions
 		.getAll()
 		.reduce(
-			(acc, direction) =>
-				acc.concat(getFreeCells(cells.get(ceo.position).getPositionsInDirection(direction), pieces)),
+			(acc, direction) => acc.concat(getFreeCells(cells.get(ceo.position).getPositionsInDirection(direction), pieces)),
 			[],
 		);
 }
@@ -548,9 +546,7 @@ function killPieces(pieces, movedId) {
 		return pieces;
 	}
 
-	const withKills = pieces.map(piece =>
-		isSamePosition(piece, movedPiece) ? killedPiece(piece, movedId) : piece,
-	);
+	const withKills = pieces.map(piece => (isSamePosition(piece, movedPiece) ? killedPiece(piece, movedId) : piece));
 
 	const killedCeo = withKills.find(piece => isCeo(piece.id) && piece.teamKilledBy);
 
@@ -823,8 +819,7 @@ function isPieceBlocked(selectedPiece, pieces, position1CellAhead, position2Cell
 	return (
 		pieces.filter(
 			piece =>
-				isPieceAtPosition(piece, position1CellAhead) ||
-				isFriendlyAtPosition(piece, position2CellsAhead, selectedPiece),
+				isPieceAtPosition(piece, position1CellAhead) || isFriendlyAtPosition(piece, position2CellsAhead, selectedPiece),
 		).length !== 0
 	);
 }

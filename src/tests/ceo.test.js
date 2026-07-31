@@ -210,48 +210,48 @@ test.describe('CEO', () => {
 		await page.click('#next-turn');
 
 		await clickOn.team(0).ceo();
-    await clickOn.cell(2, 3);
-    await clickOn.cell(2, 3);
+		await clickOn.cell(2, 3);
+		await clickOn.cell(2, 3);
 
-    expect(await get.pieceIn(2, 3).direction).toEqual(DIRECTION.up.right);
-    
-    await page.click('#next-turn');
+		expect(await get.pieceIn(2, 3).direction).toEqual(DIRECTION.up.right);
 
-		await clickOn.team(0).ceo();
-    await clickOn.cell(2, 4);
-    await clickOn.cell(2, 4);
-
-    expect(await get.pieceIn(2, 4).direction).toEqual(DIRECTION.right);
-    
-    await page.click('#next-turn');
+		await page.click('#next-turn');
 
 		await clickOn.team(0).ceo();
-    await clickOn.cell(3, 5);
-    await clickOn.cell(3, 5);
+		await clickOn.cell(2, 4);
+		await clickOn.cell(2, 4);
 
-    expect(await get.pieceIn(3, 5).direction).toEqual(DIRECTION.down.right);
-    
-    await page.click('#next-turn');
+		expect(await get.pieceIn(2, 4).direction).toEqual(DIRECTION.right);
 
-		await clickOn.team(0).ceo();
-    await clickOn.cell(5, 3);
-    await clickOn.cell(5, 3);
-
-    expect(await get.pieceIn(5, 3).direction).toEqual(DIRECTION.down.left);
-    
-    await page.click('#next-turn');
+		await page.click('#next-turn');
 
 		await clickOn.team(0).ceo();
-    await clickOn.cell(5, 1);
-    await clickOn.cell(5, 1);
+		await clickOn.cell(3, 5);
+		await clickOn.cell(3, 5);
 
-    expect(await get.pieceIn(5, 1).direction).toEqual(DIRECTION.left);
-    
-    await page.click('#next-turn');
+		expect(await get.pieceIn(3, 5).direction).toEqual(DIRECTION.down.right);
+
+		await page.click('#next-turn');
 
 		await clickOn.team(0).ceo();
-    await clickOn.cell(3, 1);
-    await clickOn.cell(3, 1);
+		await clickOn.cell(5, 3);
+		await clickOn.cell(5, 3);
+
+		expect(await get.pieceIn(5, 3).direction).toEqual(DIRECTION.down.left);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).ceo();
+		await clickOn.cell(5, 1);
+		await clickOn.cell(5, 1);
+
+		expect(await get.pieceIn(5, 1).direction).toEqual(DIRECTION.left);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).ceo();
+		await clickOn.cell(3, 1);
+		await clickOn.cell(3, 1);
 
 		expect(await get.pieceIn(3, 1).direction).toEqual(DIRECTION.up.left);
 	});

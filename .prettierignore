@@ -1,0 +1,13 @@
+# Build output, committed for GitHub Pages and the VPS. Never hand-format it.
+docs/
+
+node_modules/
+package-lock.json
+
+# Playwright artefacts
+test-results/
+playwright-report/
+blob-report/
+
+# Prose. Reflowing it would bury real edits in whitespace churn.
+*.md

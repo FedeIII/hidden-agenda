@@ -57,7 +57,10 @@ export default function createGet(page) {
 						.evaluate(el => getComputedStyle(el)['border-left'] === '2px solid rgb(255, 0, 0)');
 				},
 				get isEmpty() {
-					return page.locator(`#hex-${row}-${cell} > *`).count().then(count => count === 0);
+					return page
+						.locator(`#hex-${row}-${cell} > *`)
+						.count()
+						.then(count => count === 0);
 				},
 			};
 		},

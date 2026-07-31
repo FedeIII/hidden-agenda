@@ -2,8 +2,8 @@ import { test, expect } from './fixtures';
 
 test.describe('Smoke', () => {
 	test('renders players form', async ({ page, clickOn, get, drag, goToPlay }) => {
-		const text = await page.locator('.game').innerText()
-		
+		const text = await page.locator('.game').innerText();
+
 		expect(text).toContain('NUMBER OF PLAYERS');
 	});
 

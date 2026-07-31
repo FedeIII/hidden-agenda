@@ -76,114 +76,120 @@ Error generating stack: `+e.message+`
     }
   }
 `,R=`A`,cn=`C`,ln=`S`,un=`N`,dn={AGENT:R,CEO:cn,SPY:ln,SNIPER:un},fn={SELECTION:`selection`,DESELECTION:`deselection`,PLACEMENT:`placement`,MOVEMENT:`movement`,MOVEMENT2:`movement2`,MOVEMENT3:`movement3`,COLLOCATION:`collocation`},pn={[R]:5,[ln]:10,[un]:10,[cn]:20},mn=[`0-${R}1`,`0-${R}2`,`0-${R}3`,`0-${R}4`,`0-${R}5`,`0-${cn}`,`0-${ln}`,`0-${un}`,`1-${R}1`,`1-${R}2`,`1-${R}3`,`1-${R}4`,`1-${R}5`,`1-${cn}`,`1-${ln}`,`1-${un}`,`2-${R}1`,`2-${R}2`,`2-${R}3`,`2-${R}4`,`2-${R}5`,`2-${cn}`,`2-${ln}`,`2-${un}`,`3-${R}1`,`3-${R}2`,`3-${R}3`,`3-${R}4`,`3-${R}5`,`3-${cn}`,`3-${ln}`,`3-${un}`];function hn(e,t){if(e&&t)return e[0]===t[0]&&e[1]===t[1]}function gn(e,t){return!!t.find(([t,n]=[])=>hn(e,[t,n]))}function _n(e){return e.reduce((e,t)=>e.includes(t)?e:[...e,t],[])}var vn=[[1,1],[1,0],[0,0],[-1,0],[-1,1],[0,1]],yn={findIndex(e){return vn.findIndex(([t,n])=>hn([t,n],e))},get(e){return vn[e]},getAll(){return[...vn]},getPrevious(e){let t=e-1;return t<0&&(t=vn.length+t),vn[t]},getFollowing(e){let t=e+1;return t>=vn.length&&(t-=vn.length),vn[t]},getOpposite(e){return yn.get(e<3?e+3:e-3)}},bn=(function(){let e=e=>!(e instanceof Array)&&e instanceof Object?`${Object.values(e)}`:`${e}`,t=(...t)=>t.reduce((t,n)=>`${t}#${e(n)}`,``);return function(e){let n=function(...r){let i=t(...r),a=n.cache;if(a.has(i))return a.get(i);let o=e.apply(this,r);return n.cache=a.set(i,o),o};return n.cache=new Map,n}})(),xn=[4,5,6,7,6,5,4],Sn=xn.map((e,t)=>t),Cn=[],wn=[null,null];function Tn(e,t){return function([n,r]=[]){let i=r===0?1:-1;e<3?n>0?i=-r:n<0&&(i=+!r):e===3?n!==0&&(i=-r):e>3&&(n>0?i=+!r:n<0&&(i=-r));let a=[e-n,t+i];if(zn(a))return a}}function En(e,t){return function(...n){let r=[e,t];return n.map(e=>r&&=In(r).getPositionInDirection(e))}}function Dn(e,t){return function(...e){return this.getPositionsInDirections(...e).slice(-1)[0]}}function On(e,t){return function([n,r]=[],i=[]){let a=In(i[i.length-1]||[e,t]).getPositionInDirection([n,r]);return zn(a)?this.getPositionsInDirection([n,r],[...i,a]):i}}function kn(e,t){if(e[0]>t[0])return 1;if(e[0]===t[0])return 0;if(e[0]<t[0])return-1}function An(e,t,n){if(n===0)return Nn(e,t);if(e[0]<3)return jn(e,t,n);if(e[0]===3)return Nn(e,t);if(e[0]>3)return Mn(e,t,n)}function jn(e,t,n){if(n===1)return Nn(e,t);if(n===-1)return Pn(e,t)}function Mn(e,t,n){if(n===1)return Pn(e,t);if(n===-1)return Nn(e,t)}function Nn(e,t){return+(e[1]>t[1])}function Pn(e,t){return+(e[1]>=t[1])}var Fn=[];xn.forEach(e=>{let t=[];for(let n=0;n<e;n++){let e=Cn.length;t.push({position:[e,n],getPositionInDirection:Tn(e,n),getPositionsInDirections:En(e,n),getPositionAfterDirections:Dn(e,n),getPositionsInDirection:On(e,n)}),Fn.push([e,n])}Cn.push(t)});function In([e,t]=wn){return zn([e,t])?Cn[e][t]:{position:wn,getPositionInDirection:()=>wn,getPositionsInDirections:()=>[wn],getPositionAfterDirections:()=>wn,getPositionsInDirection:()=>[wn]}}function Ln(){return Fn}function Rn(e,t){let n=kn(e,t);return[n,An(e,t,n)]}function zn([e,t]=wn){if(e>=0&&e<7&&t>=0&&t<xn[e])return!0}function Bn(e,t){return e&&e.length?(function e(n,r){return r?hn(r,t)?[...n,r]:e([...n,r],In(r).getPositionInDirection(Rn(r,t))):[...n,t]})([e],In(e).getPositionInDirection(Rn(e,t))):[t]}var z={get:In,getAllAvailablePositions:Ln,getDirection:Rn,inBoard:zn,getMovementPositions:Bn},Vn={0:`black`,1:`red`,2:`white`,3:`yellow`},Hn={0:Vn[0].toUpperCase(),1:Vn[1].toUpperCase(),2:Vn[2].toUpperCase(),3:Vn[3].toUpperCase()};function Un(){return[{player:null,prevPlayer:null,claimEnabled:!0,controlling:!1},{player:null,prevPlayer:null,claimEnabled:!0,controlling:!1},{player:null,prevPlayer:null,claimEnabled:!0,controlling:!1},{player:null,prevPlayer:null,claimEnabled:!0,controlling:!1}]}function Wn(e,t,{pieces:n,teamControl:r,hasTurnEnded:i}){let a=W.getCeo(n,t);return i||z.inBoard(a.position)?r:r.map(Gn(e,t,n))}function Gn(e,t,n){return function(r,i){let{player:a,controlling:o}=r;if(i==t)return{player:e,prevPlayer:a,claimEnabled:!0,controlling:o};if(a==e){let e=W.getCeo(n,i);return{player:null,prevPlayer:a,claimEnabled:!z.inBoard(e.position),controlling:!1}}return r}}function Kn(e,{teamControl:t}){return t.map(qn(e))}function qn(e){return function(t,n){let{prevPlayer:r,controlling:i}=t;return n==e?{player:r,prevPlayer:null,claimEnabled:!0,controlling:i}:t}}function Jn(e,t){return Object.entries(W.getKilledPiecesByTeam(e,t)).reduce((e,[t,n])=>e+pn[t]*n,0)}function Yn(e,t){return t.filter(t=>W.getTeam(t.id)===e&&t.position&&!t.killed).reduce((e,t)=>e+pn[W.getType(t.id)],0)}function Xn(e,t){return Jn(e,t)+Yn(e,t)}function Zn(e,{teamControl:t,pieces:n}){return Qn(e,n)?t.map($n(e)):t}function Qn(e,t){return W.isCeo(e)&&!W.getPieceById(e,t).position}function $n(e){let t=W.getTeam(e);return function(e,n){let{player:r,claimEnabled:i}=e;return n==t?{player:r,prevPlayer:null,claimEnabled:i,controlling:!!r}:e}}function er(e,{teamControl:t,pieces:n}){let r=e.find(e=>e.turn);return t.map(nr(r.name,r.alignment.friend,n))}function tr(e,{teamControl:t,pieces:n}){let r=e.find(e=>e.turn);return t.map(nr(r.name,r.alignment.foe,n))}function nr(e,t,n){return function(r,i){let{player:a}=r,o=W.getCeo(n,t);return i==t?{player:e,prevPlayer:null,claimEnabled:!z.inBoard(o.position),controlling:!0}:a==e?{player:null,prevPlayer:null,claimEnabled:!z.inBoard(o.position),controlled:!1}:r}}var rr={initControl:Un,claimControl:Wn,cancelControl:Kn,getPointsForTeam:Xn,movePieceForControl:Zn,revealFriend:er,revealFoe:tr},ir={name:null,score:0};function ar(e){return e.map((e,t)=>({name:e,turn:t===0,alignment:{friend:void 0,foe:void 0},revealed:{friend:!1,foe:!1},allowedToAccuse:{friend:!0,foe:!0}}))}function or(e){let t=e.findIndex(e=>e.turn),n=t+1>=e.length?0:t+1;return e.map((e,t)=>({...e,turn:t===n}))}function sr(e,t,n,r){return e.map(e=>e.name===t?{...e,alignment:{friend:n===void 0?e.alignment.friend:n,foe:r===void 0?e.alignment.foe:r}}:e)}function cr(e){return e.find(e=>e.turn).name}function lr(e){let t=e.find(e=>e.turn);return!t.revealed.friend||!t.revealed.foe}function ur(e){return e.find(e=>e.turn).revealed.friend}function dr(e){return e.find(e=>e.turn).revealed.foe}function fr(e){let t=cr(e);return e.map(e=>e.name==t?{...e,revealed:{friend:!0,foe:e.revealed.foe}}:e)}function pr(e){let t=cr(e);return e.map(e=>e.name==t?{...e,revealed:{foe:!0,friend:e.revealed.friend}}:e)}function mr(e,t){return B.getTurn(e)==t.name}function hr({accuser:e,accusee:t,alignment:n,team:r},i){let a=i.find(t=>t.name==e),o=i.find(e=>e.name==t);if(!a.allowedToAccuse[n])return i;let s=o.alignment[n]==r;return s&&o.revealed[n]?i:i.map(i=>i.name==e?{...i,allowedToAccuse:{...i.allowedToAccuse,[n]:o.alignment[n]==r}}:i.name==t?{...i,revealed:{...i.revealed,[n]:s}}:i)}function gr(e,t){let{friend:n,foe:r}=e.alignment,{friend:i,foe:a}=e.revealed,o=rr.getPointsForTeam(n,t),s=rr.getPointsForTeam(r,t);return 100-50*i-50*a+o-s}function _r(e,t){return e.reduce((e,n)=>{let r=B.getPoints(n,t);return e.score>r?e:{...n,score:r}},ir)}function vr(e,t){return e.slice().sort((e,n)=>gr(n,t)-gr(e,t))}var B={init:ar,nextTurn:or,setAlignment:sr,getTurn:cr,isRevealActive:lr,isOwnFriendRevealed:ur,isOwnFoeRevealed:dr,revealFriend:fr,revealFoe:pr,isPlayerTurn:mr,accuse:hr,getPoints:gr,getWinner:_r,sortByPoints:vr},{AGENT:yr,CEO:br,SPY:xr,SNIPER:Sr}=dn,{SELECTION:Cr,MOVEMENT:wr,MOVEMENT2:Tr,MOVEMENT3:Er,DESELECTION:Dr,COLLOCATION:Or,PLACEMENT:kr}=fn;function Ar(e){return{id:e,position:void 0,direction:void 0,selectedDirection:void 0,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:void 0,teamKilledBy:void 0}}function jr(){return mn.map(e=>Ar(e))}function Mr(e,t){let{hasTurnEnded:n,pieces:r,piecesPrevState:i}=e;return n?r:ra(t)&&fa(t,r).highlight?Ei(r,i,t):Nr(t,sa(r),e)?r.map(e=>e.id===t?Fr(e):e):r}function Nr(e,t,{players:n,snipe:r,pieceState:i,pieces:a,teamControl:o,piecesPrevState:s}){return r||Pr(e,o,s,n,a)?!1:t?ta(e)&&(i===wr||fa(e,a).buffed&&i===Tr)?!1:t.id===e:!0}function Pr(e,t,n,r,i){if(z.inBoard(fa(e,i).position))return!1;let a=la(e);return t.map(({player:e,prevPlayer:t,controlling:n},r)=>({controlling:n,teamIndex:r,prevPlayer:t,player:e})).filter(({controlling:e,player:t,prevPlayer:n})=>e&&B.getTurn(r)!=(n||t)).map(({teamIndex:e})=>String(e)).includes(a)}function Fr(e){return e.selected?{...e,selected:!1,showMoveCells:!1,direction:e.selectedDirection}:{...e,selected:!0,showMoveCells:!0}}function Ir(e,{pieces:t,pieceState:n,followMouse:r}){let i=sa(t);if(ta(e,t)){if(n===wr)return wr;if(fa(e,t).buffed&&n===Tr)return Tr}if(i&&i.id!==e)return n;if(r)return Or;let a=fa(e,t);return a.selected?Dr:ra(a.id)&&a.position?wr:Cr}function Lr(e){return z.getAllAvailablePositions().filter(t=>!Xi(t,e)).filter(t=>!Ci(t,e))}function Rr(e,t,n,r){let i=zr(e,t,n,r);return i=_i(i,t),i}function zr(e,t,n,r){return e.map(i=>i.id===t?Br(e,i,n,r,t):Hr(i))}function Br(e,t,n,r){let i=Vr(t,n,wi(t,n,e),r);return i?{...i,moved:!0}:t}function Vr(e,t,n,r){switch(ua(e.id)){case yr:return Ur(e,t,n);case br:return Wr(e,t,n);case xr:return Gr(e,t,n,r);case Sr:return Kr(e,t,n);default:return}}function Hr(e){return e.moved?{...e,moved:!1}:e}function Ur(e,t,n){let r=e.position?e.selectedDirection:[1,0],i=$i(e)?e.direction:void 0;return{...e,position:t,direction:i,selectedDirection:r,showMoveCells:!1,throughSniperLineOf:n}}function Wr(e,t,n){let r=e.position?z.getDirection(e.position,t):void 0,i=e.position?r:[1,0];return{...e,position:t,direction:r,selectedDirection:i,showMoveCells:!1,throughSniperLineOf:n}}function Gr(e,t,n,r){let i=e.position?z.getDirection(e.position,t):void 0,a=e.position?i:[1,0];return{...e,position:t,direction:i,selectedDirection:a,showMoveCells:!!(e.position&&r===Cr||e.buffed&&r===wr),throughSniperLineOf:n}}function Kr(e,t,n){let r=e.position?z.getDirection(e.position,t):void 0,i=e.position?r:[1,0];return{...e,position:t,direction:r,selectedDirection:i,showMoveCells:!1,throughSniperLineOf:n}}function qr(e,{pieces:t,pieceState:n}){let r=fa(e,t);if(!r.direction)return kr;switch(ua(r.id)){case xr:return Jr(r,n);default:return wr}}function Jr(e,t){return e.buffed?t===wr?Tr:t===Tr?Er:wr:t===wr?Tr:wr}function Yr(e,t,n){switch(ua(e.id)){case yr:return Xr(e,t,n);case br:return Zr(e,t);case xr:return Qr(e,t);case Sr:return $r();default:return[]}}function Xr(e,t,n){return e.direction?n===Cr?[]:ei(e.direction):yn.getAll()}function Zr(e,t){return e.direction?[e.direction]:yn.getAll()}function Qr(e,t){return e.direction?[e.direction]:yn.getAll()}function $r(){return yn.getAll()}function ei(e){let t=yn.findIndex(e);return[yn.getPrevious(t),yn.get(t),yn.getFollowing(t)]}function ti(e,t,n){let r=_n([...wi(e,e.position,n),...e.throughSniperLineOf]);return{...e,selectedDirection:t,throughSniperLineOf:r}}function ni(e,t){let n=sa(e);return e.map(r=>r.id===n.id?ti(r,t,e):r)}function ri(e,t){return e.reduce((n,r)=>r.showMoveCells?n.concat(ii(r,e,t)):n,[])}function ii(e,t,n){switch(ua(e.id)){case yr:return ai(e,t);case br:return oi(e,t);case xr:return si(e,t,n);case Sr:return V(e,t);default:return[]}}function ai(e,t){if(!e.position)return Lr(t);let n=z.get(e.position).getPositionInDirection(e.direction),r=z.get(e.position).getPositionAfterDirections(e.direction,e.direction);return e.buffed?ui(e,t,n,r):di(e,t,n,r)}function oi(e,t){return e.position?yn.getAll().reduce((n,r)=>n.concat(hi(z.get(e.position).getPositionsInDirection(r),t)),[]):Lr(t)}function si(e,t,n){return e.position?fi(e.position).filter(e=>z.inBoard(e)).filter(r=>!ci(e.buffed,n)||!Ki(r,t)).filter(n=>!Gi(pi(n,t),n,e)).filter(n=>!Xi(n,t)||Zi(n,t,e.position)):Lr(t)}function V(e,t){return e.position?[]:Lr(t).filter(n=>Ai(n,e,t))}function ci(e,t){return t===Cr||e&&t===wr}function li(e,t,n){let r=pi(e,n);return!r||!H(r,t)?[e]:[]}function ui(e,t,n,r){let i=pi(n,t)?li(n,e,t):[n,...li(r,e,t)];return i.some(e=>!e)?Lr(t):i}function di(e,t,n,r){return Ui(e,t,n,r)?[]:r?[r]:Lr(t)}function fi(e){return yn.getAll().map(t=>z.get(e).getPositionInDirection(t))}function pi(e,t){return t.find(t=>hn(t.position,e))}function mi(e){return ei(yn.getOpposite(yn.findIndex(e.direction))).map(t=>z.get(e.position).getPositionInDirection(t))}function hi(e,t){return e.length&&!Ki(e[0],t)?[e[0]].concat(hi(e.slice(1),t)):[]}function gi(e,t){return e.length?Ki(e[0],t)?[e[0]]:[e[0]].concat(gi(e.slice(1),t)):[]}function _i(e,t){let n=fa(t,e);if(!n||!z.inBoard(n.position))return e;let r=e.map(e=>qi(e,n)?vi(e,t):e),i=r.find(e=>na(e.id)&&e.teamKilledBy);return i?yi(r,i):r}function vi(e,t){let n={...e,killed:!0,position:wn,killedById:t};return na(e.id)&&(n.teamKilledBy=t),n}function yi(e,t){let n=t.teamKilledBy;return e.map(e=>e.id===t.id?{...e,teamKilledBy:void 0}:H(e,t)&&!e.position?vi(e,n):e)}function bi(e,t){let n=ua(t.id);return{...e,[n]:e[n]+1}}function xi(e,t){return t.filter(t=>t.killedById&&la(t.killedById)===e).reduce(bi,{A:0,S:0,N:0,C:0})}function Si(e){return e.filter(e=>ra(e.id))}function Ci(e,t){return Si(t).filter(e=>!H(e,sa(t))).reduce((n,r)=>n||gn(e,Oi(r,t)),!1)}function wi(e,t,n){if(e.position){let r=Di(n,e),i=z.getMovementPositions(e.position,t);return Object.entries(r).reduce((e,[t,n])=>[...e,...i.reduce((e,r)=>gn(r,n)?[...e,t]:e,[])],[])}return[]}function Ti(e){return e.map(e=>({...e,throughSniperLineOf:[]}))}function Ei(e,t,n){return e.map(e=>e.throughSniperLineOf.length?vi(e,n):e.highlight?{...e,highlight:!1}:fa(e.id,t))}function Di(e,t){return e.filter(e=>ra(e.id)&&!H(t,e)&&e.position).reduce((t,n)=>({...t,[n.id]:Oi(n,e)}),{})}function Oi(e,t){let n=z.get(e.position).getPositionsInDirection(e.direction);return e.buffed?n:gi(n,t)}function ki(e,t,n,r){return z.get(e).getPositionsInDirection(t).reduce((e,t)=>{let i=pi(t,r);return e&&(!i||H(i,n))},!0)}function Ai(e,t,n){return yn.getAll().reduce((r,i)=>r||ki(e,i,t,n),!1)}function ji(e,t){return ra(e.id)&&t.includes(e.id)?{...e,highlight:!0}:e}function Mi(e){let t=_n(e.filter(e=>Pi(e)).reduce((e,t)=>[...e,...t.throughSniperLineOf],[]));return e.map(e=>ji(e,t))}function Ni(e){return!!e.find(e=>ua(e.id)===Sr&&z.inBoard(e.position))}function Pi(e){return!!e.throughSniperLineOf.length}function Fi(e){return e.some(Pi)}function Ii(e,{pieces:t,teamControl:n,hasTurnEnded:r}){return r?t:t.map(Li(e,n))}function Li(e,t){return function(t){return!na(t.id)||la(t.id)!=e?t:Fr(t)}}function Ri(e,{teamControl:t,pieceState:n}){return t[e].player?n:Cr}function zi(e,{pieces:t,teamControl:n}){return t.map(Bi(e,n))}function Bi(e,t){return function(n){return!na(n.id)||la(n.id)!=e?n:t[e].player?Fr(n):n}}function Vi(){return Dr}function Hi(e,t,n){return{...e,buffed:Yi(e,n)}}function Ui(e,t,n,r){return t.filter(t=>Wi(t,n)||Gi(t,r,e)).length!==0}function Wi(e,t){return hn(e.position,t)}function Gi(e,t,n){return e&&hn(e.position,t)&&H(e,n)}function Ki(e,t){return gn(e,t.reduce((e,{position:t})=>t?e.concat([t]):e,[]))}function H(e,t){return la(e.id)===la(t.id)}function U(e,t){return e.id!==t.id}function qi(e,t){if(U(e,t)&&z.inBoard(e.position)&&z.inBoard(t.position))return hn(e.position,t.position)}function Ji(e,t,n){let r=pi(t,n);if(r){let t=la(e.id),n=la(r.id);return na(r.id)&&t==n}return!1}function Yi(e,t){return fi(e.position).reduce((n,r)=>n||Ji(e,r,t),!1)}function Xi(e,t){return!!pi(e,t)}function Zi(e,t,n){return!!(Xi(e,t)&&t.find(e=>Qi(e,n)))}function Qi(e,t){return gn(t,mi(e))}function $i({position:e,direction:t}){return z.inBoard(z.get(e).getPositionAfterDirections(t,t))}function ea(e){return ua(e)===yr}function ta(e){return ua(e)===xr}function na(e){return ua(e)===br}function ra(e){return ua(e)===Sr}function ia(e){return e.filter(e=>na(e.id)&&e.killed).length>=3}function aa(e,t,n,r){let i=sa(n);if(!i)return!1;let a=ri(n,r),o=pi(t,n);return e||!gn(t,a)?!o||o.id!==i.id:!1}function oa(e,t,n,r){if(!sa(n))return!1;let i=ri(n,r);return!e&&gn(t,i)}function sa(e){return e.find(e=>e.selected)}function ca(e,t){return t.filter(t=>la(t.id)===e)}function la(e){return e.charAt(0)}function ua(e){return e.charAt(2)}function da(e){return e.charAt(3)||``}function fa(e,t){return t.find(t=>t.id===e)}function pa(e,t){return e.find(e=>na(e.id)&&la(e.id)==t)}function ma(e,t){return t.filter(t=>la(t.id)===e&&t.position&&!t.killed).reduce(bi,{A:0,S:0,N:0,C:0})}var W={init:jr,toggle:Mr,togglePieceState:Ir,move:Rr,movedPieceState:qr,getPossibleDirections:Yr,changeSelectedPieceDirection:ni,getSelectedPiece:sa,getHighlightedPositions:ri,getPieceAtPosition:pi,removeIsThroughSniperLine:Ti,killSnipedPiece:Ei,highlightSnipersWithSight:Mi,isInSniperSight:Pi,isAnyPieceThroughSniperLine:Fi,claimControl:Ii,claimControlPieceState:Ri,cancelControl:zi,cancelControlPieceState:Vi,getKilledPiecesByTeam:xi,setCeoBuffs:Hi,isAgent:ea,isSpy:ta,isCeo:na,isSniper:ra,isSniperOnBoard:Ni,hasGameFinished:ia,isTogglePieceOnCellClick:aa,isMovePieceOnCellClick:oa,getTeam:la,getType:ua,getNumber:da,getPieceById:fa,getSurvivorsForTeam:ma,getAllTeamPieces:ca,getCeo:pa};function ha(e,t){return`${e}(${t.displayName||t.name||`Component`})`}var ga=`START_GAME`;function _a(e){return{type:ga,payload:e}}var va=`SET_ALIGNMENT`;function ya({name:e,friend:t,foe:n}){return{type:va,payload:{name:e,friend:t,foe:n}}}var ba=`NEXT_TURN`;function xa(){return{type:ba}}var Sa=`TOGGLE_PIECE`;function Ca(e){return{type:Sa,payload:{pieceId:e}}}var G=`MOVE_PIECE`;function wa(e,t){return{type:G,payload:{pieceId:e,coords:t}}}var Ta=`DIRECT_PIECE`;function Ea(e){return{type:Ta,payload:e}}var Da=`SNIPE`;function Oa(){return{type:Da}}var ka=`CLAIM_CONTROL`;function Aa(e,t){return{payload:{playerName:e,team:t},type:ka}}var ja=`CANCEL_CONTROL`;function Ma(e){return{payload:{team:e},type:ja}}var Na=`REVEAL_FRIEND`;function Pa(e){return{payload:{players:e},type:Na}}var Fa=`REVEAL_FOE`;function Ia(e){return{payload:{players:e},type:Fa}}var La=`ACCUSE`;function Ra({accuser:e,accusee:t,alignment:n,team:r}){return{payload:{accuser:e,accusee:t,alignment:n,team:r},type:La}}function za({players:e},t){switch(t.type){case ga:return B.init(t.payload);case ba:return B.nextTurn(e);case va:let{name:n,friend:r,foe:i}=t.payload;return B.setAlignment(e,n,r,i);case Na:return B.revealFriend(t.payload.players);case Fa:return B.revealFoe(t.payload.players);case La:return B.accuse(t.payload,e);default:return e}}var{AGENT:Ba,CEO:Va,SPY:Ha,SNIPER:Ua}=dn,{MOVEMENT:Wa,MOVEMENT2:Ga,MOVEMENT3:Ka,PLACEMENT:qa}=fn;function Ja(e,t,n){let r=W.getSelectedPiece(e);if(r&&r.id===n)switch(W.getType(r.id)){case Ba:return t===qa||t===Wa;case Va:return t===qa||t===Wa;case Ha:return r.buffed?t===qa||t===Ka:t===qa||t===Ga;case Ua:return t===qa||t===Wa;default:return!1}return!1}function Ya({hasTurnEnded:e,pieces:t,pieceState:n},r){return e||Ja(t,n,r)}function Xa(e,t){return e&&W.isSniper(t)}function Za(e,t){return Ya(e,t)||Xa(e.snipe,t)}function Qa(e){return!W.isAnyPieceThroughSniperLine(e.pieces)&&e.hasTurnEnded}function $a(e,t){switch(t.type){case ba:return!1;case ga:return!1;case Sa:return Za(e,t.payload.pieceId);case G:return!1;case Da:return Qa(e);default:return e.hasTurnEnded}}function eo(e,t){return W.toggle(e,t)}function to({pieces:e,pieceState:t},{pieceId:n,coords:r}){return W.move(e,n,r,t)}function no(e,t){return W.changeSelectedPieceDirection(e,t)}function ro(e){return W.removeIsThroughSniperLine(e).map(W.setCeoBuffs)}function io(e){return W.highlightSnipersWithSight(e)}function ao(e,t){let{team:n}=e;return W.claimControl(n,t)}function oo(e,t){let{team:n}=e;return W.cancelControl(n,t)}function so(e,t){switch(t.type){case Sa:return[...eo(e,t.payload.pieceId)];case G:return[...to(e,t.payload)];case Ta:return[...no(e.pieces,t.payload)];case ba:return[...ro(e.pieces)];case Da:return[...io(e.pieces)];case ka:return[...ao(t.payload,e)];case ja:return[...oo(t.payload,e)];default:return e.pieces}}function co(e,t){let n;if(e.hasTurnEnded)n=e.pieceState;else switch(t.type){case Sa:n=W.togglePieceState(t.payload.pieceId,e);break;case G:n=W.movedPieceState(t.payload.pieceId,e);break;case ka:n=W.claimControlPieceState(t.payload.team,e);break;case ja:n=W.cancelControlPieceState();break;default:n=e.pieceState}return n}var{AGENT:lo,CEO:uo,SPY:fo,SNIPER:po}=dn,{COLLOCATION:mo}=fn;function ho({pieces:e,followMouse:t,pieceState:n}){let r=W.getSelectedPiece(e);switch(W.getType(r.id)){case lo:return!0;case uo:return n===mo;case fo:return!1;case po:return!0;default:return t}}function go(e,t){switch(t.type){case G:return ho(e);case Ta:return!0;default:return!1}}function _o(e){return e.some(e=>W.isInSniperSight(e))}function vo(e,t){switch(t.type){case Da:return _o(e.pieces);case ba:return!1;default:return e.snipe}}function K(e,t){switch(t.type){case ba:return[...e.pieces];default:return e.piecesPrevState}}function yo(e,t){switch(t.type){case ka:return rr.claimControl(t.payload.playerName,t.payload.team,e);case ja:return rr.cancelControl(t.payload.team,e);case G:return rr.movePieceForControl(t.payload.pieceId,e);case Na:return rr.revealFriend(t.payload.players,e);case Fa:return rr.revealFoe(t.payload.players,e);default:return e.teamControl}}var bo={players:[{name:`FEDE`,turn:!0,alignment:{friend:`1`,foe:`0`},revealed:{friend:!1,foe:!1},allowedToAccuse:{friend:!0,foe:!0}},{name:`SARA`,turn:!1,alignment:{friend:`0`,foe:`3`},revealed:{friend:!1,foe:!1},allowedToAccuse:{friend:!0,foe:!0}}],hasTurnEnded:!1,pieces:[{id:`0-A1`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-A4`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-A5`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-C`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-S`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-N`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A1`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A4`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A5`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-C`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-S`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-N`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A1`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A4`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A5`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-C`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-S`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-N`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A1`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A4`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A5`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-C`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-S`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-N`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1}],pieceState:`deselection`,followMouse:!1,snipe:!1,piecesPrevState:[{id:`0-A1`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-A4`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-A5`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-C`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-S`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-N`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A1`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A4`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A5`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-C`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-S`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-N`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A1`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A4`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A5`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-C`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-S`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-N`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A1`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A4`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A5`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-C`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-S`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-N`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1}],teamControl:[{player:null,prevPlayer:null,claimEnabled:!0,controlling:!1},{player:null,prevPlayer:null,claimEnabled:!0,controlling:!1},{player:null,prevPlayer:null,claimEnabled:!0,controlling:!1},{player:null,prevPlayer:null,claimEnabled:!0,controlling:!1}]},xo={players:[{name:`FEDE`,turn:!1,alignment:{friend:`1`,foe:`0`},revealed:{foe:!0,friend:!0},allowedToAccuse:{friend:!0,foe:!0}},{name:`SARA`,turn:!0,alignment:{friend:`0`,foe:`3`},revealed:{friend:!0,foe:!1},allowedToAccuse:{friend:!0,foe:!0}},{name:`ALEX`,turn:!1,alignment:{friend:`1`,foe:`3`},revealed:{foe:!0,friend:!0},allowedToAccuse:{friend:!0,foe:!0}},{name:`AZYR`,turn:!0,alignment:{friend:`2`,foe:`3`},revealed:{friend:!1,foe:!1},allowedToAccuse:{friend:!0,foe:!0}},{name:`AZAZYRA`,turn:!1,alignment:{friend:`1`,foe:`2`},revealed:{foe:!0,friend:!0},allowedToAccuse:{friend:!0,foe:!0}},{name:`AZAROG`,turn:!0,alignment:{friend:`3`,foe:`2`},revealed:{friend:!1,foe:!1},allowedToAccuse:{friend:!0,foe:!0}}],hasTurnEnded:!1,pieces:[{id:`0-A1`,position:[-1,-1],direction:[-1,0],selectedDirection:[-1,0],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`2-A1`,moved:!1},{id:`0-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,moved:!1},{id:`0-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,moved:!1},{id:`0-A4`,selected:!0,killed:!1,showMoveCells:!0,throughSniperLineOf:[],buffed:!1,highlight:!1,moved:!0,position:[1,1],direction:[0,0],selectedDirection:[0,0]},{id:`0-A5`,position:[3,3],direction:[1,0],selectedDirection:[1,0],selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,moved:!1},{id:`0-C`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,moved:!1},{id:`0-S`,position:[-1,-1],direction:[1,1],selectedDirection:[1,1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`2-A1`,moved:!1},{id:`0-N`,position:[-1,-1],direction:[1,0],selectedDirection:[1,0],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`2-A1`,moved:!1},{id:`1-A1`,position:[-1,-1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A5`,moved:!1},{id:`1-A2`,position:[-1,-1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A5`,moved:!1},{id:`1-A3`,position:[-1,-1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A5`,moved:!1},{id:`1-A4`,position:[-1,-1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A5`,moved:!1},{id:`1-A5`,position:[3,5],direction:[0,0],selectedDirection:[0,0],selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,moved:!1},{id:`1-C`,position:[-1,-1],direction:[0,0],selectedDirection:[0,0],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A5`,moved:!1},{id:`1-S`,position:[-1,-1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A5`,moved:!1},{id:`1-N`,position:[-1,-1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A5`,moved:!1},{id:`2-A1`,position:[-1,-1],direction:[0,1],selectedDirection:[0,1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`1-A5`,moved:!1},{id:`2-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,moved:!1,position:[6,2],direction:[1,0],selectedDirection:[1,0]},{id:`2-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,moved:!1,position:[6,0],direction:[1,1],selectedDirection:[1,1]},{id:`2-A4`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,moved:!1,position:[6,1],direction:[0,0],selectedDirection:[0,0]},{id:`2-A5`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,moved:!1,position:[5,0],direction:[1,1],selectedDirection:[1,1]},{id:`2-C`,position:[1,3],direction:[0,0],selectedDirection:[0,0],selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,moved:!1},{id:`2-S`,position:[-1,-1],direction:[0,0],selectedDirection:[0,0],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`1-A5`,moved:!1},{id:`2-N`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,moved:!1,position:[5,1],direction:[0,0],selectedDirection:[0,0]},{id:`3-A1`,position:[-1,-1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A1`,moved:!1},{id:`3-A2`,position:[-1,-1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A1`,moved:!1},{id:`3-A3`,position:[-1,-1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A1`,moved:!1},{id:`3-A4`,position:[-1,-1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A1`,moved:!1},{id:`3-A5`,position:[-1,-1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A1`,moved:!1},{id:`3-C`,position:[-1,-1],direction:[0,0],selectedDirection:[0,0],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A1`,moved:!1},{id:`3-S`,position:[-1,-1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A1`,moved:!1},{id:`3-N`,position:[-1,-1],selected:!1,killed:!0,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1,killedById:`0-A1`,moved:!1}],pieceState:`deselection`,followMouse:!1,snipe:!1,piecesPrevState:[{id:`0-A1`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-A4`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-A5`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-C`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-S`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`0-N`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A1`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A4`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-A5`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-C`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-S`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`1-N`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A1`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A4`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-A5`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-C`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-S`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`2-N`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A1`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A2`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A3`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A4`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-A5`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-C`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-S`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1},{id:`3-N`,selected:!1,killed:!1,showMoveCells:!1,throughSniperLineOf:[],buffed:!1,highlight:!1}],teamControl:[{player:null,prevPlayer:null,claimEnabled:!0,controlling:!1},{player:null,prevPlayer:null,claimEnabled:!0,controlling:!1},{player:null,prevPlayer:null,claimEnabled:!0,controlling:!1},{player:null,prevPlayer:null,claimEnabled:!0,controlling:!1}]},So=o((e=>{var t=u(),n=Symbol.for(`react.element`),r=Symbol.for(`react.fragment`),i=Object.prototype.hasOwnProperty,a=t.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactCurrentOwner,o={key:!0,ref:!0,__self:!0,__source:!0};function s(e,t,r){var s,c={},l=null,u=null;for(s in r!==void 0&&(l=``+r),t.key!==void 0&&(l=``+t.key),t.ref!==void 0&&(u=t.ref),t)i.call(t,s)&&!o.hasOwnProperty(s)&&(c[s]=t[s]);if(e&&e.defaultProps)for(s in t=e.defaultProps,t)c[s]===void 0&&(c[s]=t[s]);return{$$typeof:n,type:e,key:l,ref:u,props:c,_owner:a.current}}e.Fragment=r,e.jsx=s,e.jsxs=s})),q=o(((e,t)=>{t.exports=So()}))(),Co={players:za,hasTurnEnded:$a,pieces:so,pieceState:co,followMouse:go,snipe:vo,piecesPrevState:K,teamControl:yo};function J(e,t){let n=Object.entries(Co).reduce((n,[r,i])=>({...n,[r]:i(e,t)}),{});return console.log(t,`=>`,n),n}var Y={players:[],hasTurnEnded:!1,pieces:W.init(),pieceState:void 0,followMouse:!1,snipe:!1,piecesPrevState:W.init(),teamControl:rr.initControl()},wo=new URLSearchParams(window.location.search).get(`test`);wo===`play`?(Y=bo,Y.test=!0):wo===`endgame`&&(Y=xo,Y.test=!0);var X=(0,v.createContext)(null),To=(0,v.createContext)(wo);function Eo(e){function t(t){let[n,r]=(0,v.useReducer)(J,Y);return(0,q.jsx)(To.Provider,{value:wo,children:(0,q.jsx)(X.Provider,{value:[n,r],children:(0,q.jsx)(e,{...t})})})}return t.displayName=ha(`WithState`,e),t}function Do(){let[{followMouse:e,pieces:t,pieceState:n},r]=(0,v.useContext)(X);return(0,v.useCallback)(i=>{let a=W.getSelectedPiece(t);W.isTogglePieceOnCellClick(e,i,t,n)?r(Ca(a.id)):W.isMovePieceOnCellClick(e,i,t,n)&&r(wa(a.id,i))},[e,t,n,r])}var Oo=6,ko=.85,Ao=(0,v.createContext)({startDrag:()=>{},isClickSuppressed:()=>!1});function jo(){return(0,v.useContext)(Ao)}function Mo(e,t){let n=document.elementFromPoint(e,t),r=n&&n.closest(`[id^="hex-"]`);if(!r)return null;let i=/^hex-(-?\d+)-(-?\d+)$/.exec(r.id);return i?[Number(i[1]),Number(i[2])]:null}function No({ghost:e}){return e?(0,q.jsx)(`img`,{src:e.src,alt:``,"aria-hidden":`true`,style:{position:`fixed`,left:e.x-e.width/2,top:e.y-e.height/2,width:e.width,height:e.height,opacity:ko,pointerEvents:`none`,zIndex:1e3}}):null}function Po({children:e}){let t=Do(),[n,r]=(0,v.useState)(null),i=(0,v.useRef)(t);i.current=t;let a=(0,v.useRef)(null),o=(0,v.useRef)(!1),s=(0,v.useCallback)((e,{previewSrc:t,onStart:n})=>{if(typeof e.button==`number`&&e.button!==0)return;let r=e.currentTarget.getBoundingClientRect();a.current={originX:e.clientX,originY:e.clientY,width:r.width,height:r.height,previewSrc:t,onStart:n,dragging:!1}},[]),c=(0,v.useCallback)(()=>o.current,[]);return(0,v.useEffect)(()=>{function e(e){let t=a.current;if(!t)return;let n=e.clientX-t.originX,i=e.clientY-t.originY;if(!t.dragging){if(Math.sqrt(n*n+i*i)<Oo)return;t.dragging=!0,t.onStart()}r({src:t.previewSrc,x:e.clientX,y:e.clientY,width:t.width,height:t.height})}function t(e){let t=a.current;if(a.current=null,r(null),!t||!t.dragging)return;o.current=!0,setTimeout(()=>{o.current=!1},0);let n=Mo(e.clientX,e.clientY);n&&i.current(n)}return window.addEventListener(`pointermove`,e),window.addEventListener(`pointerup`,t),window.addEventListener(`pointercancel`,t),()=>{window.removeEventListener(`pointermove`,e),window.removeEventListener(`pointerup`,t),window.removeEventListener(`pointercancel`,t)}},[]),(0,q.jsxs)(Ao.Provider,{value:{startDrag:s,isClickSuppressed:c},children:[e,(0,q.jsx)(No,{ghost:n})]})}var Fo={START:`start`,ALIGNMENT:`alignment`,PLAY:`play`,END:`end`};function Io(){return(0,v.useContext)(To)}var Lo=L.button`
-  font-family: monospace;
-  font-size: 17px;
-  color: white;
-  letter-spacing: 5px;
-  background-color: lightgray;
-  padding: 5px 10px;
-  margin: -1px 0 0 -1px;
-  cursor: ${({active:e})=>e?`pointer`:`not-allowed`};
+	font-family: monospace;
+	font-size: 17px;
+	color: white;
+	letter-spacing: 5px;
+	background-color: lightgray;
+	padding: 5px 10px;
+	margin: -1px 0 0 -1px;
+	cursor: ${({active:e})=>e?`pointer`:`not-allowed`};
 
-  ${({small:e})=>{if(e)return P`
-      font-size: 13px;
-    `}}
-  ${({active:e})=>{if(e)return P`
-      background-color: black;
-      margin: 0;
-      box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14),
-        0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
-      transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+	${({small:e})=>{if(e)return P`
+			font-size: 13px;
+		`}}
+	${({active:e})=>{if(e)return P`
+			background-color: black;
+			margin: 0;
+			box-shadow:
+				0 4px 5px 0 rgba(0, 0, 0, 0.14),
+				0 1px 10px 0 rgba(0, 0, 0, 0.12),
+				0 2px 4px -1px rgba(0, 0, 0, 0.3);
+			transition:
+				transform 0.1s ease-out,
+				box-shadow 0.1s ease-out;
 
-      &:active {
-        background-color: gray;
-        margin: 1px 0 0 1px;
-      }
+			&:active {
+				background-color: gray;
+				margin: 1px 0 0 1px;
+			}
 
-      &:hover {
-        margin: 1px 0 0 1px;
-        transform: scale(1.03);
-        box-shadow: 0 6px 10px 0 rgba(0, 0, 0, 0.14),
-          0 1px 18px 0 rgba(0, 0, 0, 0.12), 0 3px 5px -1px rgba(0, 0, 0, 0.3);
-      }
-    `}}
+			&:hover {
+				margin: 1px 0 0 1px;
+				transform: scale(1.03);
+				box-shadow:
+					0 6px 10px 0 rgba(0, 0, 0, 0.14),
+					0 1px 18px 0 rgba(0, 0, 0, 0.12),
+					0 3px 5px -1px rgba(0, 0, 0, 0.3);
+			}
+		`}}
 
   &,
   &:focus,
   &:active {
-    border: none;
-    outline: none;
-  }
+		border: none;
+		outline: none;
+	}
 `,Ro=L.div`
-  text-align: center;
+	text-align: center;
 `,zo=L.div`
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  padding: 40px;
-  max-width: 960px;
-  width: 66vw;
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	padding: 40px;
+	max-width: 960px;
+	width: 66vw;
 `,Bo=L.div`
-  width: 100%;
-  background-color: antiquewhite;
-  margin-bottom: 25px;
+	width: 100%;
+	background-color: antiquewhite;
+	margin-bottom: 25px;
 `,Vo=L.div`
-  display: flex;
-  flex-direction: column;
-  border: 1px solid black;
+	display: flex;
+	flex-direction: column;
+	border: 1px solid black;
 `,Ho=L.div`
-  color: antiquewhite;
-  background-color: black;
-  padding: 5px 10px;
+	color: antiquewhite;
+	background-color: black;
+	padding: 5px 10px;
 `,Uo=L.div`
-  font-size: 10px;
-  padding: 5px 10px;
+	font-size: 10px;
+	padding: 5px 10px;
 `,Wo=L.div`
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-  font-size: 20px;
-  padding: 15px;
+	display: flex;
+	flex-direction: row;
+	justify-content: space-around;
+	font-size: 20px;
+	padding: 15px;
 `,Go=L.label`
-  margin-left: 5px;
+	margin-left: 5px;
 `,Ko=L.div`
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
 `,qo=L.div`
-  border: 1px solid black;
-  flex-basis: 33%;
-  flex-grow: 1;
+	border: 1px solid black;
+	flex-basis: 33%;
+	flex-grow: 1;
 `,Jo=L.input`
-  margin: 5px 5px 10px 10px;
-  padding: 5px 5px 2px 5px;
-  background: antiquewhite;
-  font-size: 20px;
-  position: relative;
-  text-transform: uppercase;
-  width: 75%;
+	margin: 5px 5px 10px 10px;
+	padding: 5px 5px 2px 5px;
+	background: antiquewhite;
+	font-size: 20px;
+	position: relative;
+	text-transform: uppercase;
+	width: 75%;
 
-  &,
-  &:focus,
-  &:active {
-    border: none;
-    border-bottom: 1px solid black;
-    outline: none;
-    font-family: monospace;
-    letter-spacing: 5px;
-  }
+	&,
+	&:focus,
+	&:active {
+		border: none;
+		border-bottom: 1px solid black;
+		outline: none;
+		font-family: monospace;
+		letter-spacing: 5px;
+	}
 `;function Yo({n:e,numberPlayers:t,onChange:n}){let r=(0,v.useCallback)(e=>n(parseInt(e.target.value,10)),[n]);return(0,q.jsxs)(`div`,{children:[(0,q.jsx)(`input`,{type:`radio`,id:`players${e}`,name:`number-players`,value:e,defaultChecked:e===t,onChange:r}),(0,q.jsx)(Go,{htmlFor:e,children:e})]},`players${e}`)}function Xo({n:e,onChange:t}){let n=(0,v.useCallback)(e=>t(e.target.name,e.target.value),[t]);return(0,q.jsxs)(qo,{children:[(0,q.jsxs)(Uo,{children:[`PLAYER `,e]}),(0,q.jsx)(Jo,{type:`text`,id:`player-name${e}`,name:`player${e}`,onBlur:n})]},`player${e}`)}function Zo(e,t){let[n,r]=(0,v.useContext)(X);return(0,v.useCallback)(()=>{r(_a(Object.values(e))),t()},[e,r,t])}function Qo(e,t){return(0,v.useMemo)(()=>Object.values(t).filter(e=>e).length===e,[e,t])}function $o(e){let[t,n]=(0,v.useState)(Object.keys(e).length),[r,i]=(0,v.useState)(e),a=(0,v.useCallback)(e=>{n(e),i(Object.entries(r).slice(0,e).reduce((e,[t,n])=>({...e,[t]:n}),{}))},[r]),o=(0,v.useCallback)((e,t)=>i({...r,[e]:t.toUpperCase()}),[r]);return[{players:r,numberOfPlayers:t},{onNumberPlayersChange:a,onSelectPlayerOptions:o}]}function es({onReady:e}){let[t,n]=$o({player1:void 0,player2:void 0}),{players:r,numberOfPlayers:i}=t,{onNumberPlayersChange:a,onSelectPlayerOptions:o}=n,s=Zo(r,e);return(0,q.jsxs)(zo,{children:[(0,q.jsxs)(Bo,{children:[(0,q.jsxs)(Vo,{children:[(0,q.jsx)(Ho,{children:`1. NUMBER OF PLAYERS`}),(0,q.jsx)(Wo,{children:[,,,,,].fill().map((e,t)=>(0,q.jsx)(Yo,{n:t+2,numberPlayers:i,onChange:a},`${t+2}`))})]}),(0,q.jsx)(Ho,{children:`2. PLAYERS`}),(0,q.jsx)(Ko,{children:Array(i).fill().map((e,t)=>(0,q.jsx)(Xo,{n:t+1,onChange:o},t+1))})]}),(0,q.jsx)(Ro,{children:(0,q.jsx)(Lo,{id:`start-btn`,active:Qo(i,r),onClick:s,children:`GET ALIGNMENTS`})})]})}var ts=L.div`
-  padding: 20px;
-  text-align: center;
-  color: white;
-  font-weight: bold;
-  font-size: 16px;
-  width: 90vw;
+	padding: 20px;
+	text-align: center;
+	color: white;
+	font-weight: bold;
+	font-size: 16px;
+	width: 90vw;
 `,ns=L.div`
-  padding: 20px;
-  text-align: center;
-  color: white;
-  font-size: 16px;
+	padding: 20px;
+	text-align: center;
+	color: white;
+	font-size: 16px;
 `,rs=({small:e})=>e?P`
 			margin: 0;
 		`:P`
@@ -240,20 +246,20 @@ Error generating stack: `+e.message+`
 	justify-content: center;
 	${cs}
 `;function fs(e){let{children:t,team:n,small:r}=e;return(0,q.jsx)(us,{...e,children:t&&(0,q.jsx)(ds,{small:r,team:n,children:t})})}function ps(e){return(0,q.jsx)(fs,{alignment:`friend`,...e})}function ms(e){return(0,q.jsx)(fs,{alignment:`foe`,...e})}var hs=[`0`,`1`,`2`,`3`],gs=2;function _s(){return hs.reduce((e,t)=>e.concat(Array(gs).fill(t)),[])}function vs(e,t,n){let r=e.filter(e=>e!==t),i=r.length?r:e,a=i[Math.floor(n()*i.length)];return e.splice(e.indexOf(a),1),a}function ys(e,t=Math.random){let n=_s(),r=_s();return e.map(e=>{let i=vs(n,void 0,t);return{name:e,friend:i,foe:vs(r,i,t)}})}var bs=L.div`
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  padding: 40px;
-  max-width: 960px;
-  width: 100%;
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	padding: 40px;
+	max-width: 960px;
+	width: 100%;
 `;function xs(e){let[t]=(0,v.useState)(()=>ys(e.map(e=>e.name)).reduce((e,t)=>({...e,[t.name]:t}),{}));return t}function Ss(e){let[{players:t},n]=(0,v.useContext)(X),[r,i]=(0,v.useState)(t[0].name),a=xs(t),[o,s]=(0,v.useState)({friend:!1,foe:!1}),c=(0,v.useCallback)(()=>s({friend:!1,foe:!1}),[s]),l=(0,v.useCallback)(()=>{r||e(),c(),i(e=>{let n=t.findIndex(t=>t.name===e);return n===t.length-1?null:t[n+1].name})},[t,r,e,c,i]),u=(0,v.useMemo)(()=>{let e=t.find(e=>e.name===r);return e?e.alignment.friend:null},[t,r]),d=(0,v.useMemo)(()=>{let e=t.find(e=>e.name===r);return e?e.alignment.foe:null},[t,r]);return{cardsRevealed:o,revealFriend:(0,v.useCallback)(()=>{o.friend||(n(ya({name:r,friend:a[r].friend})),s(e=>({friend:!0,foe:e.foe})))},[r,s,o,a]),revealFoe:(0,v.useCallback)(()=>{o.foe||(n(ya({name:r,foe:a[r].foe})),s(e=>({friend:e.friend,foe:!0})))},[r,s,o,a]),playerTurn:r,currentFriend:u,currentFoe:d,nextTurn:l}}function Cs(e){return e?(0,q.jsxs)(q.Fragment,{children:[(0,q.jsxs)(ts,{children:[`This is only for `,e,`'s eyes`]}),(0,q.jsx)(ns,{children:`Expose your alignments`})]}):(0,q.jsx)(ts,{children:`You are all ready to start!`})}function ws({onReady:e}){let{cardsRevealed:t,revealFriend:n,revealFoe:r,playerTurn:i,currentFriend:a,currentFoe:o,nextTurn:s}=Ss(e),c=Object.values(t).every(e=>e)||!i;return(0,q.jsxs)(bs,{children:[Cs(i),i&&(0,q.jsxs)(ls,{children:[(0,q.jsx)(ps,{id:`alingnment-card-friend`,player:i,team:a,disabled:t.friend,onClick:n,children:Hn[a]}),(0,q.jsx)(ms,{id:`alingnment-card-foe`,player:i,disabled:t.foe,team:o,onClick:r,children:Hn[o]})]}),(0,q.jsx)(Ro,{children:(0,q.jsx)(Lo,{id:`alignments-btn`,active:c,onClick:s,children:i?`NEXT PLAYER`:`START`})})]})}var Ts=L.div`
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  width: 25%;
-  max-width: 230px;
-  flex-shrink: 0;
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-around;
+	width: 25%;
+	max-width: 230px;
+	flex-shrink: 0;
 `,Es=L.div`
 	position: relative;
 	display: flex;
@@ -355,107 +361,107 @@ Error generating stack: `+e.message+`
 `,Us=L(Hs)`
 	color: ${({team:e})=>e==0?`darkgray`:Vn[e]};
 `,Ws=L.div`
-  position: relative;
-  height: 50%;
-  max-height: 223px;
-  display: flex;
-  flex-direction: column;
-  border: 2px solid gray;
-  padding: 8px;
-  margin-bottom: 20px;
-  justify-content: space-between;
-  ${({team:e})=>{switch(e){default:case`0`:return P`
-        background-color: ${Vn[2]};
-      `;case`1`:return P`
-        background-color: ${Vn[1]};
-        color: white;
-      `;case`2`:return P`
-        background-color: ${Vn[0]};
-        color: white;
-      `;case`3`:return P`
-        background-color: ${Vn[3]};
-      `}}}
+	position: relative;
+	height: 50%;
+	max-height: 223px;
+	display: flex;
+	flex-direction: column;
+	border: 2px solid gray;
+	padding: 8px;
+	margin-bottom: 20px;
+	justify-content: space-between;
+	${({team:e})=>{switch(e){default:case`0`:return P`
+				background-color: ${Vn[2]};
+			`;case`1`:return P`
+				background-color: ${Vn[1]};
+				color: white;
+			`;case`2`:return P`
+				background-color: ${Vn[0]};
+				color: white;
+			`;case`3`:return P`
+				background-color: ${Vn[3]};
+			`}}}
 `,Gs=({pieceId:e=``})=>{if(W.getTeam(e)===`2`)return P`
-      filter: brightness(1.2);
-    `},Ks={1:{0:P`
-      transform: rotate(30deg);
-    `,1:P`
-      transform: rotate(-30deg);
-    `},0:{0:P`
-      transform: rotate(90deg);
-    `,1:P`
-      transform: rotate(-90deg);
-    `},"-1":{0:P`
-      transform: rotate(150deg);
-    `,1:P`
-      transform: rotate(-150deg);
-    `}},qs=L.img`
-  position: absolute;
-  /* Without this a touch drag scrolls the page instead of emitting pointermove, so pieces
-     cannot be dragged on a phone. user-drag stops the browser's own image drag on desktop. */
-  touch-action: none;
-  -webkit-user-drag: none;
-  user-select: none;
-  width: 92%;
-  top: -43%;
-  bottom: 0;
-  left: -6%;
-  right: 0;
-  margin-left: 10%;
-  margin-top: 13%;
-  z-index: 2;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
+			filter: brightness(1.2);
+		`},Ks={1:{0:P`
+			transform: rotate(30deg);
+		`,1:P`
+			transform: rotate(-30deg);
+		`},0:{0:P`
+			transform: rotate(90deg);
+		`,1:P`
+			transform: rotate(-90deg);
+		`},"-1":{0:P`
+			transform: rotate(150deg);
+		`,1:P`
+			transform: rotate(-150deg);
+		`}},qs=L.img`
+	position: absolute;
+	/* touch-action: without it a touch drag scrolls the page instead of emitting pointermove,
+	   so pieces cannot be dragged on a phone. user-drag stops the browser's own image drag. */
+	touch-action: none;
+	-webkit-user-drag: none;
+	user-select: none;
+	width: 92%;
+	top: -43%;
+	bottom: 0;
+	left: -6%;
+	right: 0;
+	margin-left: 10%;
+	margin-top: 13%;
+	z-index: 2;
+	cursor: pointer;
+	transition: all 0.2s ease-in-out;
 
-  &:hover {
-    filter: brightness(1.5);
-  }
+	&:hover {
+		filter: brightness(1.5);
+	}
 
-  ${Gs}
-  ${({selectedDirection:e})=>{if(e){let[t,n]=e;return Ks[t][n]}}}
-  ${({selectedDirection:e})=>{if(!e)return P`
-      width: 20%;
-      margin: 0;
-    `}}
-  ${({selectedDirection:e,pieceId:t})=>{if(!e&&t)switch(`${W.getType(t)}${W.getNumber(t)}`){case`A1`:return P`
-          top: 44%;
-          left: 3%;
-        `;case`A2`:return P`
-          top: 24.5%;
-          left: 21.5%;
-        `;case`A3`:return P`
-          top: 6%;
-          left: 40%;
-        `;case`A4`:return P`
-          top: 24.5%;
-          left: 58%;
-        `;case`A5`:return P`
-          top: 44%;
-          left: 76.5%;
-        `;case`C`:return P`
-          top: 44%;
-          left: 40%;
-        `;case`S`:return P`
-          top: 63.5%;
-          left: 21.5%;
-        `;case`N`:return P`
-          top: 63.5%;
-          left: 58%;
-        `}}}
-  ${({killed:e})=>{if(e)return P`
-      position: relative;
-      top: 0;
-      left: 0;
-      width: 50%;
-      margin-right: 2px;
-    `}}
-  ${({selected:e,highlight:t})=>{if(e||t)return P`
-      filter: brightness(2);
+	${Gs}
+	${({selectedDirection:e})=>{if(e){let[t,n]=e;return Ks[t][n]}}}
+	${({selectedDirection:e})=>{if(!e)return P`
+			width: 20%;
+			margin: 0;
+		`}}
+	${({selectedDirection:e,pieceId:t})=>{if(!e&&t)switch(`${W.getType(t)}${W.getNumber(t)}`){case`A1`:return P`
+					top: 44%;
+					left: 3%;
+				`;case`A2`:return P`
+					top: 24.5%;
+					left: 21.5%;
+				`;case`A3`:return P`
+					top: 6%;
+					left: 40%;
+				`;case`A4`:return P`
+					top: 24.5%;
+					left: 58%;
+				`;case`A5`:return P`
+					top: 44%;
+					left: 76.5%;
+				`;case`C`:return P`
+					top: 44%;
+					left: 40%;
+				`;case`S`:return P`
+					top: 63.5%;
+					left: 21.5%;
+				`;case`N`:return P`
+					top: 63.5%;
+					left: 58%;
+				`}}}
+	${({killed:e})=>{if(e)return P`
+			position: relative;
+			top: 0;
+			left: 0;
+			width: 50%;
+			margin-right: 2px;
+		`}}
+	${({selected:e,highlight:t})=>{if(e||t)return P`
+			filter: brightness(2);
 
-      &:hover {
-        filter: brightness(2);
-      }
-    `}}
+			&:hover {
+				filter: brightness(2);
+			}
+		`}}
 `,Js=L.div`
 	letter-spacing: -3px;
 	display: flex;
@@ -498,14 +504,14 @@ Error generating stack: `+e.message+`
 				}
 			}
 		`},wl=7,Tl=e=>({"-1":14,0:wl,1:0,2:-7,3:-14,4:-7,5:0,6:wl,7:14})[e],El=e=>e<0||e>=Sn.length,Dl=(e,t)=>t<0||t>=(xn[e]||3),Ol=e=>[vl,yl,xl,Sl].includes(e),kl=(e,t,n)=>Ol(n)||Dl(e,t)?`absolute`:`relative`,Al=(e,t)=>El(e)&&!Dl(e,t)?`initial`:t>=0?`unset`:`${Tl(e)}%`,jl=(e,t)=>El(e)&&!Dl(e,t)?`initial`:t<0?`unset`:`${Tl(e)}%`,Ml=e=>({row:t,cell:n,edge:r})=>r?P`
-			background: none;
-			position: ${kl(t,n,e)};
-			left: ${Al(t,n)};
-			right: ${jl(t,n)};
-			z-index: 1;
-		`:P`
-		background: ${pl(e)({row:t,cell:n})};
-	`,Nl=L.div`
+				background: none;
+				position: ${kl(t,n,e)};
+				left: ${Al(t,n)};
+				right: ${jl(t,n)};
+				z-index: 1;
+			`:P`
+			background: ${pl(e)({row:t,cell:n})};
+		`,Nl=L.div`
 	width: calc((100% - ${gl}px) / ${hl});
 	height: 0;
 	padding-bottom: 7.8%;
@@ -634,4 +640,4 @@ Error generating stack: `+e.message+`
 	font-size: 32px;
 	font-weight: bold;
 `;function hu({type:e}){let t=`img/0-${e}.png`;return(0,q.jsx)(qs,{src:t,killed:!0})}function gu(){return(0,q.jsxs)(au,{children:[(0,q.jsxs)(ou,{children:[(0,q.jsxs)(cu,{children:[(0,q.jsx)(hu,{type:`A`}),` 5 pts`]}),(0,q.jsxs)(cu,{children:[(0,q.jsx)(hu,{type:`S`}),` 10 pts`]})]}),(0,q.jsxs)(ou,{children:[(0,q.jsxs)(cu,{children:[(0,q.jsx)(hu,{type:`N`}),` 10 pts`]}),(0,q.jsxs)(cu,{children:[(0,q.jsx)(hu,{type:`C`}),` 20 pts`]})]})]})}function _u(e){let{player:t}=e,[{pieces:n}]=(0,v.useContext)(X),r=rr.getPointsForTeam(t.alignment.friend,n),i=rr.getPointsForTeam(t.alignment.foe,n),a=t.revealed.friend&&t.revealed.foe?`- 100`:t.revealed.friend||t.revealed.foe?`- 50`:``;return(0,q.jsxs)(du,{children:[(0,q.jsxs)(fu,{big:!0,children:[t.name,`:`]}),(0,q.jsx)(fu,{children:`100`}),(0,q.jsx)(fu,{children:a}),(0,q.jsxs)(fu,{team:t.alignment.friend,children:[r>=0&&`+ `,r]}),(0,q.jsxs)(fu,{team:t.alignment.foe,children:[`- `,i]}),(0,q.jsx)(fu,{children:`=`}),(0,q.jsxs)(fu,{children:[B.getPoints(t,n),` pts.`]})]})}function vu(){let[{players:e,pieces:t}]=(0,v.useContext)(X);return(0,q.jsxs)(uu,{children:[(0,q.jsx)(`table`,{children:(0,q.jsx)(`tbody`,{children:B.sortByPoints(e,t).map(e=>(0,q.jsx)(_u,{player:e},e.name))})}),(0,q.jsx)(pu,{big:!0,children:`Winner: `}),(0,q.jsx)(mu,{big:!0,children:B.getWinner(e,t).name})]})}function yu(e){let[{pieces:t}]=(0,v.useContext)(X);return(0,q.jsxs)(tu,{children:[rr.getPointsForTeam(e,t),(0,q.jsx)(nu,{children:`pts`})]})}function bu({team:e}){return(0,q.jsxs)(Ws,{team:e,children:[yu(e),(0,q.jsxs)(ru,{children:[(0,q.jsx)(iu,{children:`Killed:`}),(0,q.jsx)(ec,{team:e})]}),(0,q.jsxs)(ru,{children:[(0,q.jsx)(iu,{children:`Survivors:`}),(0,q.jsx)(nc,{team:e})]})]})}function xu(){return(0,q.jsxs)(eu,{children:[(0,q.jsxs)(Ts,{children:[(0,q.jsx)(bu,{team:`0`}),(0,q.jsx)(bu,{team:`1`})]}),(0,q.jsxs)(lu,{children:[(0,q.jsx)(gu,{}),(0,q.jsx)(vu,{})]}),(0,q.jsxs)(Ts,{children:[(0,q.jsx)(bu,{team:`2`}),(0,q.jsx)(bu,{team:`3`})]})]})}var{START:Su,ALIGNMENT:Cu,PLAY:wu,END:Tu}=Fo;function Eu(e){return e===`play`?wu:e===`endgame`?Tu:Su}function Du(){let[{pieces:e}]=(0,v.useContext)(X),t=Io(),[n,r]=(0,v.useState)(()=>Eu(t)),i=W.hasGameFinished(e)?Tu:n;return(0,q.jsxs)(Po,{children:[(0,q.jsx)(sn,{}),i===Su&&(0,q.jsx)(es,{onReady:()=>r(Cu)}),i===Cu&&(0,q.jsx)(ws,{onReady:()=>r(wu)}),i===wu&&(0,q.jsx)($l,{}),i===Tu&&(0,q.jsx)(xu,{})]})}var Ou=Eo(Du);(0,y.createRoot)(document.querySelector(`.game`)).render((0,q.jsx)(v.StrictMode,{children:(0,q.jsx)(Ou,{})}));
-//# sourceMappingURL=index-xo2cJz5m.js.map
+//# sourceMappingURL=index-a1r30Axd.js.map

@@ -17,11 +17,7 @@ test.describe('py.accuse', () => {
 	// Regression: the map had no fallback return, so anyone who was neither accuser nor
 	// accusee came back undefined. Two players masked it; three or more is a crash.
 	test('leaves uninvolved players intact in a 3 player game', () => {
-		const players = [
-			player('ANA', '1', '0', { turn: true }),
-			player('BEA', '0', '3'),
-			player('CAI', '2', '1'),
-		];
+		const players = [player('ANA', '1', '0', { turn: true }), player('BEA', '0', '3'), player('CAI', '2', '1')];
 
 		const result = py.accuse({ accuser: 'ANA', accusee: 'BEA', alignment: 'friend', team: '0' }, players);
 

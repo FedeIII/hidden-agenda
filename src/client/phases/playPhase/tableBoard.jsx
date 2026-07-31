@@ -50,7 +50,7 @@ function TableBoard() {
 			? {
 					from: selectedPiece.position,
 					directions: pz.getPossibleDirections(selectedPiece, pieces, pieceState),
-			  }
+				}
 			: null,
 	};
 

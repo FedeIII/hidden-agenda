@@ -35,11 +35,7 @@ function renderPieceCountList(pieces, team, getPieceCount) {
 	return getPieceCount(pieces, team)
 		.filter(([pieceType, pieceCount]) => pieceCount !== 0)
 		.map(([pieceType, pieceCount]) => (
-			<PieceTypeCount
-				key={`piece-count-${team}-${pieceType}`}
-				id={`piece-count-${team}-${pieceType}`}
-				team={team}
-			>
+			<PieceTypeCount key={`piece-count-${team}-${pieceType}`} id={`piece-count-${team}-${pieceType}`} team={team}>
 				<PieceType type={pieceType} team={team} /> x {pieceCount}
 			</PieceTypeCount>
 		));
