@@ -48,14 +48,32 @@
 	},
 	"author": "Federico Perez <fedelll@gmail.com>",
 	"jest": {
-		"setupFiles": [
-			"<rootDir>/jest.init.js"
-		],
-		"setupFilesAfterEnv": [
-			"<rootDir>src/tests/helpers/setupTests.js"
-		],
-		"moduleNameMapper": {
-			"Domain/(.*)": "<rootDir>/src/domain/$1"
-		}
+		"projects": [
+			{
+				"displayName": "unit",
+				"testEnvironment": "node",
+				"testMatch": [
+					"<rootDir>/src/tests/unit/**/*.test.js"
+				],
+				"moduleNameMapper": {
+					"Domain/(.*)": "<rootDir>/src/domain/$1"
+				}
+			},
+			{
+				"displayName": "e2e",
+				"testMatch": [
+					"<rootDir>/src/tests/*.test.js"
+				],
+				"setupFiles": [
+					"<rootDir>/jest.init.js"
+				],
+				"setupFilesAfterEnv": [
+					"<rootDir>/src/tests/helpers/setupTests.js"
+				],
+				"moduleNameMapper": {
+					"Domain/(.*)": "<rootDir>/src/domain/$1"
+				}
+			}
+		]
 	}
 }
