@@ -189,7 +189,7 @@ Worth recording:
 - **`publicDir: false` is required** in the server config, or the bundle gets a copy of the Pages theme and all 116 piece images.
 - The build emits **`main.mjs`**, not `main.js` — the `server` script and the PM2 command in Phase 3 both have to say `.mjs`.
 
-# Phase 2 — Client
+# Phase 2 — Client — **done**
 
 - **`LobbyPhase`**: create or join by 4-letter code, shareable `#/r/ABCD` link, seat list, host starts. The existing player-count/name form stays for local mode.
 - **Feed the Phase −1 phase switch from the server** instead of local state.
@@ -224,17 +224,28 @@ Worth recording:
 
 ---
 
-## Verify on the box before Phase 3
+## Box facts — **checked**
 
-The VPS docs are readable from here but nothing on the box has been run. Unconfirmed:
+Gathered read-only from the VPS. The important one changes a decision.
 
-0. **Does the box have Node >= 22.12?** `engines` now requires it and the server bundle is built against it.
-1. Is `3007` free? (3000, 3001, 3002, 3003, 3005, 3006 and 8410/8411 are taken.)
-2. Does the Cloudflare Origin cert at `/etc/nginx/ssl/azyr.io.pem` cover `*.azyr.io`, or does the subdomain need its own?
-3. Which existing site config is the cleanest base — `journal.azyr.io` is the assumption.
-4. `/var/lib/hidden-agenda` creation and ownership (which user PM2 runs as).
-5. Cloudflare WebSocket toggle state for the zone.
-6. Should `/opt/hidden-agenda` be a fresh clone of the GitHub repo, matching journal and house-md?
+| | Finding |
+| --- | --- |
+| **Node on the box** | **18.19.1**, and PM2 runs apps with the same node — no nvm split. Node 18 went EOL April 2025. |
+| Port 3007 | **free.** Taken nearby: 3000–3006 (youtube-analytics, github-analytics, journal backend/frontend, an auth service on 3004, activity-api, vps-bridge), 8410/8411 (osler via docker-proxy), 9000 (journal webhook), 5432 (postgres). |
+| Origin certificate | `/etc/nginx/ssl/azyr.io.pem` has SANs `*.azyr.io, azyr.io` — **hidden-agenda.azyr.io is covered**, no new cert. |
+| `journal.azyr.io` config | Usable as a TLS/headers template, but it proxies *everything* — there is no `root`/`try_files` block to copy for the static half, which has to be written. It also hardcodes `Connection 'upgrade'` on every location; fine inside the `/ws` block, wrong in the static one. |
+| DNS | `hidden-agenda.azyr.io` still needs a **proxied Cloudflare record**. Dashboard action, not doable from the box. |
+
+### The Node 18 finding, and what was done about it
+
+`engines` requires node >= 22.12, which is a **toolchain** requirement: Vite 8 and Playwright need it to *build and test*. The box never builds — it runs the committed `dist-server/main.mjs`. So the two are separable, and the fix was to lower the server bundle's syntax target to `node18`.
+
+Audited rather than assumed: every API the server touches predates Node 18 (`randomUUID` is 16.7+, `randomInt` 14.10+, the `node:fs` and `node:http` calls far older), there is no top-level await, and the rebuilt bundle contains no post-18 syntax and still serves `/healthz`.
+
+So Phase 3 is **not blocked**. But two things are Fede's call:
+
+1. **Upgrading the box to a supported Node** would affect all five existing PM2 apps. Worth doing on its own merits — Node 18 has been EOL since April 2025 — but it is not this deploy's problem to force.
+2. Until then, do not raise `target: 'node18'` in `vite.server.config.mjs` speculatively. There is a comment there saying so.
 
 ## Rough effort
 
@@ -243,8 +254,8 @@ The VPS docs are readable from here but nothing on the box has been run. Unconfi
 | −1 Housekeeping | done |
 | 0 Reducer core | done |
 | 1 Server | done |
-| 2 Client | 1–1.5 days |
-| 3 Deploy | 2–3 h + box verification |
+| 2 Client | done |
+| 3 Deploy | 2–3 h (box facts now known) |
 | 4 Tests & hardening | half a day |
 
 **≈5.5–6.5 focused days.**

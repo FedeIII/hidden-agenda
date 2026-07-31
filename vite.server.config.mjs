@@ -16,7 +16,11 @@ export default defineConfig({
 		ssr: 'server/main.js',
 		outDir: 'dist-server',
 		emptyOutDir: true,
-		target: 'node22',
+		// The VPS runs node 18.19, not 22 — it only ever *runs* this bundle, it never builds it,
+		// so the toolchain's node 22 requirement (`engines`) does not apply there. Every API the
+		// server uses predates 18 (randomUUID is 16.7+), so only the syntax target had to move.
+		// Raise this if the box is ever upgraded; do not raise it speculatively.
+		target: 'node18',
 		// Readable stack traces matter more than bytes for a process nobody downloads.
 		minify: false,
 		sourcemap: true,
