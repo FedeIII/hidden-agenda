@@ -118,21 +118,31 @@ One trap: `babel-eslint` depends on `@babel/core`, so dropping Babel may force t
 
 Mutation purge → Vite → react-dnd → react-router → dep hygiene → React 18 → Playwright, Tier 2 folded in, each step landing with the suite green. Mutation must precede React 18, because StrictMode turns those double-applied toggles into visible bugs.
 
-### Progress
+### Outcome — Phase −1 is complete
 
-Items 1–6 and most of Tier 2 have landed on master, one commit each.
+All nine Tier 1 items and all of Tier 2 landed on master, one commit each.
 
 | | Baseline | Now |
 | --- | --- | --- |
-| Bundle, gzipped | 97.9 KB | **73.8 KB** |
-| Declared dependencies | 30 | **18**, none at runtime |
+| Bundle, gzipped | 97.9 KB | **82.2 KB** |
+| Declared dependencies | 30 | **7**, none at runtime |
 | Tests passing | 72 of 81 | **102 of 102** |
-| Dependabot alerts | 136 (16 critical) | 60 (5 critical) |
+| Dependabot alerts | 136 (16 critical) | **5** (1 critical) |
 | Build on Node 22 | impossible | ~300 ms |
+| Test runners | jest + puppeteer | Playwright only |
 
-Three live bugs were fixed on the way: a crash on clicking any empty cell before selecting a piece, `py.accuse` corrupting every uninvolved player from 3 players up, and the alignment deck depleting across games in one page load. The mutation purge also exposed a reducer that depended on cross-slice mutation leakage — `pieceStateReducer` was reading the already-toggled `selected` flag out of what is nominally the pre-action state, which is exactly the class of bug that would have been miserable to chase once a server shared and persisted that state.
+The bundle is 82 KB rather than the ~75 KB projected, because React 18's `react-dom` is bigger than 16's. Dropping polished (2.6% of the bundle, and measured *after* tree-shaking) was correctly judged not worth it and was not done.
 
-Still open: React 18, the Playwright migration, the Hexagon component and dead-code sweep, Prettier, and pinning the runtime. `CLAUDE.md` needs a pass at the end — it still describes webpack, react-dnd and the `img/` duplication, with a warning block standing in for now.
+**Four live bugs** were fixed on the way, none of them known when the plan was written:
+
+1. Clicking any empty cell before selecting a piece threw a TypeError.
+2. `py.accuse` corrupted every uninvolved player from 3 players up — invisible at 2, where accuser and accusee are the whole table.
+3. The alignment deck depleted across games in one page load, and its retry loop could spin forever at 6 players.
+4. The e2e suite was never green to begin with: 9 of 81 specs failed on fixture rot (Chrome changing how it reports `cos(90°)`, and a viewport that depended on browser UI chrome height).
+
+The mutation purge also exposed a reducer depending on cross-slice mutation leakage: `pieceStateReducer` was reading the already-toggled `selected` flag out of what is nominally the pre-action state. That is precisely the class of bug that would have been miserable to chase once a server shared and persisted that state, and it is now guarded by deep-freeze purity tests plus a full suite run under React StrictMode.
+
+Two things deliberately left undone, both filed rather than forgotten: there is **no linter** (eslint 6 and eslint-config-react-app 4 were version-incompatible, so it had never run — replacing it with eslint 9 flat config is outstanding), and styled-components stays on 4, which turned out to be fine under React 18.
 
 ---
 
@@ -216,6 +226,7 @@ One caveat that bites at the end of the game: `py.getPoints` needs *every* playe
 
 The VPS docs are readable from here but nothing on the box has been run. Unconfirmed:
 
+0. **Does the box have Node >= 22.12?** `engines` now requires it and the server bundle is built against it.
 1. Is `3007` free? (3000, 3001, 3002, 3003, 3005, 3006 and 8410/8411 are taken.)
 2. Does the Cloudflare Origin cert at `/etc/nginx/ssl/azyr.io.pem` cover `*.azyr.io`, or does the subdomain need its own?
 3. Which existing site config is the cleanest base — `journal.azyr.io` is the assumption.
@@ -227,7 +238,7 @@ The VPS docs are readable from here but nothing on the box has been run. Unconfi
 
 | Phase | Effort |
 | --- | --- |
-| −1 Housekeeping | 2–3 days (items 1–6 done) |
+| −1 Housekeeping | done |
 | 0 Reducer core | half a day |
 | 1 Server | 1 day |
 | 2 Client | 1–1.5 days |

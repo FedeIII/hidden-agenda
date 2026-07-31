@@ -1,8 +1,10 @@
 {
 	"name": "hidden-agenda",
 	"version": "2.1.1",
-	"main": "src/index.js",
 	"homepage": "https://fedeiii.github.io/hidden-agenda/",
+	"engines": {
+		"node": ">=22.12.0"
+	},
 	"scripts": {
 		"go": "vite --open",
 		"do": "vite build",

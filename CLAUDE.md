@@ -4,48 +4,55 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Hidden Agenda: a local-multiplayer hex board game (React 16 + styled-components + webpack 4, no backend). 2–6 players share one screen and command four teams (0–3 = black/red/white/yellow) of 5 agents + CEO + spy + sniper. Each player secretly holds a *friend* and a *foe* team; the psychology is that everyone moves everyone's pieces. Published at https://fedeiii.github.io/hidden-agenda/ from the committed `docs/` build.
+Hidden Agenda: a hex board game with hidden information (React 18 + styled-components + Vite, no backend yet). 2–6 players share one screen and command four teams (0–3 = black/red/white/yellow) of 5 agents + CEO + spy + sniper. Each player secretly holds a *friend* and a *foe* team; the psychology is that everyone moves everyone's pieces. Published at https://fedeiii.github.io/hidden-agenda/ from the committed `docs/` build.
 
-## Scheduled to change — read `MULTIPLAYER-PLAN.md` first
-
-Everything below describes the repo **as it is today** and is accurate. But five of these
-facts are slated for removal in Phase −1 of `MULTIPLAYER-PLAN.md`, so don't invest in them:
-
-- **webpack 4 → Vite.** Webpack 4 hashes with md4 and is expected to fail on Node 17+
-  (`ERR_OSSL_EVP_UNSUPPORTED`); local Node is v22. Verify before debugging a build.
-- **`img/` + `docs/img/` duplication goes away** — `public/img/` becomes the single source.
-- **react-dnd is being removed** in favour of native pointer events (HTML5 drag events
-  don't fire on touch devices, and the game needs to work on phones).
-- **react-router is being removed** in favour of a `phase` switch fed by the server.
-- **In-place piece mutation in `pz` is being purged** — it silently corrupts
-  `piecesPrevState` and blocks React 18. Don't add new mutating helpers.
+`MULTIPLAYER-PLAN.md` is the live plan for making it playable over the internet and deploying it to a VPS. Phase −1 (housekeeping) is done; Phase 0 onwards is not. Read it before any structural change — several decisions below exist to serve it.
 
 ## Commands
 
+Node >= 22.12 (`.nvmrc`, `engines`).
+
 ```bash
-npm install                       # node_modules is not checked in
-npm run go                        # webpack-dev-server (dev, opens browser); no port configured -> 8080
-npm run do                        # production build into docs/  (see "docs/ is the published build")
-npm test                          # full puppeteer suite
-npm run smoke                     # smoke test only
-npx jest src/tests/spy.test.js    # one file
-npx jest src/tests/spy.test.js -t 'can kill'   # one test
-npx eslint src                    # eslint/prettier are installed but have no npm script
+npm install
+npx playwright install chromium   # one-time, for the test suite
+
+npm run go        # dev server on :8081, opens a browser
+npm run build     # production build into docs/   (npm run do is the same thing)
+npm run serve     # serve the build on :8081
+
+npm test              # everything, ~2 min
+npm run test:domain   # game rules only, no browser, ~2s
+npm run test:e2e      # browser specs
+npm run test:ui       # interactive Playwright runner
+npx playwright test agent            # one file
+npx playwright test -g 'can kill'    # one test by name
+
+npm run format        # prettier
+npm run format:check
 ```
 
-### Running tests
+There is **no linter**. eslint 6 + eslint-config-react-app 4 were version-incompatible, so `eslint src` had never run; the stack was removed rather than left as dead weight. Replacing it with eslint 9 flat config is outstanding work.
 
-The suite is end-to-end Puppeteer, not unit tests: every test drives a real Chrome against a running app.
+### Tests
 
-- `src/tests/helpers/setupTests.js` navigates to `http://localhost:8081`, so **a server must already be serving the app on 8081** before `npm test`. `npm run go` does not use that port — start one explicitly, e.g. `npx webpack-dev-server --port 8081` (run from the repo root so `img/` resolves).
-- `src/tests/helpers/initBrowser.js` hardcodes `executablePath: '/Applications/Google Chrome.app/...'` — macOS-only, and the path must exist.
-- `afterEach` writes `test.png` (gitignored) — useful for debugging a failing test.
-- Tests interact only through DOM ids via `helpers/clickOn.js` and `helpers/get.js`; assertions read computed styles (e.g. a piece's direction is asserted as a CSS `transform` matrix from `DIRECTION` in `helpers/get.js`, highlight as `brightness(2)`). If you change styling of pieces/cells you will break tests, and vice versa: new mechanics need a DOM id to be testable.
-- `helpers/navigation.js#goToPlay(n)` walks the real start + alignment screens.
+Playwright is the only runner, with two projects:
+
+- **`domain`** — pure game-rules specs in `src/tests/unit/`. They never request a `page` fixture, so no browser starts and they finish in ~2s. This is where reducer-purity guards live (they deep-freeze inputs and assert the reducer doesn't throw), and where a `redact` test belongs in Phase 1.
+- **`e2e`** — everything else in `src/tests/`, driving chromium.
+
+Things worth knowing before touching the suite:
+
+- `playwright.config.mjs` has a `webServer` block, so the suite starts and waits for `npm run serve` itself. Don't add "start a server first" instructions.
+- **Viewport is pinned to 800×600 and must stay pinned.** The HQ positions its pieces with percentage offsets, so viewport size decides whether they overlap and therefore which piece a click lands on. An unpinned viewport silently broke a spec when Chrome's UI chrome height changed.
+- Assertions read **computed styles** (`brightness(2)` for selected, a border colour for a highlighted cell, a `matrix()` transform for a piece's facing). Restyling pieces or cells will break tests, and new mechanics need a DOM id to be testable. Matrix comparisons are normalised numerically in `helpers/get.js` — Chrome used to report `cos(90°)` as `6.12323e-17` and now reports `0`, which broke eight assertions at once.
+- Helpers are factories over a `page`, wired up as fixtures in `src/tests/fixtures.js`. Most specs take `{ page, clickOn, get, drag, goToPlay }`.
+- An **uncaught page error fails the test that provoked it** (`failOnPageError` fixture). The suite was once fully green while clicking an empty cell threw a TypeError, because nothing watched for it.
+- Playwright bundles a pinned chromium on purpose: browser auto-updates are what caused the fixture rot above.
+- `tsconfig.json` contains no TypeScript. It exists only so Playwright's resolver knows the import aliases, because the domain modules import each other as `Domain/*`. Keep its `paths` in step with `vite.config.mjs`.
 
 ### Skipping to a mid-game state
 
-`?test=play` or `?test=endgame` replaces `initialState` with `src/client/state/mocks/{play,endgame}.js` and sets `state.test`, which makes StartPhase and AlignmentPhase auto-`Redirect` (via `Hooks/useTest`). Use this to reach a board position by hand instead of clicking through phases.
+`?test=play` or `?test=endgame` replaces `initialState` with `src/client/state/mocks/{play,endgame}.js` and makes `Game` start directly in that phase. Useful for reaching a board position without clicking through.
 
 ## Architecture
 
@@ -55,14 +62,23 @@ The suite is end-to-end Puppeteer, not unit tests: every test drives a real Chro
 
 | Module | Responsibility |
 | --- | --- |
-| `domain/pieces/pz.js` | The big one (~1000 lines): toggling/selection, movement, legal positions per piece type, killing, snipers, CEO buffs, claim-control effects. Exported as the `pz` object with sections marked by banner comments. |
+| `domain/pieces/pz.js` | The big one (~1000 lines): toggling/selection, movement, legal positions per piece type, killing, snipers, CEO buffs, claim-control effects. Exported as the `pz` object, with sections marked by banner comments. |
 | `domain/py.js` | Players: turn order, alignments, reveal, accuse, scoring (`py` object). |
 | `domain/teams.js` | Team control (who commands which team's HQ) and team point totals. |
-| `domain/cells.js` | Hex board geometry. |
+| `domain/cells.js` | Hex board geometry, plus `CELLS_BY_ROW` / `ROW_NUMBERS`. |
+| `domain/deal.js` | Deals the hidden friend/foe alignments. Pure and takes an `rng` because Phase 1 moves it to the server. |
+| `domain/phases.js` | The four phase names. In `domain` because the server will send these strings. |
 | `domain/utils.js` | Coord helpers, the six-direction ring, `memoize`. |
-| `domain/pieces/constants.js` | `TYPES`, `STATES`, piece `IDS`, point values, end condition. |
 
-`pz` and `py` import each other (`pz` calls `py.getTurn`, `py` calls `teams`/`py` back through the default export) — keep new cross-layer calls going through those default-exported objects, which is what makes the cycle work.
+`pz` and `py` import each other, which works because both go through their default-exported objects. Keep new cross-module calls doing the same.
+
+### Reducers must stay pure
+
+This is the one invariant to not break. `pz` used to mutate piece objects in place, and because `piecesPrevStateReducer` takes a shallow copy, `piecesPrevState[i]` *was* `pieces[i]` — so the previous-turn snapshot that the sniper rollback restores from was corrupted by the current turn.
+
+Purity is now load-bearing three times over: React 18 StrictMode double-invokes reducers (a mutating toggle would apply twice and cancel itself), Phase 1's server keeps one state object per room and persists it, and redaction depends on being able to project state without disturbing it.
+
+There are guards in `src/tests/unit/pieces.test.js` that deep-freeze the input and call the reducers. Don't add mutating helpers; return new objects.
 
 ### Piece ids and DOM ids
 
@@ -72,13 +88,15 @@ DOM ids the tests depend on: `pz-{pieceId}`, `hex-{row}-{cell}`, `store-{team}`,
 
 ### Board geometry and directions
 
-The board is 7 rows of `[4, 5, 6, 7, 6, 5, 4]` cells; a position is `[row, cell]`, and `[null, null]` (`OUT_POSITION`) means off-board/dead. A direction is a pair `[v, h]`: `v` is `1` up / `0` sideways / `-1` down, `h` is `1` left / `0` right — six combinations, listed in ring order in `utils.js#possibleDirections` so `directions.getPrevious/getFollowing/getOpposite` are rotations.
+7 rows of `[4, 5, 6, 7, 6, 5, 4]` cells; a position is `[row, cell]`, and `[null, null]` (`OUT_POSITION`) means off-board/dead. A direction is a pair `[v, h]`: `v` is `1` up / `0` sideways / `-1` down, `h` is `1` left / `0` right — six combinations, listed in ring order in `utils.js#possibleDirections` so `directions.getPrevious/getFollowing/getOpposite` are rotations.
 
 Translating a direction into the next cell is **not** uniform: it depends on whether you are above, on, or below the middle row (row 3), because the hex rows change width. That logic lives in `cells.js#createGetPositionInDirection`. Always go through `cells.get(position).getPositionInDirection(...)` / `getPositionsInDirection` / `getPositionAfterDirections` rather than doing coordinate arithmetic in a component or in `pz`.
 
+The board renders two extra cells per row and an extra row above and below, so a piece on the border can still be pointed outwards. Those edge hexagons have ids like `hex--1--1`.
+
 ### State container
 
-`src/client/state/index.js` holds one `useReducer` behind a `withState` HOC; components read `const [state, dispatch] = useContext(StateContext)`. State slices: `players`, `hasTurnEnded`, `pieces`, `pieceState`, `followMouse`, `snipe`, `piecesPrevState`, `teamControl`.
+`src/client/state/index.jsx` holds one `useReducer` behind a `withState` HOC; components read `const [state, dispatch] = useContext(StateContext)`. Slices: `players`, `hasTurnEnded`, `pieces`, `pieceState`, `followMouse`, `snipe`, `piecesPrevState`, `teamControl`.
 
 **This is not Redux `combineReducers`.** Every slice reducer is called with the *entire previous state* plus the action and returns only its own new slice:
 
@@ -86,45 +104,57 @@ Translating a direction into the next cell is **not** uniform: it depends on whe
 [stateVar]: reducer(state, action)   // reducer(fullPrevState, action)
 ```
 
-So `pieceStateReducer` can gate on `state.hasTurnEnded`, `piecesReducer` can read `state.teamControl`, and slice order never matters — everyone sees the pre-action snapshot. Consequence: a reducer can never observe another slice's *new* value in the same dispatch; if two slices must agree, both compute it from the old state (see how `hasTurnEndedReducer` and `pieceStateReducer` both re-derive turn-end from `pieces` + `pieceState`). Adding a slice means registering it in both the `reducers` map and `initialState`. `gameReducer` `console.log`s every action and resulting state — that log is the main debugging tool for mechanics.
+So `pieceStateReducer` can gate on `state.hasTurnEnded`, and slice order never matters — everyone sees the pre-action snapshot. That last part used to be a lie: `pieces` runs before `pieceState`, and while `piecesReducer` mutated in place, `pieceStateReducer` was reading the already-toggled `selected` flag out of what is nominally the old state. It now derives intent from the pre-action value explicitly (`togglePieceState`). If you find a reducer that seems to need another slice's *new* value, that is the trap — recompute it from the old state instead.
 
-Mutation caveat: parts of `pz` (`togglePiece`, `killPieces`, `killPiece`) mutate piece objects in place, and `piecesReducer` spreads the returned array (`[...result]`) to force a new reference for React. Keep that spread when adding cases.
+Adding a slice means registering it in both the `reducers` map and `initialState`.
 
 ### Turn flow
 
-`pieceState` is a per-piece finite state machine — `SELECTION → DESELECTION | PLACEMENT | MOVEMENT → MOVEMENT2 → MOVEMENT3 → COLLOCATION` — with the exact per-type transitions written out in the header comment of `state/reducers/pieceStateReducer.js`. `undefined` means the piece is still in its HQ. `hasTurnEndedReducer` decides the turn is over from piece type + `pieceState` (a spy gets two moves, three when buffed), which gates the `NEXT TURN` button; while `hasTurnEnded` is true most reducers short-circuit and refuse further action.
+`pieceState` is a per-piece finite state machine — `SELECTION → DESELECTION | PLACEMENT | MOVEMENT → MOVEMENT2 → MOVEMENT3 → COLLOCATION` — with the exact per-type transitions written out in the header comment of `state/reducers/pieceStateReducer.js`. `undefined` means the piece is still in its HQ. `hasTurnEndedReducer` decides the turn is over from piece type + `pieceState` (a spy gets two moves, three when buffed), which gates the `NEXT TURN` button; while `hasTurnEnded` is true most reducers short-circuit.
 
-`followMouse` distinguishes *aiming* from *moving*: after a move it is set per piece type, and while true a hex click/hover directs the selected piece (`DIRECT_PIECE`) instead of moving it. `piecesPrevState` is a snapshot taken on `NEXT_TURN`, used to roll back a turn's consequences when a sniper kill fires (`pz.killSnipedPiece`).
+`followMouse` distinguishes *aiming* from *moving*. `piecesPrevState` is a snapshot taken on `NEXT_TURN`, used to roll back a turn's consequences when a sniper kill fires (`pz.killSnipedPiece`).
 
-### Mechanics vocabulary in the code
+### Mechanics vocabulary
 
 - **buffed** — adjacent to its own CEO; recomputed for every piece on `NEXT_TURN` via `pz.setCeoBuffs`. Buffed agents move differently, buffed spies get a third move, buffed snipers see through pieces.
 - **throughSniperLineOf** — ids of enemy snipers whose line of sight a piece crossed while moving. `SNIPE` highlights snipers that have a target; clicking a highlighted sniper kills what it saw.
 - **claim control** — `teamControl[team]` = `{ player, prevPlayer, claimEnabled, controlling }`. Claiming toggles that team's CEO as selected; control becomes real (`controlling`) when the CEO is deployed, or immediately when an alignment is revealed. A player can hold only one team at a time.
-- **killing a CEO** kills that team's still-undeployed pieces (`killWholeTeam` inside `pz.js`); the game ends when `NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END` (3) CEOs are dead.
-- **scores** — `py.getPoints`: `100 - 50` per revealed alignment `+ friendTeamPoints - foeTeamPoints`, where a team's points are its kills plus its survivors valued by `POINTS_PER_PIECE_TYPE`.
+- **killing a CEO** kills that team's still-undeployed pieces (`killWholeTeam` in `pz.js`); the game ends when `NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END` (3) CEOs are dead.
+- **scores** — `py.getPoints`: `100 - 50` per revealed alignment `+ friendTeamPoints - foeTeamPoints`, where a team's points are its kills plus its survivors valued by `POINTS_PER_PIECE_TYPE`. Note this needs *every* player's alignment, which is why Phase 1 stops redacting at the end of the game.
 
-### Phases and routing
+### Phases
 
-`game.jsx` mounts a `HashRouter` inside a react-dnd `DndProvider`: `/` StartPhase, `/alignment` AlignmentPhase, `/play` PlayPhase, `/end` EndPhase. Phases redirect themselves from state (PlayPhase → `/` if players aren't ready, → `/end` when `pz.hasGameFinished`), so there is no navigation controller to look for.
+`game.jsx` renders one of four phases from a single `phase` value; each phase calls `onReady` when done, and the end phase is derived from `pz.hasGameFinished`. There is no router — the app has no URLs worth sharing, and Phase 2 replaces the `useState` with the phase the server reports, leaving the switch alone.
 
-Each phase directory follows the same shape: `index.jsx` with the phase component and local `useXxx` hooks, `components.jsx` with its styled-components. `.js` files are styling/pure modules, `.jsx` are components.
+Each phase directory has `index.jsx` with the phase component and local `useXxx` hooks, and `components.jsx` with its styled-components. `.js` files are styling/pure modules, `.jsx` are components.
 
-### Drag & drop and clicks are the same path
+### Dragging is ours
 
-`piece/index.jsx` (`useDrag`) and `hexagon/index.jsx` (`useDrop`) route drops into exactly the callback a click uses (`useOnCellClick` → `pz.isTogglePieceOnCellClick` / `pz.isMovePieceOnCellClick`), so a mechanic implemented for clicking works for dragging. Drag previews are directional images picked by `previewSrc`.
+`src/client/drag/` is a small pointer-event drag controller; there is no drag library. A press that moves past 6px selects the piece and shows a ghost following the pointer, and releasing resolves the hexagon under the point via `elementFromPoint` and runs the cell action. A press that doesn't move stays a plain click.
+
+Clicking a cell and dropping on a cell are the same operation, which is why that logic lives in `Hooks/useCellAction` and both the hexagon and the drag controller call it.
+
+This replaced react-dnd because **HTML5 drag-and-drop does not fire on touch devices** — on a phone the game could only be tapped. Two consequences: pieces need `touch-action: none` and `draggable="false"` (see `components/pieceStyled.js`), and there are touch-drag specs driven through CDP because `page.touchscreen` only taps.
+
+### The board renders 53 hexagons
+
+`TableBoard` computes highlights and aim **once** and passes them down; `Hexagon` is a real component that owns its own hooks. It used to be a plain function called in a loop that held `useContext`/`useCallback` and recomputed `pz.getHighlightedPositions` for every cell. Keep expensive derivations in `TableBoard`, not per-hexagon.
 
 ### Path aliases
 
-`webpack.config.js` defines `Src`, `Client`, `Components`, `Phases`, `State`, `Hooks`, `Domain`. Jest only maps `Domain/*` (`package.json` → `jest.moduleNameMapper`), which is why test helpers import constants by relative path. If a test ever needs another alias, add it to `moduleNameMapper` too.
+`vite.config.mjs` defines `Src`, `Client`, `Components`, `Phases`, `State`, `Hooks`, `Domain`. `tsconfig.json` mirrors them for Playwright. Both lists must be updated together.
 
 ## docs/ is the published build
 
-`npm run do` writes `docs/index.html`, `docs/main.js` and `docs/main.js.map`, and **those artifacts are committed** — GitHub Pages serves the folder (`docs/_config.yml` sets the Jekyll theme; `npm run deploy` = `gh-pages -d docs`). Rebuild and commit `docs/` when shipping a user-visible change.
+`npm run build` writes `docs/`, and **the output is committed** — GitHub Pages serves the folder, and Phase 3 has nginx serving it on the VPS. Rebuild and commit `docs/` when shipping a user-visible change.
 
-Piece art exists twice, identical and both committed: `img/` at the repo root (what webpack-dev-server serves, since pages reference `img/...` relatively) and `docs/img/` (what the published build serves). Webpack does not copy it. Add or change art in **both**. Naming: `{team}-{TYPE}.png` for an undirected piece and `{team}-{TYPE}-{v}{h}.png` for each of the six directions (e.g. `0-A--10.png` is team 0 agent facing `[-1, 0]`).
+- Assets are **content-hashed**, and must stay that way: the target VPS serves `*.js` with `Cache-Control: immutable` for a year, so a fixed filename would pin stale code in returning browsers.
+- `base: './'` keeps one build working both under the Pages subpath and at a domain root.
+- Piece art lives in **`public/img/`** only; the build copies it into `docs/img/`. `public/_config.yml` is there for the same reason — `emptyOutDir` would otherwise delete the Pages Jekyll theme.
+- Art naming: `{team}-{TYPE}.png` for an undirected piece and `{team}-{TYPE}-{v}{h}.png` per direction (e.g. `0-A--10.png` is team 0's agent facing `[-1, 0]`).
 
 ## Conventions
 
-- Indentation is inconsistent across files (tabs in `domain/` and `state/`, 2 spaces in several client files). Match the file you are editing.
-- Releases, per git history: bump `package.json` version, add the entry under README `## Changelog`, strike through the finished `Roadmap`/`Known Bugs` line, commit as `vX.Y.Z`. Behaviour fixes land with a regression test in the matching `src/tests/*.test.js`.
+- Prettier owns formatting (tabs, 120 columns, single quotes, trailing commas). Run `npm run format` before committing. `docs/` and `*.md` are ignored.
+- `dependencies` is empty on purpose and reserved for what the *server process* will need at runtime (`ws`, from Phase 1). Everything the browser needs is compiled into the committed bundle, so it all belongs in `devDependencies` — this keeps `npm ci --omit=dev` on the VPS down to almost nothing. There is a note in `package.json` saying so.
+- Releases, per git history: bump `package.json` version, add the entry under README `## Changelog`, strike through the finished `Roadmap`/`Known Bugs` line, commit as `vX.Y.Z`. Behaviour fixes land with a regression test.
