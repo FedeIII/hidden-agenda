@@ -27,6 +27,18 @@ export async function goToPlay(numPlayers) {
 	await page.click('#alignments-btn');
 
 	await page.waitForSelector('#pz-0-A1');
+	await waitForPiecesToRender();
 
 	return alignments;
+}
+
+// Pieces are <img> with only a width set, so until the PNG loads its height is 0 and the
+// element's box is degenerate — page.click then aims at the wrong point. The first test in each
+// file was the one that failed, because the rest ran with a warm HTTP cache.
+async function waitForPiecesToRender() {
+	await page.waitForFunction(() => {
+		const piece = document.querySelector('#pz-0-A1');
+
+		return !!piece && piece.getBoundingClientRect().height > 0;
+	});
 }

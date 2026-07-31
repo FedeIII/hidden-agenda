@@ -12,12 +12,27 @@ global.beforeAll(async () => {
 	browser = await initBrowser();
 });
 
+// page.click resolves once the input event has been *dispatched*, not once the page has
+// handled it and React has re-rendered. The specs fire clicks back to back and the DOM moves
+// between them (a piece changes hex), so under load the next click could land on a stale
+// element — placement specs failed intermittently, differently each run. Yielding one task in
+// the page after every click serialises interaction against rendering.
+function settleAfterClicks(target) {
+	const click = target.click.bind(target);
+
+	target.click = async (...args) => {
+		await click(...args);
+		await target.evaluate(() => new Promise(resolve => setTimeout(resolve, 0)));
+	};
+}
+
 global.beforeEach(async () => {
 	global.page = await browser.newPage();
 	global.pageErrors = [];
 	page.on('pageerror', error => global.pageErrors.push(error));
 	await page.goto(BASE_URL);
 	await page.addStyleTag({ content: '.piece-styled {transition: none !important;}' });
+	settleAfterClicks(page);
 });
 
 // Any uncaught exception in the app fails the test that provoked it. The suite was fully green
