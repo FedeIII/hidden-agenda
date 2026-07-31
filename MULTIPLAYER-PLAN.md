@@ -159,37 +159,35 @@ No behaviour change; 111 tests green.
 
 Proven rather than assumed: the core bundles for node through Vite SSR (**45.5 kB, 9.2 kB gzipped**) and runs turn order, piece initialisation and a payload-free reveal with no browser present. That is the Phase 1 server path working end to end before any server exists.
 
-# Phase 1 — Server (`server/`, built to `dist-server/`)
+# Phase 1 — Server — **done**
 
-| File | Contents |
+`server/`, bundled to `dist-server/main.mjs` (67 kB, 15.25 kB gzipped) and committed. 162 tests green, 51 of them new.
+
+| File | What it does |
 | --- | --- |
-| `index.js` | http server for `GET /healthz` + `ws` upgrade on `/ws`; 25 s app-level ping (Cloudflare drops idle WebSockets at ~100 s) |
-| `rooms.js` | `Map<code, Room>`, `Room = {code, phase, state, seats, version}`, `Seat = {name, token, socket, connected}`; 4-char codes with collision retry |
-| `protocol.js` | C→S `create·join·rejoin·start·ready·action{seq,action}·forceNextTurn·ping`; S→C `seat·room·snapshot{v,state}·rejected{seq,reason,v}·error` |
-| `redact.js` | The security-critical file (below) |
-| `validate.js` | The authority rules (below) |
-| `apply.js` | validate → `gameReducer` → `version++` → persist → per-seat snapshot |
+| `index.js` | `createGameServer()` — http `GET /healthz`, `ws` upgrade on `/ws` only, 25 s ping, snapshot coalescing, room eviction sweep |
+| `main.js` | the process entry: port, host, signal handlers. Split out so tests can create a server without binding a port |
+| `rooms.js` | room and seat model, 2–6 players, 200-room cap, start and ready transitions |
+| `codes.js` | 4-char room codes over an alphabet with no O/0, I/1 or S/5, plus seat tokens |
+| `protocol.js` | the JSON envelopes, 8 kB cap |
+| `redact.js` | the per-recipient projection |
+| `validate.js` | phase gate, turn gate, payload shape, move legality, token-bucket rate limiting |
+| `apply.js` | validate → reduce → version → derive phase, plus the disconnect grace check |
+| `persistence.js` | one JSON file per room, tmp+rename, reload on boot |
 
-**`redact.js`** — for each player: `alignment.friend = (p.name === seat.name || p.revealed.friend) ? value : null`, same for `foe`; drop `state.test`. Everything else passes through.
+**The three properties hold, and are tested over a real socket rather than asserted:**
 
-One caveat that bites at the end of the game: `py.getPoints` needs *every* player's alignment to compute scores (`py.js:150-175`), and `endPhase/playersScore.jsx` renders them. So **when `phase === 'end'`, stop redacting** — the game is over and all secrets are public by then.
+1. Each seat receives its own alignment and `null` for everyone else's, checked on the serialised frame. A seat name not at the table sees nothing at all — it fails closed.
+2. The seat not on turn is rejected with `not_your_turn` and **nothing is broadcast to anyone**. The negative half matters as much as the positive.
+3. An illegal move is rejected even from the turn holder, re-derived with the same `pz.getHighlightedPositions` the UI highlights with.
 
-**`validate.js`** — a per-type table:
+Worth recording:
 
-- Phase gate: `START_GAME` lobby-only, `ready` alignment-only, the rest play-only.
-- **Turn gate**: sender must be `py.getTurn(state.players)`. That single rule is the whole ownership model — the game deliberately lets the turn-holder move *any* team's pieces.
-- `MOVE_PIECE`: `coords ∈ pz.getHighlightedPositions(state.pieces, state.pieceState)`.
-- `DIRECT_PIECE`: `direction ∈ pz.getPossibleDirections(selected, pieces, pieceState)`.
-- `TOGGLE_PIECE` / `SNIPE` / `CLAIM_CONTROL` / `CANCEL_CONTROL`: the domain layer already no-ops when illegal (`pz.toggle` returns the same pieces) — accept and let the reducer decide.
-- `ACCUSE`: `accuser === sender`, accusee exists, `alignment ∈ {friend,foe}`, `team ∈ 0..3`.
-- Shape-validate every payload at the boundary; never hand an unchecked `payload` to the reducer.
-- Rate limit 30 actions/s per seat; `DIRECT_PIECE` exempt but coalesced.
-
-**Snapshot coalescing**: trailing 40 ms timer per room. Needed because `DIRECT_PIECE` is dispatched from `onMouseEnter` (`tableBoard.jsx:36-44`), i.e. at hover rate, not click rate.
-
-**Durability**: write `/var/lib/hidden-agenda/rooms/<code>.json` (tmp + rename) on each accepted action and reload on boot, so `pm2 reload` during a deploy doesn't kill live games. Evict a room 30 min after its last disconnect, 3 h hard cap.
-
-**Disconnects**: keep the game, broadcast seat status. If the turn-holder has been gone > 60 s, any connected seat may send `forceNextTurn`. Without that escape hatch one closed laptop ends the game permanently.
+- **Clients can never send `START_GAME` or `SET_ALIGNMENT`.** Starting a game and dealing cards belong to the server, so those two are absent from the allowed set and a client asking for either gets `action_not_allowed`. Alignments therefore only ever exist inside the authoritative state.
+- **Rooms hold no sockets.** A room stays plain JSON so it can be written to disk; live connections live in a `Map` keyed by seat id. That is what makes restart survival cheap, and it is tested: a room and its seats come back after the process restarts, and a player rejoins with the token they already had — with redaction still holding on the far side.
+- **Persistence is best-effort.** `/var/lib` is not writable on a laptop, so it disables itself and logs. A game that cannot be saved is still a perfectly good game, and failing to save must never take the server down. Verified against the real bundle: `persistence: false` in `/healthz`, server serving normally.
+- **`publicDir: false` is required** in the server config, or the bundle gets a copy of the Pages theme and all 116 piece images.
+- The build emits **`main.mjs`**, not `main.js` — the `server` script and the PM2 command in Phase 3 both have to say `.mjs`.
 
 # Phase 2 — Client
 
@@ -243,8 +241,8 @@ The VPS docs are readable from here but nothing on the box has been run. Unconfi
 | Phase | Effort |
 | --- | --- |
 | −1 Housekeeping | done |
-| 0 Reducer core | half a day |
-| 1 Server | 1 day |
+| 0 Reducer core | done |
+| 1 Server | done |
 | 2 Client | 1–1.5 days |
 | 3 Deploy | 2–3 h + box verification |
 | 4 Tests & hardening | half a day |

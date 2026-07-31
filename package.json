@@ -19,7 +19,10 @@
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"lint": "eslint .",
-		"lint:fix": "eslint . --fix"
+		"lint:fix": "eslint . --fix",
+		"build:server": "vite build -c vite.server.config.mjs",
+		"build:all": "npm run build && npm run build:server",
+		"server": "node dist-server/main.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
@@ -37,5 +40,8 @@
 	"comments": {
 		"dependencies": "Everything the browser needs is compiled into the committed docs/ bundle, so nothing here is required at runtime by the app. `dependencies` is reserved for what the multiplayer server process itself needs (ws, from phase 1), which keeps `npm ci --omit=dev` on the VPS down to almost nothing."
 	},
-	"author": "Federico Perez <fedelll@gmail.com>"
+	"author": "Federico Perez <fedelll@gmail.com>",
+	"dependencies": {
+		"ws": "^8.21.1"
+	}
 }

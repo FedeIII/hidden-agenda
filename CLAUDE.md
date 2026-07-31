@@ -20,7 +20,7 @@ npm run go        # dev server on :8081, opens a browser
 npm run build     # production build into docs/   (npm run do is the same thing)
 npm run serve     # serve the build on :8081
 
-npm test              # everything, ~2 min
+npm test              # everything, ~2 min (162 tests)
 npm run test:domain   # game rules only, no browser, ~2s
 npm run test:e2e      # browser specs
 npm run test:ui       # interactive Playwright runner
@@ -65,7 +65,28 @@ Things worth knowing before touching the suite:
 
 ## Architecture
 
-### Two layers
+### Three layers
+
+`src/domain/` and `src/game/` are the **shared core**: pure game rules and the reducer, with no React and no browser globals. `src/client/` is the UI. `server/` is the multiplayer server. Both the client and the server import the core; **neither `src/domain` nor `src/game` may import from `src/client` or `server`** — that direction is checked by eye today and is the thing to preserve.
+
+### The server
+
+`server/` runs the *same* `gameReducer` as the browser and is authoritative. Three properties define it, in priority order, all tested over a real socket in `src/tests/unit/server.test.js`:
+
+1. **A seat never receives another seat's alignment.** `redact.js` projects the state per recipient, so a secret is never serialised in the first place. It fails closed: an unknown seat name sees nothing. The one exception is `phase === 'end'`, because scoring needs every alignment (`py.getPoints`).
+2. **Only the seat on turn may act.** That single rule is the whole ownership model — the game deliberately lets the turn holder move *any* team's pieces. The one escape hatch is `NEXT_TURN` after the turn holder has been disconnected for 60s, so a closed laptop cannot end a game permanently.
+3. **Legality is re-derived server-side** from `pz.getHighlightedPositions` / `pz.getPossibleDirections`. In the local game legality was only ever enforced by which hexagons the UI made clickable.
+
+Things not to undo:
+
+- **`START_GAME` and `SET_ALIGNMENT` are absent from the actions a client may send.** Starting a game and dealing cards belong to the server; a client asking for either gets `action_not_allowed`.
+- **A room holds no sockets.** It stays plain JSON so `persistence.js` can write it per file, which is what lets a deploy restart without killing games in progress. Live sockets live in a `Map` keyed by seat id in `index.js`.
+- **Persistence is best-effort on purpose.** `/var/lib` is not writable on a dev machine, so it disables itself and logs; failing to save must never take the server down.
+- `createGameServer()` (in `index.js`) is separate from the process entry (`main.js`) so tests can create a server without binding a port or installing signal handlers.
+
+Build with `npm run build:server` → `dist-server/main.mjs` (committed, like `docs/`). Note the **`.mjs`** extension, and that `vite.server.config.mjs` needs `publicDir: false` or the bundle acquires all 116 piece images.
+
+### Two layers inside the core
 
 `src/domain/` is pure game rules — plain functions, no React, no state container. `src/client/` is React UI and the reducer wiring. Rules belong in `domain`; components should call into it rather than re-deriving geometry or legality.
 
