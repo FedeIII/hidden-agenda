@@ -10,16 +10,28 @@ https://fedeiii.github.io/hidden-agenda/
 ```
 npm install
 ```
-* Build dist folder
+* Build into the docs folder
 ```
 npm run do
 ```
-* Open index.html in the dist folder
+* Serve the build (ES modules need http, so opening the file directly will not work)
+```
+npm run serve
+```
 
 ### Developer
-Watch for changes to build again the dist folder
+Dev server with hot reload on http://localhost:8081
 ```
 npm run go
+```
+
+### Tests
+The end-to-end specs drive a real Chrome against http://localhost:8081, so start a server
+first (`npm run go` or `npm run serve`), then:
+```
+npm test              # everything
+npm run test:unit     # domain only, no browser, ~2s
+npm run test:e2e      # browser specs
 ```
 
 ## Changelog
