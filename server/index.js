@@ -345,9 +345,12 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 	});
 
 	wss.on('connection', (socket, request) => {
-		// nginx sets X-Forwarded-For to the real client (set, not appended, so it cannot be
-		// spoofed by prepending); fall back to the socket address.
-		const ip = request.headers['x-forwarded-for'] || request.socket.remoteAddress || 'unknown';
+		// Only the leftmost hop, and only because nginx is configured to *set* this header to
+		// $remote_addr rather than append to it. If it appended, a client could prepend a value
+		// of its own and get a fresh rate-limit bucket on every attempt. Taking [0] as well means
+		// a misconfigured proxy degrades to over-limiting rather than to no limit at all.
+		const forwarded = request.headers['x-forwarded-for'];
+		const ip = (forwarded ? String(forwarded).split(',')[0].trim() : request.socket.remoteAddress) || 'unknown';
 
 		socket.isAlive = true;
 		socket.on('pong', () => {
