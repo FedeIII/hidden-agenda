@@ -15,17 +15,15 @@ Everything is prebuilt and committed — `docs/` (browser) and `dist-server/main
 | PM2 + `.mjs` | works, no wrapper needed |
 | `/var/lib` writable | yes, `persistence: true` |
 | Inherited caching | none; the apex's `immutable` rule is server-scoped |
-| mTLS | **an open decision — see below** |
+| mTLS | **on**, matching osler and wallet |
 
-## Decision needed: Cloudflare Authenticated Origin Pulls
+## Cloudflare Authenticated Origin Pulls — on
 
-Both existing subdomains — `osler.azyr.io` and `wallet.azyr.io` — enforce mTLS via their own `*-mtls.conf` snippet, so only Cloudflare can reach the origin. The apex `azyr.io` does not. The house convention is therefore "subdomains do", and this config currently **does not**, which was a call made before knowing wallet also did.
+Matching `osler.azyr.io` and `wallet.azyr.io`; only the apex does not use it. Only Cloudflare can reach this origin, so nobody who finds the IP can bypass Cloudflare's rate limiting and DDoS protection.
 
-Arguments for turning it on here: it stops anyone reaching the origin IP directly and bypassing Cloudflare's rate limiting and DDoS protection. There are no secrets in this app, but there is a websocket that accepts commands.
+Follows the house pattern: `deploy/nginx/hidden-agenda-mtls.conf` holds the two directives and is installed to `/etc/nginx/snippets/`. The site config includes it **by glob**, so an absent file is not an error and moving the file aside then reloading is the rollback, with no config edit.
 
-Cost of turning it on: `curl -k https://127.0.0.1/ -H 'Host: ...'` starts returning `400 No required SSL certificate was sent` — a healthy stack refusing a non-Cloudflare client, exactly as documented for osler. The smoke tests below would have to use the loopback upstream (`127.0.0.1:3007/healthz`) and the public URL, dropping the middle one.
-
-To enable: add its own snippet alongside osler's and `include` it from the `server` block, mirroring how osler does it. One line, reversible by moving the snippet aside.
+**This changes what healthy looks like from the box.** `curl -k https://127.0.0.1/ -H 'Host: hidden-agenda.azyr.io'` now returns **400 — "No required SSL certificate was sent"**. That is the stack correctly refusing a non-Cloudflare client, not a fault. Smoke-test the loopback upstream and the public URL instead.
 
 ## Status: deployed
 
@@ -38,7 +36,7 @@ Verified on the box rather than assumed:
 - A websocket upgrades **through nginx over TLS**, creates a room and writes it to disk.
 - `index.html` is `no-store`, `/assets/` is a single `public, max-age=31536000, immutable`.
 
-**The only thing left is DNS** — until `hidden-agenda.azyr.io` has a proxied Cloudflare record, the site is reachable only from the box's loopback.
+**It is live at https://hidden-agenda.azyr.io** — proxied Cloudflare `A` record, WebSockets on for the zone, mTLS enforced. Verified end to end from outside: two clients through Cloudflare join one room, each sees only its own alignment, and an out-of-turn action is refused.
 
 ## One-time setup
 
@@ -92,16 +90,15 @@ nginx -t && systemctl reload nginx
 ## Smoke tests
 
 ```bash
-# the node process
+# the node process, on the box
 curl -s http://127.0.0.1:3007/healthz
 
-# nginx, bypassing Cloudflare. Only works while mTLS is off — with it on these
-# return 400, which is correct behaviour and not a fault
-curl -sk https://127.0.0.1/ -H 'Host: hidden-agenda.azyr.io' | head -5
-curl -sk https://127.0.0.1/healthz -H 'Host: hidden-agenda.azyr.io'
-
-# through Cloudflare
+# through Cloudflare — the real path
 curl -s https://hidden-agenda.azyr.io/healthz
+curl -sI https://hidden-agenda.azyr.io/ | grep -i cache-control     # must be no-store
+
+# mTLS is doing its job when this is refused
+curl -sk --resolve hidden-agenda.azyr.io:443:46.224.16.48 https://hidden-agenda.azyr.io/
 ```
 
 Then the only test that really counts: open the site on two devices, one of them a phone, create a room on one, join with the code on the other, and play a turn each. Check that the second device cannot move a piece on the first device's turn.
