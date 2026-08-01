@@ -1,5 +1,6 @@
 import styled, { css } from 'styled-components';
 import { Button } from 'Client/components/button';
+import { narrow, short, narrowOrShort } from 'Client/components/breakpoints';
 import { TEAM_COLORS } from 'Domain/teams';
 
 export const PlayPhaseContainer = styled.div`
@@ -9,6 +10,10 @@ export const PlayPhaseContainer = styled.div`
 	align-items: center;
 	padding: 10px 40px 60px;
 	width: 100%;
+
+	${narrowOrShort} {
+		padding: 4px 8px 16px;
+	}
 `;
 
 export const Board = styled.div`
@@ -19,6 +24,23 @@ export const Board = styled.div`
 	margin-bottom: 20px;
 	width: 90vw;
 	height: 75vh;
+
+	/* Upright, there is no room for HQ | board | HQ side by side: the HQs end up narrower than
+	   their own "Claim Control" button. Stack instead — two HQs, the board, two HQs. */
+	${narrow} {
+		flex-direction: column;
+		align-items: center;
+		width: 100%;
+		height: auto;
+		margin-bottom: 12px;
+	}
+
+	/* On its side the board keeps the row layout, just shorter — enough that the action bar
+	   lands above the fold instead of just below it. */
+	${short} {
+		height: 68vh;
+		margin-bottom: 6px;
+	}
 `;
 
 export const Actions = styled.div`
@@ -27,6 +49,15 @@ export const Actions = styled.div`
 	justify-content: space-evenly;
 	padding: 0;
 	z-index: 10;
+
+	/* Was a single non-wrapping row, so on a phone the last button hung off the screen — and
+	   with the old overflow: hidden it was simply gone. */
+	${narrowOrShort} {
+		width: 100%;
+		flex-wrap: wrap;
+		gap: 6px;
+		justify-content: center;
+	}
 `;
 
 export const Action = styled.div`
@@ -34,6 +65,10 @@ export const Action = styled.div`
 	display: flex;
 	justify-content: center;
 	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
+
+	${narrowOrShort} {
+		flex-basis: auto;
+	}
 `;
 
 export const ActionCancelButton = styled(Button)`
@@ -58,6 +93,14 @@ export const TableBoardStyled = styled.div`
 	flex-direction: column;
 	justify-content: center;
 	padding: 0 20px;
+
+	/* Stacked, the board gets the full width — which is what makes it usable with a thumb. */
+	${narrow} {
+		width: 100%;
+		max-width: 96vw;
+		padding: 0;
+		margin: 4px 0;
+	}
 `;
 
 export const BoardRow = styled.div`
@@ -77,18 +120,38 @@ export const HqStore = styled.div`
 	background-repeat: no-repeat;
 	margin-top: 53px;
 	margin-bottom: 8px;
+
+	/* The pieces are sized from the store's width but positioned down its height, so the store
+	   has to keep roughly its desktop proportions or they hang out of the bottom. */
+	${narrowOrShort} {
+		margin-top: 26px;
+		height: calc(100% - 32px);
+	}
 `;
 
 export const HqButton = styled(Button)`
 	position: absolute;
 	font-size: 16px;
 	width: calc(100% - 16px);
+
+	/* "Claim Control" at 16px with wide letter-spacing is wider than a phone-sized HQ, which is
+	   what produced "Claim Contro" cut off mid-word. */
+	${narrowOrShort} {
+		font-size: 11px;
+		letter-spacing: 0;
+		padding: 4px 2px;
+	}
 `;
 export const HqMessage = styled.span`
 	position: absolute;
 	font-size: 16px;
 	top: 40px;
 	letter-spacing: -0.5px;
+
+	${narrowOrShort} {
+		font-size: 10px;
+		top: 26px;
+	}
 `;
 
 export const RevealContainer = styled.div`

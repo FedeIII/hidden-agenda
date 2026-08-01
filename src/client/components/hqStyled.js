@@ -1,4 +1,5 @@
 import styled, { css } from 'styled-components';
+import { narrow, short } from './breakpoints';
 import { TEAM_COLORS } from 'Domain/teams';
 
 const hqColor = ({ team }) => {
@@ -36,6 +37,21 @@ const HqStyled = styled.div`
 	margin-bottom: 20px;
 	justify-content: space-between;
 	${hqColor}
+
+	${narrow} {
+		flex: 1 1 0;
+		min-width: 0;
+		height: auto;
+		aspect-ratio: 1 / 1.08;
+		max-height: none;
+		margin-bottom: 8px;
+		padding: 5px;
+	}
+
+	${short} {
+		margin-bottom: 8px;
+		padding: 5px;
+	}
 `;
 
 export default HqStyled;

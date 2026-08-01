@@ -12,7 +12,8 @@
 
 set -euo pipefail
 
-HOST="${HA_DEPLOY_HOST:-root@46.224.16.48}"
+# The tailnet address, not the public IP: port 22 is not reachable from the internet on that box.
+HOST="${HA_DEPLOY_HOST:-root@100.82.16.46}"
 REMOTE_DIR="${HA_DEPLOY_DIR:-/opt/hidden-agenda}"
 SSH_KEY="${HA_SSH_KEY:-$HOME/.ssh/id_rsa}"
 BRANCH="${HA_DEPLOY_BRANCH:-master}"

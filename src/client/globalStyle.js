@@ -3,6 +3,8 @@ import { createGlobalStyle } from 'styled-components';
 const GlobalStyle = createGlobalStyle`
   html {
     background-color: #445873;
+    /* Stops iOS inflating text in landscape, which is one reason labels overran their boxes. */
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
@@ -11,20 +13,29 @@ const GlobalStyle = createGlobalStyle`
     letter-spacing: 5px;
     margin: 0;
     width: 100%;
-    max-width: 874px;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
   }
 
   .game {
     display: flex;
     flex-direction: column;
     align-items: center;
-    overflow: hidden;
     z-index: 1;
     position: absolute;
     top: 0;
     bottom: 0;
     left: 0;
     right: 0;
+
+    /* This was overflow: hidden, which is why anything that did not fit was simply cut off and
+       unreachable — on a phone that was the entire action bar. Content that overruns now
+       scrolls. Horizontal stays hidden so one wide element cannot introduce a sideways scroll. */
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .btn {
@@ -66,6 +77,25 @@ const GlobalStyle = createGlobalStyle`
 
     &--small {
       font-size: 13px;
+    }
+  }
+
+  /* 5px of letter-spacing on monospace is the single biggest reason a label is wider than its
+     box on a phone. Tightened rather than removed, so the look survives. Thresholds clear of
+     800x600, which the browser specs are pinned to. */
+  @media (max-width: 780px), (max-height: 520px) {
+    body {
+      letter-spacing: 2px;
+    }
+
+    .btn {
+      font-size: 14px;
+      letter-spacing: 2px;
+      padding: 5px 8px;
+    }
+
+    .btn--small {
+      font-size: 12px;
     }
   }
 `;
