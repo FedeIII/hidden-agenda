@@ -194,33 +194,45 @@ Worth recording:
 - **`LobbyPhase`**: create or join by 4-letter code, shareable `#/r/ABCD` link, seat list, host starts. The existing player-count/name form stays for local mode.
 - **Feed the Phase −1 phase switch from the server** instead of local state.
 - **AlignmentPhase becomes per-player**: your two cards on your own screen, `ready` → server advances when all are ready. The "this is only for X's eyes" ceremony and the `FRIEND & FOE` warning gate are hot-seat artifacts — keep them only in local mode.
-- **Optimistic apply for everything except `SET_ALIGNMENT`, `REVEAL_FRIEND`, `REVEAL_FOE`, `ACCUSE`.** Those four read secrets the client doesn't hold, so their result isn't locally predictable; wait for the snapshot. All four are single clicks where latency doesn't matter.
-- **Aiming**: apply `DIRECT_PIECE` locally at once, send trailing-throttled at 50 ms, flush before the committing action. While a local direct is unacked, ignore inbound `selectedDirection` for your own selected piece, or the echo causes visible jitter.
+- **Optimistic apply for everything except `SET_ALIGNMENT`, `REVEAL_FRIEND`, `REVEAL_FOE`, `ACCUSE`.** Those four read secrets the client doesn't hold, so their result isn't locally predictable; wait for the snapshot.
+
+  **This needed more than the plan assumed.** Applying an action locally and then adopting the next snapshot wholesale silently reverts anything done since the server built it — in practice: place a piece, selection quietly undone, next click read as a second move, rejected as illegal. Intermittent, and invisible unless two clicks land inside one round trip. Dropping prediction instead made it worse: the second click then reads state the server has not updated, so rapid clicks are dropped outright. Prediction is load-bearing, not a nicety.
+
+  So seats carry the last sequence number applied for them, snapshots carry it, and the client drops what has been acknowledged and replays the rest on top of every snapshot. A rejection drops that action and everything predicted after it, since those were predicated on it.
+- **Aiming**: apply `DIRECT_PIECE` locally at once, send trailing-throttled at 50 ms, flush before the committing action. The planned "ignore inbound `selectedDirection` while unacked" guard was written and then deleted: replaying outstanding actions on top of each snapshot (below) subsumes it, and is the general case.
 - **Reconnect**: `{code, token}` in `localStorage`; exponential backoff 0.5→8 s; banner for connecting / reconnecting / seat lost. A refresh currently destroys the whole game — after this it rejoins the same seat.
 - **Turn affordance**: render read-only when it isn't your turn (pieces not draggable, actions inactive). Cosmetic only — the server is the enforcement.
 - **Touch**: the Phase −1 pointer-event drag is what makes phones work; verify on a real device here, not at the end.
 
-# Phase 3 — Deploy
+# Phase 3 — Deploy — **prepared, not applied**
 
-- **Bundle**: Vite already emits content-hashed filenames, so this reduces to *verifying* it and serving `index.html` with `no-store`. Non-negotiable, because the box's asset location sets `expires 1y; Cache-Control "public, immutable"` for `*.js` — a fixed `main.js` would stay pinned in returning browsers for a year, a failure already documented on that server.
-- **Server bundle**: second Vite config, `build.ssr: 'server/index.js'`, `build.outDir: 'dist-server'`, `ws` left external. Same alias resolution as the client, so the shared reducer core needs no import churn, and the box needs only `npm ci --omit=dev` — no devDependencies and no Babel step on 2 vCPUs. Commit `dist-server/` next to `docs/`, matching this repo's existing committed-build convention.
-- **nginx** `/etc/nginx/sites-available/hidden-agenda.azyr.io` — clone the **journal** subdomain config, not the osler one (osler's includes the Cloudflare mTLS snippet, which would 400 every non-Cloudflare client):
-  - `root /opt/hidden-agenda/docs; try_files $uri /index.html;`
-  - `location = /index.html { add_header Cache-Control "no-store"; }`
-  - `location /ws { proxy_pass http://127.0.0.1:3007; proxy_http_version 1.1; Upgrade/Connection headers; proxy_read_timeout 3600s; }`
-  - `location = /healthz { proxy_pass http://127.0.0.1:3007; }`
-  - `proxy_set_header X-Forwarded-For $remote_addr` — **set**, not `$proxy_add_x_forwarded_for`, same reasoning as osler: the app trusts the first hop for rate limiting, and appending lets a client spoof past it.
-  - `cloudflare-realip.conf` is already in the http context box-wide → real visitor IPs for free.
-- **Cloudflare**: proxied A record `agenda` → box IP; WebSockets enabled; SSL is already Full (strict) globally. Do not apply a "Cache Everything" rule to `/ws`.
-- **PM2, not Docker**: `pm2 start dist-server/server.js --name hidden-agenda --env PORT=3007 && pm2 save`. Every other Node app on the box is PM2, and that box's Docker daemon runs userns-remap, which breaks bind-mounted paths.
-- **Deploy script** mirroring house-md's pattern — there is no webhook on this box, a push ships nothing. Laptop builds, commits, pushes; then over SSH: `cd /opt/hidden-agenda && git pull --ff-only && npm ci --omit=dev && pm2 reload hidden-agenda && curl -sf localhost:3007/healthz`.
-- **Smoke**: `curl -s 127.0.0.1:3007/healthz`; `curl -sk https://127.0.0.1/ -H 'Host: hidden-agenda.azyr.io'` (this works here, unlike osler — no mTLS on this site); then a real two-device room, one of them a phone.
+Every artifact is written, committed and reviewable. **Nothing has touched the box**: the bridge parks a session for Fede rather than executing, so the box-side work is his to approve and run.
 
-# Phase 4 — Tests and hardening
+| Artifact | |
+| --- | --- |
+| `deploy/nginx/hidden-agenda.azyr.io.conf` | the site config |
+| `deploy/pm2/ecosystem.config.cjs` | loopback, port 3007, state under `/var/lib/hidden-agenda/rooms` |
+| `scripts/deploy-remote.sh` | laptop-side deploy; refuses a dirty or unpushed tree |
+| `deploy/README.md` | the runbook: one-time setup, smoke tests, rollback, cache trap |
 
-- The existing browser specs must keep passing in local mode throughout. The port mismatch is already fixed by the Vite dev server port in Phase −1.
-- New tests, in value order: `redact` (in the no-browser `domain` project — the one test that actually protects the game's premise; assert no other seat's alignment appears in any outbound frame), `validate` (non-turn seat rejected, off-highlight coords rejected), and a two-context browser test. That last one is markedly easier under Playwright: two `browser.newContext()` instances are two independent players in one room, so "B cannot act on A's turn" and "B never receives A's alignment" become ordinary assertions rather than a puppeteer contortion.
-- Hardening: 4-char codes are low entropy → rate-limit `join` per IP (10/min) and cap total rooms (200). Cap name length, cap message size at 8 KB. Nothing else here is secret, so there are no credentials to manage — a real simplification versus the other apps on that box.
+Built from the journal template with two deliberate departures: journal proxies everything so there is no static `root`/`try_files` block to copy, and it hardcodes `Connection 'upgrade'` on every location, which belongs on the websocket alone. No mTLS snippet — that is osler's, and copying it would make a loopback curl return 400.
+
+**One nginx subtlety caught before it shipped.** `add_header` is inherited by a location only if that location declares none of its own, so any location setting `Cache-Control` silently drops the security headers. Worse, `/` is served by `location /` through `try_files` — which serves the file inside the current location and does not re-run location matching — so a `location = /index.html` block would never have applied to the page anybody loads, and `index.html` would have been cacheable. That is exactly the year-long-stale-bundle trap this box already documents. The `no-store` lives on `location /`, and every location that sets a `Cache-Control` restates the headers it still wants.
+
+The server also now takes only the leftmost hop of `X-Forwarded-For`, and the config *sets* rather than appends that header. Appending would let a client prepend a value and get a fresh rate-limit bucket each attempt.
+
+# Phase 4 — Tests and hardening — **done**
+
+**169 tests**, all green. Most of the hardening had already landed with Phase 1.
+
+- The browser specs still pass in local mode, untouched, throughout. That was the point of the transport seam.
+- `redact` (10 specs) asserts on the serialised frame, not the object graph, and that an unknown seat name sees nothing — it fails closed.
+- `validate` (25 specs) covers the turn gate, phase gate, payload shapes, re-derived move legality, the disconnect escape hatch and the action rate limiter.
+- `server` (19 specs) drives a real socket in process, including restart survival and rejoining with a token.
+- Four browser specs drive **two contexts through one room**: reaching the board by shared code, each screen showing only its own cards, refresh putting a player back in the same seat, and the seat not on turn being unable to move a piece while the same clicks from the turn holder land on both screens.
+- The one control that was claimed but unverified now has a test: ten room creations a minute per address, then `slow_down`. 4-character codes are cheap to guess at without it.
+
+Two footguns recorded in `CLAUDE.md` rather than left to be rediscovered: the online specs use 8 of those 10 joins, so another one trips the limit and fails in a way that looks nothing like a rate limit; and the suite runs `dist-server/main.mjs`, not `server/` source, so the config rebuilds it before starting — testing against a stale server bundle cost real time once.
 
 ---
 
@@ -255,7 +267,20 @@ So Phase 3 is **not blocked**. But two things are Fede's call:
 | 0 Reducer core | done |
 | 1 Server | done |
 | 2 Client | done |
-| 3 Deploy | 2–3 h (box facts now known) |
-| 4 Tests & hardening | half a day |
+| 3 Deploy | artifacts done; box-side unapplied |
+| 4 Tests & hardening | done |
 
-**≈5.5–6.5 focused days.**
+## What is actually left
+
+Everything remaining needs either the box or a physical device. No code is outstanding.
+
+1. **Cloudflare DNS** — a proxied `A` record for `hidden-agenda`. Dashboard, Fede.
+2. **Cloudflare WebSockets** — confirm they are on for the zone. Without it `/ws` fails while the page loads fine, which is a confusing failure worth ruling out first. Dashboard, Fede.
+3. **Run the box-side setup** in `deploy/README.md`: clone to `/opt/hidden-agenda`, `npm ci --omit=dev`, create `/var/lib/hidden-agenda/rooms`, PM2, nginx, reload.
+4. **Three things only the box can answer**, all read-only:
+   - `nginx -t` on the site config. There is no nginx on the laptop, so it has only been checked statically — brace balance, semicolons, and which locations lose inherited headers.
+   - whether **PM2 runs an `.mjs` entry point**. The one item in the runbook with no local equivalent. `node dist-server/main.mjs` from `/opt/hidden-agenda` is the fallback check.
+   - whether **`cloudflare-realip.conf` is in the http context**. If it is not, `$remote_addr` is a Cloudflare edge and every visitor shares one join-rate bucket, so real players get throttled. Fix the http-context config rather than raising the limit.
+5. **Play it on a real phone.** Touch dragging is covered by a CDP-driven spec, but emulated touch is not a phone.
+
+Open decision, not a blocker: the box runs **Node 18, EOL since April 2025**. The server bundle targets `node18` so this deploy does not force the issue, but upgrading would affect all five existing PM2 apps.
