@@ -1,5 +1,7 @@
-# Build output, committed for GitHub Pages and the VPS. Never hand-format it.
+# Build output, committed for GitHub Pages and the VPS. Never hand-format it — the next build
+# would undo it, and format:check has been red on the server bundle ever since it landed.
 docs/
+dist-server/
 
 node_modules/
 package-lock.json

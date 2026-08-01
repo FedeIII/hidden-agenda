@@ -112,10 +112,13 @@ On your turn you take **exactly one piece action**, plus as many free actions as
 | Claim control of a team, or cancel a claim | free | any number, before your piece action ends |
 | Reveal one of your own cards | free | twice per game (one per card) |
 | Accuse another player | free | until you get one wrong |
-| Fire a sniper (`SNIPE!`) | ends the turn | only when a sniper has a target |
 
 Then press **NEXT TURN** and play passes to the next player in seating order, cyclically
 (`py.js#nextTurn`).
+
+**One button on that screen is not yours.** `SNIPE!` belongs to every player *except* the one on
+turn — it is how the rest of the table answers the move that has just been made, and it can be
+pressed at any point during somebody else's turn. See §9.
 
 Two consequences worth stating plainly:
 
@@ -126,7 +129,8 @@ Two consequences worth stating plainly:
   it only covers pieces still sitting in an HQ.
 
 Once your piece action is finished, the board is frozen for you: no more moving, no more claiming.
-The only thing still live is `SNIPE!`, and revealing/accusing.
+Revealing and accusing are still live, and so is everybody else's chance to shoot at what you just
+did.
 
 ---
 
@@ -301,7 +305,8 @@ stood when the turn began; walking next to a CEO does not buff the walker until 
 
 ## 9. Snipers, in full
 
-Snipers are the reason a move can be undone.
+Snipers are the reason a move can be undone, and the only thing in the game that does **not** belong
+to the player taking the turn.
 
 **Marking.** During a turn, any piece that **moves into, out of, through, or turns while standing in**
 an enemy sniper's line of fire is marked as seen by that sniper
@@ -309,23 +314,35 @@ an enemy sniper's line of fire is marked as seen by that sniper
 piece that crosses a line and keeps going is just as marked as one that stops in it. Snipers only
 ever mark **enemy** pieces.
 
-**Firing.** The player on turn presses **`SNIPE!`** — available whenever any sniper is on the board.
-Every sniper that has a marked target lights up. Clicking a lit sniper fires it, and three things
-happen at once (`pz.js#killSnipedPiece`):
+**Whose shot it is.** `SNIPE!` belongs to **everyone except the player on turn**. A sniper answers a
+move, so the player who made that move is the one person who may not take the shot — and every other
+player may, without waiting for a turn of their own. Nobody owns a sniper any more than they own any
+other piece: whoever is not on turn may fire whichever one has a target.
 
-1. **Every marked piece dies**, credited to the sniper you clicked.
+* **Online** — the button is dead for the seat on turn and live for everybody else, and the server
+  refuses it either way round (`server/validate.js#isSnipeAction`). The same goes for the click that
+  fires: the lit sniper answers to the other seats, not to the mover.
+* **Hot-seat** — one screen, one mouse, and the app cannot tell who reached for it, so the button
+  stays live. Who presses it is a rule between the people in the room: whoever is not on turn.
+
+**Firing.** Press **`SNIPE!`** — available whenever any sniper is on the board. Every sniper that has
+a marked target lights up. Clicking a lit sniper fires it, and three things happen at once
+(`pz.js#killSnipedPiece`):
+
+1. **Every marked piece dies**, credited to the sniper that was clicked.
 2. **The rest of the board rolls back to how it stood at the start of the turn.** The victim's move is
    undone, along with everything that move did — a piece it killed on the way is alive again and
    standing where it was, and if it killed a CEO, that team's HQ is back too.
-3. **The turn ends.**
+3. **The turn ends**, and the player who was on turn passes it on as usual.
 
-**Timing.** Marks are wiped at NEXT TURN (`piecesReducer.js#nextTurnState`). A snipe can only be taken
-**during the same turn as the movement that provoked it**, by the player whose turn it is. There is
-no holding fire.
+**Timing.** The window is the turn the movement happened in. Marks are wiped when the turn passes
+(`piecesReducer.js#nextTurnState`), so the shot has to be taken before play moves on — notice it or
+lose it. There is no holding fire until later.
 
-**`SNIPE!` un-ends a finished turn.** If you have already put your piece down and then notice the
-shot, pressing `SNIPE!` re-opens the turn just long enough to take it
-(`hasTurnEndedReducer.js#snipeState`).
+**Pressing `SNIPE!` freezes the turn.** A turn that had ended counts as unfinished again, so NEXT TURN
+goes dead, and while the snipe is armed nothing on the board can be selected except a lit sniper
+(`hasTurnEndedReducer.js#snipeState`, `pz.js#hasToToggle`). Once the table has reached for the button,
+the shot happens — there is no arming it and then thinking better of it.
 
 **Deployment is protected.** No piece may be deployed into an enemy sniper's line of fire, so nothing
 ever arrives already marked.
@@ -462,7 +479,10 @@ The rules above are unchanged online. What the server adds
 - **Alignments are never transmitted to the wrong seat.** A seat's own two cards are the only ones its
   client ever receives. Redaction stops only at the end of the game, because scoring needs all of them.
 - **Only the seat on turn may act** — which is exactly the local rule, since the turn holder may move
-  any team's pieces anyway. There is nothing per-piece to check.
+  any team's pieces anyway. There is nothing per-piece to check. The **snipe is the exception, and it
+  points the other way**: arming it and firing the lit sniper are refused *to* the seat on turn and
+  allowed to every other seat (§9). Nothing else about a lit sniper is special — an ordinary toggle of
+  an ordinary piece is still the turn holder's alone.
 - **Legality is re-derived server-side.** Locally, legality is enforced by which cells the interface
   makes clickable; online the server checks every move and direction against the same domain code.
 - **Starting a game and dealing cards belong to the server.** A client cannot ask for either.
@@ -532,6 +552,12 @@ A spy cannot be deselected once it has stepped, and the turn only ends when it h
 steps. If after the first step every neighbouring cell holds a friendly, or an enemy it cannot take
 from behind, it can neither finish nor be put down — and the turn cannot be passed. It takes a
 corner and three pieces, so it is rare rather than impossible.
+
+**An armed snipe that nobody resolves stalls the game.**
+Pressing `SNIPE!` stops the player on turn from passing it on, and only a player who is not on turn
+can fire. With three or more players another of them can always resolve it, but in a two-player game
+the one who armed it is the only one who can, so if they walk away the turn cannot move. The
+disconnection hatch does not cover this — it releases a turn whose *holder* has gone.
 
 **If every player is on a negative score, nobody is declared the winner.**
 The winner is folded up from a placeholder with a score of 0, which beats every negative score, so

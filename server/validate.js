@@ -98,6 +98,24 @@ function validateShape(action, state) {
 	}
 }
 
+// The snipe is the rest of the table's answer to the move that has just been made, so it is the
+// one thing the player on turn may NOT do and everybody else may. Two actions carry it: arming it,
+// and clicking the sniper that fires. Nothing else about a lit sniper is special — an ordinary
+// toggle of an ordinary piece is still the turn holder's alone.
+function isSnipeAction(action, state) {
+	if (action.type === SNIPE) {
+		return true;
+	}
+
+	if (action.type !== TOGGLE_PIECE) {
+		return false;
+	}
+
+	const piece = pz.getPieceById(action.payload?.pieceId, state.pieces);
+
+	return !!state.snipe && !!piece && !!piece.highlight && pz.isSniper(piece.id);
+}
+
 // Legality, re-derived from the authoritative state with the same domain code the UI uses to
 // decide what to highlight.
 function validateLegality(action, state) {
@@ -141,13 +159,20 @@ export function validateAction({ action, room, seat, turnGraceExpired = false })
 		return reject('action_not_allowed');
 	}
 
-	// The whole ownership model, in one rule. The game deliberately lets whoever is on turn move
-	// any team's pieces, so there is nothing per-piece to check — only whose turn it is.
+	// Nearly the whole ownership model, in one rule. The game deliberately lets whoever is on turn
+	// move any team's pieces, so there is nothing per-piece to check — only whose turn it is.
 	const turnHolder = py.getTurn(room.state.players);
+	const isSnipe = isSnipeAction(action, room.state);
 
-	if (seat.name !== turnHolder) {
-		// One escape hatch: if the turn holder has been gone long enough, anyone may pass the
-		// turn on, so a closed laptop cannot end the game permanently.
+	if (seat.name === turnHolder) {
+		// The exception, and it points the other way: a player cannot answer their own move. The
+		// snipe belongs to every seat at the table except the one that provoked it.
+		if (isSnipe) {
+			return reject('not_your_snipe');
+		}
+	} else if (!isSnipe) {
+		// The other escape hatch: if the turn holder has been gone long enough, anyone may pass
+		// the turn on, so a closed laptop cannot end the game permanently.
 		const isForcedPass = action.type === NEXT_TURN && turnGraceExpired;
 
 		if (!isForcedPass) {

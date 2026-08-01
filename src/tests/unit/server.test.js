@@ -318,6 +318,31 @@ test.describe('turn authority over the wire', () => {
 		}
 	});
 
+	// The one action that inverts the turn rule. The mover cannot answer their own move, and the
+	// rest of the table can — which is the whole point of the sniper, and was lost over the wire
+	// when "only the seat on turn may act" was written as if it had no exceptions.
+	test('the snipe is the seat not on turn’s, and is refused to the seat on turn', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const { ana, bea, atPlay } = await playingRoom(url);
+			atPlay();
+
+			bea.send({ type: 'action', seq: 1, action: { type: 'SNIPE' } });
+
+			// Accepted: everyone gets the snapshot and nobody gets a rejection.
+			await bea.waitFor('snapshot');
+			await ana.waitFor('snapshot');
+			expect(await bea.expectNothing('rejected')).toBe(true);
+
+			ana.send({ type: 'action', seq: 2, action: { type: 'SNIPE' } });
+
+			expect(await ana.waitFor('rejected')).toMatchObject({ seq: 2, reason: 'not_your_snipe' });
+		} finally {
+			await server.close();
+		}
+	});
+
 	test('an illegal move is rejected even from the seat on turn', async () => {
 		const { server, url } = await startServer();
 

@@ -11,6 +11,7 @@ import {
 	accuse,
 	setAlignment,
 	revealFriend,
+	snipe,
 } from 'Game/actions';
 import { validateAction, createRateLimiter } from 'Server/validate';
 import { applyAction, TURN_GRACE_MS } from 'Server/apply';
@@ -65,6 +66,62 @@ test.describe('turn ownership', () => {
 
 		// ANA is on turn but team 3's pieces are not "hers" — the game deliberately allows it.
 		expect(check(room, 'ANA', togglePiece('3-C')).ok).toBe(true);
+	});
+});
+
+// The one exception to turn ownership, and it points the other way: the snipe answers the move
+// that was just made, so it belongs to every seat except the one that made it. This was lost when
+// the turn rule was written — it let the mover shoot their own piece and nobody else shoot at all.
+test.describe('the snipe belongs to the seats not on turn', () => {
+	// A sniper lit up by SNIPE, which is the state in which clicking it fires.
+	function armedRoom() {
+		const room = playingRoom();
+
+		room.state = {
+			...room.state,
+			snipe: true,
+			pieces: room.state.pieces.map(piece => {
+				if (piece.id === '0-N') {
+					return { ...piece, position: [3, 0], direction: [0, 0], highlight: true };
+				}
+
+				if (piece.id === '1-A1') {
+					return { ...piece, position: [3, 3], throughSniperLineOf: ['0-N'] };
+				}
+
+				return piece;
+			}),
+		};
+
+		return room;
+	}
+
+	test('a seat that is not on turn may arm the snipe', () => {
+		expect(check(playingRoom(), 'BEA', snipe()).ok).toBe(true);
+	});
+
+	test('a seat that is not on turn may fire a lit sniper', () => {
+		expect(check(armedRoom(), 'BEA', togglePiece('0-N')).ok).toBe(true);
+	});
+
+	test('the seat on turn may not answer its own move', () => {
+		expect(check(playingRoom(), 'ANA', snipe())).toEqual({ ok: false, reason: 'not_your_snipe' });
+		expect(check(armedRoom(), 'ANA', togglePiece('0-N'))).toEqual({ ok: false, reason: 'not_your_snipe' });
+	});
+
+	test('the exception is the snipe and nothing else', () => {
+		const room = armedRoom();
+
+		// Not a sniper, even with the snipe armed.
+		expect(check(room, 'BEA', togglePiece('1-A1')).reason).toEqual('not_your_turn');
+		// A sniper, but not the one that is lit.
+		expect(check(room, 'BEA', togglePiece('1-N')).reason).toEqual('not_your_turn');
+		// A lit sniper, but nobody armed the snipe.
+		expect(check({ ...room, state: { ...room.state, snipe: false } }, 'BEA', togglePiece('0-N')).reason).toEqual(
+			'not_your_turn',
+		);
+		// And moving is still the turn holder's alone.
+		expect(check(room, 'BEA', movePiece('0-N', [3, 1])).reason).toEqual('not_your_turn');
 	});
 });
 

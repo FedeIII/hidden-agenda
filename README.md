@@ -194,6 +194,14 @@ Play it over the internet. Also a complete change of toolchain underneath, and t
     including an appendix of edge cases that are in the game whether or not anybody designed them
   * `CLAUDE.md`, `MULTIPLAYER-PLAN.md` and `deploy/README.md` describe what is there now
 * 102 tests → **176**
+* **v3.0.1**
+  * Fixed the SNIPE! action, whose rule was lost in the move to multiplayer. A sniper answers the move
+    that has just been made, so the shot belongs to **every player except the one on turn** — online it
+    had ended up the other way round, offered only to the player who had just moved and refused to
+    everybody else. The turn holder is now refused both halves of it, arming and firing, and every
+    other seat is allowed both. Hot-seat keeps one live button, since one screen cannot tell who
+    reached for it
+  * 176 tests → **182**
 
 ### v2.1.0
 * Drag and drop controls for pieces

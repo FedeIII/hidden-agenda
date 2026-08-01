@@ -4,7 +4,7 @@ import { pz } from 'Domain/pieces';
 import { TEAM_NAMES } from 'Domain/teams';
 import py from 'Domain/py';
 import useBooleanState from 'Hooks/useBooleanState';
-import { useCanAct } from 'Hooks/useSession';
+import { useCanAct, useCanSnipe } from 'Hooks/useSession';
 import { snipe, revealFriend, revealFoe } from 'Game/actions';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
 import { Button } from 'Client/components/button';
@@ -22,18 +22,21 @@ import {
 } from './components';
 import AccuseMenu from './accuseMenu';
 
+// Not gated on canAct like every other action here: sniping is the rest of the table's answer to
+// the move the player on turn has just made, so it is theirs and not the mover's.
 function useSnipe() {
 	const [{ pieces }, dispatch] = useContext(StateContext);
+	const canSnipe = useCanSnipe();
 
 	const isSniperOnBoard = pz.isSniperOnBoard(pieces);
 
 	const onSnipe = useCallback(() => {
-		if (isSniperOnBoard) {
+		if (isSniperOnBoard && canSnipe) {
 			dispatch(snipe());
 		}
-	}, [isSniperOnBoard, dispatch]);
+	}, [isSniperOnBoard, canSnipe, dispatch]);
 
-	return onSnipe;
+	return [canSnipe, onSnipe];
 }
 
 function useAccuseMenu() {
@@ -190,7 +193,7 @@ function AlignmentReminder(props) {
 
 function PlayActions() {
 	const canAct = useCanAct();
-	const onSnipe = useSnipe();
+	const [canSnipe, onSnipe] = useSnipe();
 	const [isAccusedShown, showAccuseMenu, hideAccuseMenu] = useAccuseMenu();
 	const [isRevealShown, isRevealActive, onReveal, hideReveal] = useRevealMenu();
 	const [isAlignmentWarningShown, isAlignmentShown, showWarning, onWarningConfirm, hideAlignment] =
@@ -201,7 +204,7 @@ function PlayActions() {
 	return (
 		<Actions>
 			<Action>
-				<Button id="snipe" small active={canAct} onClick={onSnipe}>
+				<Button id="snipe" small active={canSnipe} onClick={onSnipe}>
 					SNIPE!
 				</Button>
 			</Action>

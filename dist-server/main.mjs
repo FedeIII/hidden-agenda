@@ -1589,6 +1589,12 @@ function validateShape(action, state) {
 		default: return ok;
 	}
 }
+function isSnipeAction(action, state) {
+	if (action.type === "SNIPE") return true;
+	if (action.type !== "TOGGLE_PIECE") return false;
+	const piece = pz.getPieceById(action.payload?.pieceId, state.pieces);
+	return !!state.snipe && !!piece && !!piece.highlight && pz.isSniper(piece.id);
+}
 function validateLegality(action, state) {
 	switch (action.type) {
 		case MOVE_PIECE: {
@@ -1609,7 +1615,10 @@ function validateAction({ action, room, seat, turnGraceExpired = false }) {
 	if (room.phase !== PHASES.PLAY) return reject("wrong_phase");
 	if (!PLAY_ACTIONS.has(action.type)) return reject("action_not_allowed");
 	const turnHolder = py_default.getTurn(room.state.players);
-	if (seat.name !== turnHolder) {
+	const isSnipe = isSnipeAction(action, room.state);
+	if (seat.name === turnHolder) {
+		if (isSnipe) return reject("not_your_snipe");
+	} else if (!isSnipe) {
 		if (!(action.type === "NEXT_TURN" && turnGraceExpired)) return reject("not_your_turn");
 	}
 	if (action.type === "ACCUSE" && action.payload?.accuser !== seat.name) return reject("accuser_mismatch");
@@ -1834,7 +1843,7 @@ var SNAPSHOT_COALESCE_MS = 40;
 var SWEEP_INTERVAL_MS = 6e4;
 var EVICT_AFTER_ALL_GONE_MS = 18e5;
 var EVICT_HARD_CAP_MS = 108e5;
-var JOINS_PER_IP_PER_MINUTE = 10;
+var JOINS_PER_IP_PER_MINUTE = Number(process.env.HA_JOINS_PER_MINUTE) || 10;
 function createGameServer({ log = console.log, now = () => Date.now(), rng = Math.random, stateDir } = {}) {
 	const rooms = createRoomStore({
 		now,

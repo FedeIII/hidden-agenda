@@ -134,6 +134,41 @@ test.describe('ONLINE', () => {
 		}
 	});
 
+	// Every other button on this screen belongs to the player on turn. This one is the inverse: it
+	// is how the rest of the table answers the move that was just made, so offering it to the mover
+	// would be offering them a shot at their own piece.
+	test('the SNIPE! button belongs to the players who are not on turn', async ({ browser }) => {
+		const { hostContext, guestContext, host, guest } = await twoPlayerGame(browser);
+
+		try {
+			await host.click('#alignments-btn');
+			await guest.click('#alignments-btn');
+			await expect(host.locator('#next-turn')).toBeVisible();
+			await expect(guest.locator('#next-turn')).toBeVisible();
+
+			// An inactive Button is still in the DOM and still clickable — what says so is the
+			// cursor, so that is what the assertion reads.
+			const cursorOn = page => page.locator('#snipe').evaluate(node => getComputedStyle(node).cursor);
+
+			// ANA (host) is on turn.
+			expect(await cursorOn(host)).toEqual('not-allowed');
+			expect(await cursorOn(guest)).toEqual('pointer');
+
+			// A full turn, then it changes hands with the turn.
+			await host.click('#pz-0-A1');
+			await host.click('#hex-1-1');
+			await host.click('#hex-2-2');
+			await host.click('#next-turn');
+			await expect(guest.locator('.game')).toContainText("Player's turn: BEA");
+
+			expect(await cursorOn(host)).toEqual('pointer');
+			expect(await cursorOn(guest)).toEqual('not-allowed');
+		} finally {
+			await hostContext.close();
+			await guestContext.close();
+		}
+	});
+
 	test('the player who is not on turn cannot move a piece', async ({ browser }) => {
 		const { hostContext, guestContext, host, guest } = await twoPlayerGame(browser);
 

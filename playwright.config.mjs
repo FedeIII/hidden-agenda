@@ -13,7 +13,9 @@ export default defineConfig({
 			// Built here rather than assumed: the suite runs the bundle, not the source, so testing
 			// against a stale dist-server is silently possible otherwise — and it cost real time.
 			command: 'npm run build:server && node dist-server/main.mjs',
-			env: { PORT: '3007', HA_STATE_DIR: '.playwright-rooms' },
+			// The join limit is per address and every online spec joins from this one, so it caps
+			// how many of them there can be. Raised here rather than lowered in the server.
+			env: { PORT: '3007', HA_STATE_DIR: '.playwright-rooms', HA_JOINS_PER_MINUTE: '60' },
 			url: 'http://127.0.0.1:3007/healthz',
 			reuseExistingServer: !process.env.CI,
 			timeout: 30_000,

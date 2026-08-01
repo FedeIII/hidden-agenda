@@ -28,7 +28,10 @@ const SNAPSHOT_COALESCE_MS = 40;
 const SWEEP_INTERVAL_MS = 60_000;
 const EVICT_AFTER_ALL_GONE_MS = 30 * 60_000;
 const EVICT_HARD_CAP_MS = 3 * 60 * 60_000;
-const JOINS_PER_IP_PER_MINUTE = 10;
+// 4-character codes are cheap to guess at without this. Raised for the test server rather than
+// lowered in production: the online specs all join from one address, so the real limit is a
+// ceiling on how many of them there can be.
+const JOINS_PER_IP_PER_MINUTE = Number(process.env.HA_JOINS_PER_MINUTE) || 10;
 
 export function createGameServer({ log = console.log, now = () => Date.now(), rng = Math.random, stateDir } = {}) {
 	const rooms = createRoomStore({ now, rng });
