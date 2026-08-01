@@ -182,7 +182,7 @@ This replaced react-dnd because **HTML5 drag-and-drop does not fire on touch dev
 
 `npm run build` writes `docs/`, and **the output is committed** — GitHub Pages serves the folder, and Phase 3 has nginx serving it on the VPS. Rebuild and commit `docs/` when shipping a user-visible change.
 
-- Assets are **content-hashed**, and must stay that way: the target VPS serves `*.js` with `Cache-Control: immutable` for a year, so a fixed filename would pin stale code in returning browsers.
+- Assets are **content-hashed**, and must stay that way. `hidden-agenda.azyr.io` sets its own `immutable` on `/assets/` precisely because the names change every build; a fixed filename would pin stale code in returning browsers for a year. (The apex `azyr.io` site has the same rule for `*.js`, but it is server-scoped, so nothing is inherited — the new site had to opt in.)
 - `base: './'` keeps one build working both under the Pages subpath and at a domain root.
 - Piece art lives in **`public/img/`** only; the build copies it into `docs/img/`. `public/_config.yml` is there for the same reason — `emptyOutDir` would otherwise delete the Pages Jekyll theme.
 - Art naming: `{team}-{TYPE}.png` for an undirected piece and `{team}-{TYPE}-{v}{h}.png` per direction (e.g. `0-A--10.png` is team 0's agent facing `[-1, 0]`).

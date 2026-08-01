@@ -55,7 +55,7 @@ The existing suite covers this refactor well. Land it green before anything else
 
 **3. Replace webpack with Vite.** Collapses 8 devDeps — `webpack`, `webpack-cli`, `webpack-dev-server`, `html-webpack-plugin`, `html-loader`, `babel-loader`, `@babel/preset-env`, `@babel/preset-react` — into one, and fixes item 2.
 
-- Content hashing by default, which Phase 3 needs anyway for the box's `Cache-Control: immutable` rule on `*.js`.
+- Content hashing by default, which Phase 3 wants so `/assets/` can be pinned `immutable` safely.
 - `public/img/` becomes the single source of truth, ending the `img/` + `docs/img/` duplication (116 files kept in sync by hand today).
 - Same config bundles the Node server in Phase 1 with the same alias map, so no separate server build toolchain.
 - Set the dev server to port **8081** and the test-suite port mismatch disappears (`tests/helpers/setupTests.js:10` targets 8081; `npm run go` serves 8080).
@@ -247,6 +247,9 @@ Gathered read-only from the VPS. The important one changes a decision.
 | Origin certificate | `/etc/nginx/ssl/azyr.io.pem` has SANs `*.azyr.io, azyr.io` — **hidden-agenda.azyr.io is covered**, no new cert. |
 | `journal.azyr.io` config | Usable as a TLS/headers template, but it proxies *everything* — there is no `root`/`try_files` block to copy for the static half, which has to be written. It also hardcodes `Connection 'upgrade'` on every location; fine inside the `/ws` block, wrong in the static one. |
 | DNS | `hidden-agenda.azyr.io` still needs a **proxied Cloudflare record**. Dashboard action, not doable from the box. |
+| Real visitor IPs | `cloudflare-realip.conf` is in the **http** context, so the new site inherits them for free. Must **not** be copied into the server block: `real_ip_header` is single-value and a duplicate is a hard `[emerg]` that stops nginx booting. |
+| Inherited caching | **none.** The apex's `expires 1y; immutable` for `*.js` is server-scoped, not http-scoped — so the earlier assumption that a new site inherits it was wrong. This site sets its own, which lands in the same place for the right reason. |
+| mTLS | **open decision.** Both `osler.azyr.io` *and* `wallet.azyr.io` enforce Authenticated Origin Pulls; only the apex does not. The config currently omits it, a call made before knowing wallet also had it. Written up in `deploy/README.md`. |
 
 ### The Node 18 finding, and what was done about it
 

@@ -9,9 +9,21 @@ Everything is prebuilt and committed — `docs/` (browser) and `dist-server/main
 | | |
 | --- | --- |
 | Node on the box | 18.19.1, PM2 runs apps with the same one |
-| Port 3007 | free |
+| Port 3007 | free (3000–3006, 8410/8411 osler, 8420/8421 wallet are taken) |
 | TLS | `/etc/nginx/ssl/azyr.io.pem` already covers `*.azyr.io` — no new certificate |
-| mTLS | **not** used here. Only `osler.azyr.io` has Authenticated Origin Pulls |
+| Real visitor IPs | inherited from the http context, nothing to add — see step 7 |
+| Inherited caching | none; the apex's `immutable` rule is server-scoped |
+| mTLS | **an open decision — see below** |
+
+## Decision needed: Cloudflare Authenticated Origin Pulls
+
+Both existing subdomains — `osler.azyr.io` and `wallet.azyr.io` — enforce mTLS via their own `*-mtls.conf` snippet, so only Cloudflare can reach the origin. The apex `azyr.io` does not. The house convention is therefore "subdomains do", and this config currently **does not**, which was a call made before knowing wallet also did.
+
+Arguments for turning it on here: it stops anyone reaching the origin IP directly and bypassing Cloudflare's rate limiting and DDoS protection. There are no secrets in this app, but there is a websocket that accepts commands.
+
+Cost of turning it on: `curl -k https://127.0.0.1/ -H 'Host: ...'` starts returning `400 No required SSL certificate was sent` — a healthy stack refusing a non-Cloudflare client, exactly as documented for osler. The smoke tests below would have to use the loopback upstream (`127.0.0.1:3007/healthz`) and the public URL, dropping the middle one.
+
+To enable: add its own snippet alongside osler's and `include` it from the `server` block, mirroring how osler does it. One line, reversible by moving the snippet aside.
 
 ## One-time setup
 
@@ -45,7 +57,9 @@ pm2 save
 curl -s http://127.0.0.1:3007/healthz    # {"ok":true,...}
 ```
 
-If PM2 will not run the `.mjs` entry point, that is the one thing here that has not been verified on this box — `node dist-server/main.mjs` from the same directory is the fallback check.
+If PM2 will not run the `.mjs` entry point, that is the one thing here still unverified on this box — `node dist-server/main.mjs` from the same directory is the fallback check.
+
+The `/ws` block already sets `proxy_read_timeout 3600s`. nginx's 60s default would drop idle websockets, and Cloudflare has its own ~100s idle limit on top, which the server's 25s ping stays under.
 
 **6. nginx:**
 
@@ -56,13 +70,9 @@ ln -s /etc/nginx/sites-available/hidden-agenda.azyr.io /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 ```
 
-**7. Verify the real-IP config.** The server rate-limits room joins per IP. Check that `cloudflare-realip.conf` is in the **http** context (`/etc/nginx/conf.d/`) so `$remote_addr` is the visitor rather than a Cloudflare edge:
+**7. Real-IP restoration — already handled, do not touch.** Checked on the box: `/etc/nginx/conf.d/cloudflare-realip.conf` holds 22 `set_real_ip_from` ranges plus `real_ip_header CF-Connecting-IP`, and `conf.d/*` is included from the http context, so **this site inherits real visitor IPs for free**. That matters because the server rate-limits room joins per IP; without it every visitor would share one bucket.
 
-```bash
-nginx -T | grep -c 'set_real_ip_from'
-```
-
-If it is absent, every visitor shares one rate-limit bucket and the 10-joins-per-minute limit will throttle real players. Fix the http-context config rather than raising the limit.
+**Do not copy that snippet into this site's server block.** `real_ip_header` is single-value, so a second copy is a hard `[emerg] directive is duplicate` and nginx will not start. Two existing configs carry warning comments about exactly this.
 
 ## Smoke tests
 
@@ -70,7 +80,8 @@ If it is absent, every visitor shares one rate-limit bucket and the 10-joins-per
 # the node process
 curl -s http://127.0.0.1:3007/healthz
 
-# nginx, bypassing Cloudflare. Works here, unlike osler, because there is no mTLS
+# nginx, bypassing Cloudflare. Only works while mTLS is off — with it on these
+# return 400, which is correct behaviour and not a fault
 curl -sk https://127.0.0.1/ -H 'Host: hidden-agenda.azyr.io' | head -5
 curl -sk https://127.0.0.1/healthz -H 'Host: hidden-agenda.azyr.io'
 
@@ -105,4 +116,4 @@ Rooms in progress survive it — they are reloaded from `/var/lib/hidden-agenda/
 
 ## Cache trap, deliberately handled
 
-That box serves `*.js` with `Cache-Control: immutable` for a year on the main site. Assets here are **content-hashed**, so `/assets/` is pinned hard on purpose and `index.html` is `no-store` — it is the file that points at the current hashed bundle. Never add a fixed-filename script, and never cache `index.html`.
+The apex `azyr.io` site serves `*.js` with `expires 1y; Cache-Control: immutable`, but that rule is **server-scoped, so this site inherits nothing** — checked on the box. This site therefore sets its own. Assets here are **content-hashed**, so `/assets/` is pinned hard on purpose and `index.html` is `no-store` — it is the file that points at the current hashed bundle. Never add a fixed-filename script, and never cache `index.html`.
