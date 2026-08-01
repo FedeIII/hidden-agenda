@@ -1,45 +1,200 @@
 # Hidden Agenda
 An abstract board game with psychology
 
-https://fedeiii.github.io/hidden-agenda/
+* **Play over the internet:** https://hidden-agenda.azyr.io — make a room, share the code, one seat per player.
+* **Play hot-seat:** https://fedeiii.github.io/hidden-agenda/ — everyone round one screen.
 
-## Getting Started
+The rules are in **[RULES.md](RULES.md)**.
 
-### Installing
-* Install dependencies
-```
+2–6 players command four teams of agents on a hex board. Nobody owns a team — on your turn you move
+*any* piece of *any* team. What you own is a secret pair of cards, one team whose success scores for
+you and one whose success scores against you, and the whole game is reading which moves were sincere.
+
+## Getting started
+
+Node >= 22.12 to build and test (`.nvmrc`). The deployed server itself only needs Node 18 — see
+[Deployment](#deployment).
+
+```bash
 npm install
-```
-* Build into the docs folder
-```
-npm run do
-```
-* Serve the build (ES modules need http, so opening the file directly will not work)
-```
-npm run serve
+npx playwright install chromium   # one-time, for the test suite
+npm run go                        # dev server on :8081, opens a browser
 ```
 
-### Developer
-Dev server with hot reload on http://localhost:8081
+To play the online mode locally you need the game server too, since the dev server proxies `/ws` to
+it exactly as nginx does in production:
+
+```bash
+npm run build:server
+PORT=3007 npm run server
 ```
-npm run go
+
+## Commands
+
+| | |
+| --- | --- |
+| `npm run go` | dev server on :8081 with hot reload (`npm run dev` is the same) |
+| `npm run build` | production build into `docs/` (`npm run do` is the same) |
+| `npm run build:server` | server bundle into `dist-server/main.mjs` |
+| `npm run build:all` | both |
+| `npm run serve` | serve the built `docs/` on :8081 |
+| `npm run server` | run the built game server |
+| `npm test` | the whole suite, ~2 min |
+| `npm run test:domain` | game rules only, no browser, ~2s |
+| `npm run test:e2e` | browser specs |
+| `npm run test:ui` | interactive Playwright runner |
+| `npm run lint` | eslint (flat config, clean — keep it that way) |
+| `npm run format` | prettier |
+
+## How it works
+
+**React 18 + styled-components + Vite** in the browser, a small **`ws`** server in Node, and a shared
+core that both of them run.
+
+### Three layers
+
 ```
+src/domain/  ─┐  pure game rules: board geometry, piece legality, players, scoring.
+src/game/    ─┴─ the reducer, the actions, the store.   No React, no browser globals.
+src/client/      the UI: phases, components, the drag controller, the socket transport.
+server/          the authoritative multiplayer server.
+```
+
+The client and the server both import the core; **neither `src/domain` nor `src/game` may import from
+`src/client` or `server`**. That is the layering the whole design rests on: the server enforces the
+rules by running the same code the browser uses to decide what to highlight.
+
+### The server
+
+`server/` runs the *same* `gameReducer` as the browser and is authoritative. Three properties define
+it, all tested over a real socket:
+
+1. **A seat never receives another seat's alignment.** State is projected per recipient before it is
+   serialised, so a secret is never on the wire in the first place. It fails closed — an unknown seat
+   sees nothing. The one exception is the end of the game, where scoring needs every alignment.
+2. **Only the seat on turn may act.** That single rule is the whole ownership model, because the game
+   deliberately lets the turn holder move any team's pieces. The one escape hatch is passing the turn
+   after the turn holder has been disconnected for 60s, so a closed laptop cannot end a game.
+3. **Legality is re-derived server-side**, with the same domain functions the UI highlights with.
+
+Starting a game and dealing cards belong to the server; a client cannot ask for either. Rooms hold no
+sockets — they stay plain JSON so they can be written to disk per file, which is what lets a deploy
+restart without killing games in progress.
+
+### The client
+
+A transport seam (`src/client/net/`) hands the UI a `{ getState, subscribe, dispatch }` store, so every
+game component works unchanged whether the game lives in this tab or on a server. Online adds a session
+observable — room, seats, phase, connection — that only the lobby and the connection banner read.
+
+Actions apply optimistically and are replayed on top of each server snapshot until acknowledged. The
+four that resolve against alignments the client cannot see (setting, revealing and accusing) wait for
+the server instead, because their outcome is not predictable locally.
+
+Dragging is our own pointer-event controller rather than a library: HTML5 drag-and-drop does not fire
+on touch devices, so on a phone the game could otherwise only be tapped.
 
 ### Tests
-Playwright runs everything. One-time browser install:
-```
-npx playwright install chromium
-```
-Then, from anywhere — the config starts and waits for the preview server itself:
-```
-npm test                # everything
-npm run test:domain     # game rules only, no browser, ~2s
-npm run test:e2e        # browser specs
-npm run test:ui         # interactive runner
-```
-On failure Playwright keeps a trace, video and screenshot under `test-results/`.
+
+Playwright is the only runner, with two projects:
+
+* **`domain`** — game-rules specs in `src/tests/unit/`. They never request a `page`, so no browser
+  starts and they finish in ~2s. The reducer-purity guards live here, and so do the server specs:
+  redaction, validation and two clients over an in-process socket, with no browser.
+* **`e2e`** — everything else, driving a pinned chromium at a pinned 800×600 viewport.
+
+The config starts and waits for both servers itself, and rebuilds the server bundle first — testing
+against a stale `dist-server` is otherwise silently possible.
+
+`?test=play` and `?test=endgame` jump straight to a mid-game board without clicking through.
+
+## Deployment
+
+`npm run build` writes `docs/` and **the output is committed**, as is `dist-server/main.mjs`. Rebuild
+and commit both when shipping a user-visible change.
+
+* **GitHub Pages** serves `docs/` from `master` — hot-seat only, no server.
+* **The VPS** serves the same `docs/` off disk through nginx and proxies `/ws` and `/healthz` to one
+  small PM2-managed Node process. Because both artifacts are committed, the box installs exactly one
+  package (`ws`) and never runs a build — which is what lets it stay on Node 18 while the toolchain
+  needs Node 22.
+
+There is no deploy webhook: `scripts/deploy-remote.sh` is the deploy. It builds locally, refuses to
+ship a dirty or unpushed tree, then pulls and reloads over SSH. The runbook, the nginx site and the
+PM2 config are in [`deploy/`](deploy/README.md).
+
+Assets are content-hashed and must stay that way — the site sets `immutable` on `/assets/` for a year
+precisely because the names change every build.
 
 ## Changelog
+### v3.0.0
+Play it over the internet. Also a complete change of toolchain underneath, and the first written rules.
+
+* **Multiplayer** — the game is playable over the internet
+  * An authoritative `ws` server running the same reducer as the browser
+  * Rooms with 4-character codes and shareable `#/r/CODE` links, a lobby showing who is in and who is
+    offline, and the host starting the game
+  * The server deals the cards, and each client only ever receives its own pair. Clients cannot send
+    `START_GAME` or `SET_ALIGNMENT` at all
+  * Only the seat on turn may act, and move and direction legality is re-derived server-side rather
+    than trusted from the client
+  * Optimistic apply with sequence acknowledgement and replay, so rapid clicks are neither dropped nor
+    silently reverted. Aiming applies locally at once and goes on the wire coalesced at 50ms
+  * Reconnect: a per-room seat token in `localStorage`, exponential backoff from 0.5s to 8s, and a
+    banner while it happens. A refresh mid-game rejoins the same seat
+  * Rooms are persisted per file, so a deploy restart does not kill a game in progress
+  * Anyone may pass the turn once the turn holder has been disconnected for 60s — and only that
+  * Rate limiting: a per-seat token bucket, and ten room joins a minute per address
+* **Deployed** — live at https://hidden-agenda.azyr.io
+  * nginx serving the static bundle and proxying `/ws`, one PM2 process, Cloudflare in front with
+    Authenticated Origin Pulls enforced, matching the other subdomains on the box
+  * `deploy/` holds the nginx site, the PM2 config and a runbook; `scripts/deploy-remote.sh` builds
+    locally and refuses to ship a dirty or unpushed tree
+  * The server bundle targets Node 18, so the box's runtime does not block the deploy, and `engines`
+    describes the deployed artifact rather than the toolchain
+* **Playable on a phone**
+  * The action bar used to be unreachable rather than merely off-screen: `.game` was `overflow: hidden`
+  * Upright, the HQs stack two-and-two above and below the board instead of being squeezed either side
+    of it; sideways, the action bar wraps instead of running off the edge; the end screen stacks
+  * Touch dragging works at all, which it never did under HTML5 drag-and-drop
+* **A legible score breakdown** — each player is now the equation it actually is, with each alignment
+  in its own framed group carrying its team's colour and its own −50 reveal cost. No scoring rule
+  changed, and a spec adds the displayed terms up and checks they equal the total
+* **Toolchain**
+  * webpack 4 → **Vite**. webpack 4 could not build here at all: md4 hashing, which OpenSSL 3 refuses
+  * jest + puppeteer → **Playwright**, one runner for both the domain and browser specs
+  * React 16 → **React 18**, `createRoot` and StrictMode, which the whole suite passes against
+  * react-dnd → **our own pointer-event drag controller**, 67 kB lighter and working on touch
+  * react-router → **a phase value**; the app had four routes, no links and no URL worth sharing
+  * **Prettier** config adopted (the repo was split between tabs and spaces), and a **working eslint**
+    for the first time — the old one had never run, its config was version-incompatible
+  * `dependencies` is now empty except `ws`, so `npm ci --omit=dev` on the VPS installs almost nothing.
+    Around 950 packages left the tree
+* **Architecture**
+  * The reducer, the actions and the initial state moved to `src/game` and run outside a browser
+  * A transport seam behind `useSyncExternalStore`, so no game component knows where the state lives
+  * Card dealing moved to a pure `Domain/deal` with an injectable rng; phase names to `Domain/phases`
+  * Board geometry consolidated in `Domain/cells`, ending a cycle back through the component that
+    renders the board
+  * `Hexagon` became a real component; the board works its highlights out once instead of 53 times
+* **Fixes**
+  * **The piece reducers no longer mutate.** They corrupted the previous-turn snapshot the sniper
+    rollback restores from, and would have applied every toggle twice under StrictMode
+  * Clicking an empty cell with nothing selected threw, and nothing in the suite was watching for it
+  * Accusations corrupted the turn order with three or more players — invisible at two
+  * A second game in the same page load dealt from a depleted deck
+  * A snapshot arriving after a newer local action silently reverted it, which read as a piece
+    un-selecting itself and the next click being rejected as illegal
+  * Refreshing mid-game crashed on the empty table between the two frames the server sends
+  * Assets were served with two different `Cache-Control` headers
+  * A foe whose team scored nothing read `+ 0`, which says the opposite of what it means
+  * Nine test failures from fixture rot — Chrome changed how it reports `cos(90°)` — plus two flakes
+* **Documentation**
+  * **[RULES.md](RULES.md)**: the full rules, derived from the implementation and verified against it,
+    including an appendix of edge cases that are in the game whether or not anybody designed them
+  * `CLAUDE.md`, `MULTIPLAYER-PLAN.md` and `deploy/README.md` describe what is there now
+* 102 tests → **176**
+
 ### v2.1.0
 * Drag and drop controls for pieces
 * **v2.1.1**
@@ -147,7 +302,7 @@ On failure Playwright keeps a trace, video and screenshot under `test-results/`.
 * ~~Hosting~~
 * UI revamp
 * 3D
-* Remote multiplayer
+* ~~Remote multiplayer~~
 * Port to electron
 
 ## Known Bugs
@@ -168,3 +323,13 @@ On failure Playwright keeps a trace, video and screenshot under `test-results/`.
 * ~~Pieces are not allowed to spawn over other pieces~~
 * ~~Switch selected agent allows to direct it without moving it first~~
 * ~~Agent direction after sliding~~
+
+Found while writing [RULES.md](RULES.md) and reproduced against the domain code — see its Appendix B:
+
+* The spy's kill-from-behind check looks at *any* piece with the spy in its rear arc rather than the
+  target, so an unrelated piece can unlock a head-on kill
+* A buffed agent one step from the board edge takes the whole-board redeploy instead of its one-cell step
+* Sniping a CEO defers wiping its HQ until somebody's next move
+* Firing one sniper kills every marked piece on the board, so a team can be credited with killing its own
+* A spy boxed in after its first step can neither finish its move nor be put down, and the turn cannot be passed
+* If every player ends on a negative score, no winner is announced
