@@ -204,11 +204,11 @@ Worth recording:
 - **Turn affordance**: render read-only when it isn't your turn (pieces not draggable, actions inactive). Cosmetic only — the server is the enforcement.
 - **Touch**: the Phase −1 pointer-event drag is what makes phones work; verify on a real device here, not at the end.
 
-# Phase 3 — Deploy — **done on the box; DNS outstanding**
+# Phase 3 — Deploy — **live**
 
 Deployed over SSH (Tailscale — the public IP's port 22 is not reachable). Running under PM2 as `hidden-agenda`, nginx serving `/opt/hidden-agenda/docs` and proxying `/ws` and `/healthz` to `127.0.0.1:3007`. `pm2 save` done and `pm2-root` is enabled, so it survives a reboot. Every existing site was re-checked after the nginx reload and is unaffected.
 
-**Only DNS is outstanding**: `hidden-agenda.azyr.io` has no Cloudflare record yet, so the site answers on the box's loopback and nowhere else.
+**Live at https://hidden-agenda.azyr.io.** Proxied Cloudflare `A` record, WebSockets on for the zone, and Authenticated Origin Pulls enforced so only Cloudflare can reach the origin — matching `osler` and `wallet`, the other two subdomains. Verified from outside: two clients through Cloudflare join one room, each sees only its own alignment, the game reaches the play phase, and an out-of-turn action comes back `not_your_turn`. Connecting straight to the origin IP is refused.
 
 Answered by deploying rather than by asking: Node 18.19 runs the bundle, **PM2 runs an `.mjs` entry with no wrapper**, `/var/lib/hidden-agenda/rooms` is writable (`persistence: true`), and a websocket upgrades through nginx over TLS, creates a room and persists it.
 
@@ -276,16 +276,18 @@ So Phase 3 is **not blocked**. But two things are Fede's call:
 | 0 Reducer core | done |
 | 1 Server | done |
 | 2 Client | done |
-| 3 Deploy | artifacts done; box-side unapplied |
+| 3 Deploy | live |
 | 4 Tests & hardening | done |
 
 ## What is actually left
 
 Everything remaining needs either the box or a physical device. No code is outstanding.
 
-1. **Cloudflare DNS** — a proxied `A` record for `hidden-agenda` → the VPS. This is the only thing standing between the current state and a live site.
-2. **Cloudflare WebSockets** — confirm they are on for the zone. Without it the page loads fine and only `/ws` fails, which is a confusing failure worth ruling out first.
-3. **Decide on mTLS** — both other subdomains enforce Authenticated Origin Pulls; this one does not yet. Written up in `deploy/README.md`.
-4. **Play it on a real phone**, once DNS is up. Touch dragging has a CDP-driven spec, but emulated touch is not a phone.
+Nothing, other than playing it. Touch dragging has a CDP-driven spec, but emulated touch is not a phone — Fede is trying that himself.
+
+Worth doing at some point, neither blocking:
+
+- **The box runs Node 18, EOL since April 2025.** This app targets `node18` deliberately so it does not force the issue, but the other five PM2 apps share that runtime.
+- **Rotate the Cloudflare token** used to create the DNS record. It was pasted into a chat transcript, which is not where API tokens should live.
 
 Open decision, not a blocker: the box runs **Node 18, EOL since April 2025**. The server bundle targets `node18` so this deploy does not force the issue, but upgrading would affect all five existing PM2 apps.
