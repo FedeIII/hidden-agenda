@@ -204,9 +204,15 @@ Worth recording:
 - **Turn affordance**: render read-only when it isn't your turn (pieces not draggable, actions inactive). Cosmetic only — the server is the enforcement.
 - **Touch**: the Phase −1 pointer-event drag is what makes phones work; verify on a real device here, not at the end.
 
-# Phase 3 — Deploy — **prepared, not applied**
+# Phase 3 — Deploy — **done on the box; DNS outstanding**
 
-Every artifact is written, committed and reviewable. **Nothing has touched the box**: the bridge parks a session for Fede rather than executing, so the box-side work is his to approve and run.
+Deployed over SSH (Tailscale — the public IP's port 22 is not reachable). Running under PM2 as `hidden-agenda`, nginx serving `/opt/hidden-agenda/docs` and proxying `/ws` and `/healthz` to `127.0.0.1:3007`. `pm2 save` done and `pm2-root` is enabled, so it survives a reboot. Every existing site was re-checked after the nginx reload and is unaffected.
+
+**Only DNS is outstanding**: `hidden-agenda.azyr.io` has no Cloudflare record yet, so the site answers on the box's loopback and nowhere else.
+
+Answered by deploying rather than by asking: Node 18.19 runs the bundle, **PM2 runs an `.mjs` entry with no wrapper**, `/var/lib/hidden-agenda/rooms` is writable (`persistence: true`), and a websocket upgrades through nginx over TLS, creates a room and persists it.
+
+Two defects the deploy itself exposed, both fixed: `expires` plus `add_header` sent **two** `Cache-Control` headers on every asset, and `engines: >=22.12` printed an EBADENGINE warning on every production install when the deployed artifact only needs 18.
 
 | Artifact | |
 | --- | --- |
@@ -277,13 +283,9 @@ So Phase 3 is **not blocked**. But two things are Fede's call:
 
 Everything remaining needs either the box or a physical device. No code is outstanding.
 
-1. **Cloudflare DNS** — a proxied `A` record for `hidden-agenda`. Dashboard, Fede.
-2. **Cloudflare WebSockets** — confirm they are on for the zone. Without it `/ws` fails while the page loads fine, which is a confusing failure worth ruling out first. Dashboard, Fede.
-3. **Run the box-side setup** in `deploy/README.md`: clone to `/opt/hidden-agenda`, `npm ci --omit=dev`, create `/var/lib/hidden-agenda/rooms`, PM2, nginx, reload.
-4. **Three things only the box can answer**, all read-only:
-   - `nginx -t` on the site config. There is no nginx on the laptop, so it has only been checked statically — brace balance, semicolons, and which locations lose inherited headers.
-   - whether **PM2 runs an `.mjs` entry point**. The one item in the runbook with no local equivalent. `node dist-server/main.mjs` from `/opt/hidden-agenda` is the fallback check.
-   - whether **`cloudflare-realip.conf` is in the http context**. If it is not, `$remote_addr` is a Cloudflare edge and every visitor shares one join-rate bucket, so real players get throttled. Fix the http-context config rather than raising the limit.
-5. **Play it on a real phone.** Touch dragging is covered by a CDP-driven spec, but emulated touch is not a phone.
+1. **Cloudflare DNS** — a proxied `A` record for `hidden-agenda` → the VPS. This is the only thing standing between the current state and a live site.
+2. **Cloudflare WebSockets** — confirm they are on for the zone. Without it the page loads fine and only `/ws` fails, which is a confusing failure worth ruling out first.
+3. **Decide on mTLS** — both other subdomains enforce Authenticated Origin Pulls; this one does not yet. Written up in `deploy/README.md`.
+4. **Play it on a real phone**, once DNS is up. Touch dragging has a CDP-driven spec, but emulated touch is not a phone.
 
 Open decision, not a blocker: the box runs **Node 18, EOL since April 2025**. The server bundle targets `node18` so this deploy does not force the issue, but upgrading would affect all five existing PM2 apps.

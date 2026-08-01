@@ -12,6 +12,8 @@ Everything is prebuilt and committed — `docs/` (browser) and `dist-server/main
 | Port 3007 | free (3000–3006, 8410/8411 osler, 8420/8421 wallet are taken) |
 | TLS | `/etc/nginx/ssl/azyr.io.pem` already covers `*.azyr.io` — no new certificate |
 | Real visitor IPs | inherited from the http context, nothing to add — see step 7 |
+| PM2 + `.mjs` | works, no wrapper needed |
+| `/var/lib` writable | yes, `persistence: true` |
 | Inherited caching | none; the apex's `immutable` rule is server-scoped |
 | mTLS | **an open decision — see below** |
 
@@ -25,9 +27,22 @@ Cost of turning it on: `curl -k https://127.0.0.1/ -H 'Host: ...'` starts return
 
 To enable: add its own snippet alongside osler's and `include` it from the `server` block, mirroring how osler does it. One line, reversible by moving the snippet aside.
 
+## Status: deployed
+
+The box side is **done and verified** — clone, `npm ci --omit=dev`, state dirs, PM2 (saved, and `pm2-root` is enabled so it survives a reboot), nginx installed, tested and reloaded. Every existing site was re-checked after the reload and is unaffected.
+
+Verified on the box rather than assumed:
+
+- Node 18.19 runs the bundle, and **PM2 6.0.13 runs an `.mjs` entry point** — the one item that had no local equivalent.
+- `/var/lib/hidden-agenda/rooms` is writable: `/healthz` reports `persistence: true`.
+- A websocket upgrades **through nginx over TLS**, creates a room and writes it to disk.
+- `index.html` is `no-store`, `/assets/` is a single `public, max-age=31536000, immutable`.
+
+**The only thing left is DNS** — until `hidden-agenda.azyr.io` has a proxied Cloudflare record, the site is reachable only from the box's loopback.
+
 ## One-time setup
 
-Steps 1 and 2 are not doable from the box.
+Kept as the record of what was done, and for rebuilding from scratch. Steps 1 and 2 are not doable from the box.
 
 **1. Cloudflare DNS.** Add a **proxied** `A` record for `hidden-agenda` pointing at the VPS.
 
@@ -57,7 +72,7 @@ pm2 save
 curl -s http://127.0.0.1:3007/healthz    # {"ok":true,...}
 ```
 
-If PM2 will not run the `.mjs` entry point, that is the one thing here still unverified on this box — `node dist-server/main.mjs` from the same directory is the fallback check.
+PM2 6.0.13 runs the `.mjs` entry fine — confirmed on this box, no wrapper needed.
 
 The `/ws` block already sets `proxy_read_timeout 3600s`. nginx's 60s default would drop idle websockets, and Cloudflare has its own ~100s idle limit on top, which the server's 25s ping stays under.
 
