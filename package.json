@@ -1,6 +1,6 @@
 {
 	"name": "hidden-agenda",
-	"version": "3.0.2",
+	"version": "3.0.3",
 	"homepage": "https://fedeiii.github.io/hidden-agenda/",
 	"engines": {
 		"node": ">=18.18"
@@ -39,7 +39,7 @@
 	},
 	"comments": {
 		"dependencies": "Everything the browser needs is compiled into the committed docs/ bundle, so nothing here is required at runtime by the app. `dependencies` is reserved for what the multiplayer server process itself needs (ws, from phase 1), which keeps `npm ci --omit=dev` on the VPS down to almost nothing.",
-		"engines": "What the *deployed artifact* needs. dist-server/main.mjs targets node18 and the VPS runs 18.19, so requiring 22 here only produced an EBADENGINE warning on every production install. Building and testing needs node 22 (see .nvmrc) \u2014 vite and playwright declare that themselves, so a developer on 18 still gets told."
+		"engines": "What the *deployed artifact* needs. dist-server/main.mjs targets node18 and the VPS runs 18.19, so requiring 22 here only produced an EBADENGINE warning on every production install. Building and testing needs node 22 (see .nvmrc) — vite and playwright declare that themselves, so a developer on 18 still gets told."
 	},
 	"author": "Federico Perez <fedelll@gmail.com>",
 	"dependencies": {

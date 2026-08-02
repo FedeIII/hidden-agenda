@@ -1,4 +1,5 @@
 import styled, { css } from 'styled-components';
+import { narrowOrShort } from 'Client/components/breakpoints';
 import { TEAM_COLORS } from 'Domain/teams';
 
 const containerMargin = ({ small }) => {
@@ -29,6 +30,10 @@ const size = ({ small }) => {
 			width: initial;
 			height: initial;
 			margin-right: 8px;
+
+			${narrowOrShort} {
+				margin-right: 4px;
+			}
 		`;
 	}
 
@@ -45,6 +50,16 @@ const innerSize = ({ small }) => {
 			height: calc(100% - 16px);
 			margin: 6px 8px;
 			padding: 2px 8px;
+
+			/* A small card is a label with 40px of chrome around it, and two of them sit inline
+			   between ACCUSE and REVEAL. At "YELLOW" that row was wider than a phone. */
+			${narrowOrShort} {
+				font-size: 12px;
+				letter-spacing: 1px;
+				margin: 4px;
+				padding: 2px 4px;
+				white-space: nowrap;
+			}
 		`;
 	}
 
@@ -83,6 +98,13 @@ export const Alignments = styled.div`
 	display: flex;
 	justify-content: space-evenly;
 	${containerMargin}
+
+	${narrowOrShort} {
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		max-width: 100%;
+	}
 `;
 
 export const AlignmentCardStyled = styled.div`

@@ -66,8 +66,16 @@ export const Action = styled.div`
 	justify-content: center;
 	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
 
+	/* An action holds more than one button: the middle one grows to ACCUSE + the alignment cards
+	   the player has revealed + REVEAL. Without wrapping it outgrew the screen, and since it is
+	   centred it hung off *both* edges at once — with .game clipping horizontally, ACCUSE and
+	   REVEAL were not merely ugly but unreachable. */
 	${narrowOrShort} {
 		flex-basis: auto;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		max-width: 100%;
 	}
 `;
 
@@ -182,6 +190,15 @@ export const RevealCard = styled.div`
 export const RevealActions = styled.div`
 	display: flex;
 	flex-direction: row;
+
+	/* Same shape as an Action: two cards and CANCEL side by side, which is more than a phone is
+	   wide once a card carries a revealed team name instead of "Friend". */
+	${narrowOrShort} {
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		max-width: 100%;
+	}
 `;
 
 const onHide = ({ hide }) => {

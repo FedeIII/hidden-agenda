@@ -5,6 +5,42 @@ import { test, expect } from './fixtures';
 const PORTRAIT = { width: 390, height: 844 };
 const LANDSCAPE = { width: 844, height: 390 };
 
+// The cards a player has revealed sit inline between ACCUSE and REVEAL, so that action group grows
+// to four items. It was wider than a phone and, being centred, hung off *both* edges at once — and
+// since .game clips horizontally, the two buttons were not merely ugly but unreachable.
+async function revealBothAlignments(page) {
+	await page.click('#reveal');
+	await page.click('#reveal-friend');
+	await page.click('#reveal-foe');
+	await page.click('text=CANCEL');
+
+	// Which teams were dealt is random and the widest name is half again the narrowest, so the
+	// worst case is forced rather than left to the deal. Nothing re-renders in between.
+	await page.evaluate(() => {
+		for (const id of ['revealed-friend', 'revealed-foe']) {
+			document.getElementById(id).querySelector('span').textContent = 'YELLOW';
+		}
+	});
+}
+
+async function whatStandsOutSideways(page, selector) {
+	return page.evaluate(sel => {
+		// The board deliberately renders a hexagon past each edge, so .game is scrollable sideways
+		// even though it clips. A click can leave it scrolled, which would measure a shifted layout.
+		document.querySelector('.game').scrollLeft = 0;
+
+		const width = document.documentElement.clientWidth;
+
+		return [...document.querySelectorAll(sel)]
+			.filter(el => {
+				const box = el.getBoundingClientRect();
+
+				return box.left < -1 || box.right > width + 1;
+			})
+			.map(el => el.id || el.textContent.trim());
+	}, selector);
+}
+
 // Was `overflow: hidden`, so anything that did not fit was not merely off-screen, it was
 // unreachable. Whatever else changes, that must not come back.
 async function nothingIsUnreachable(page) {
@@ -53,6 +89,30 @@ test.describe('PHONE LAYOUT', () => {
 			}
 		});
 
+		test('a revealed friend and foe stay on screen', async ({ page, goToPlay }) => {
+			await goToPlay(2);
+			await revealBothAlignments(page);
+
+			expect(await whatStandsOutSideways(page, '#accuse, #reveal, #revealed-friend, #revealed-foe')).toEqual([]);
+
+			await expect(page.locator('#accuse')).toBeInViewport();
+			await expect(page.locator('#reveal')).toBeInViewport();
+		});
+
+		// The accuse menu takes over the same group and is the widest thing that ever goes in it:
+		// at six players it ran a hundred pixels off each edge, and the seats at the far left were
+		// not merely clipped but impossible to tap.
+		test('every seat can be accused at six players', async ({ page, goToPlay }) => {
+			await page.click('#players6');
+			await goToPlay(6);
+			await page.click('#accuse');
+
+			expect(await whatStandsOutSideways(page, '[id^="accuse-player-"]')).toEqual([]);
+
+			await page.click('#accuse-player-1');
+			await expect(page.locator('#accuse-friend')).toBeVisible();
+		});
+
 		test('all four HQs and the board are present', async ({ page, goToPlay }) => {
 			await goToPlay(2);
 
@@ -80,6 +140,16 @@ test.describe('PHONE LAYOUT', () => {
 			expect(fits).toBe(true);
 			await expect(page.locator('#snipe')).toBeInViewport();
 			await expect(page.locator('#next-turn')).toBeInViewport();
+		});
+
+		test('a revealed friend and foe stay on screen', async ({ page, goToPlay }) => {
+			await goToPlay(2);
+			await revealBothAlignments(page);
+
+			expect(await whatStandsOutSideways(page, '#accuse, #reveal, #revealed-friend, #revealed-foe')).toEqual([]);
+
+			await expect(page.locator('#accuse')).toBeInViewport();
+			await expect(page.locator('#reveal')).toBeInViewport();
 		});
 	});
 });

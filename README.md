@@ -214,6 +214,15 @@ Play it over the internet. Also a complete change of toolchain underneath, and t
     spot — and, since a walk from a cell to itself goes by way of its right-hand neighbour, for a cell
     it never entered either. A move already records its whole path, which is where marks come from
   * 182 tests → **201**
+* **v3.0.3**
+  * The friend and foe cards a player has revealed no longer hang off the edges of a phone. They sit
+    inline between `ACCUSE` and `REVEAL`, in a group that did not wrap, so two of them made it wider
+    than the screen — and because the group is centred it overran *both* edges at once. `.game` clips
+    horizontally, so those two buttons were not merely cut off but impossible to tap. The group wraps
+    now, and a revealed card is tightened on a phone so that it usually does not have to
+  * The same group carries the accuse menu, which at six players ran a hundred pixels off each side
+    and left the seats at the far left unreachable
+  * 201 tests → **204**
 
 ### v2.1.0
 * Drag and drop controls for pieces

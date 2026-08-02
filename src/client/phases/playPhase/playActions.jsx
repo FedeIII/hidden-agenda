@@ -97,12 +97,12 @@ function RevealedAlignments() {
 	return (
 		<>
 			{showFriend && (
-				<AlignmentFriend small disabled player={player.name} team={player.alignment.friend}>
+				<AlignmentFriend id="revealed-friend" small disabled player={player.name} team={player.alignment.friend}>
 					{TEAM_NAMES[player.alignment.friend]}
 				</AlignmentFriend>
 			)}
 			{showFoe && (
-				<AlignmentFoe small disabled player={player.name} team={player.alignment.foe}>
+				<AlignmentFoe id="revealed-foe" small disabled player={player.name} team={player.alignment.foe}>
 					{TEAM_NAMES[player.alignment.foe]}
 				</AlignmentFoe>
 			)}
