@@ -27,8 +27,29 @@ function hasPieceEndedTurn(pieces, pieceState, toggledPieceId) {
 	return false;
 }
 
-function isPieceBeingDropped({ hasTurnEnded, pieces, pieceState }, toggledPieceId) {
-	return hasTurnEnded || hasPieceEndedTurn(pieces, pieceState, toggledPieceId);
+// A turn that leaves the board exactly as it found it is not a turn. Dropping a piece is what
+// ends one, and several ways of dropping one changed nothing at all: selecting a deployed sniper
+// puts it straight into MOVEMENT, so letting go of it again ended the turn without a shot being
+// aimed anywhere new — as did turning it away and back — and a spy walked out of its cell and
+// back onto it, arriving on the facing it left with, did the same over two moves.
+//
+// piecesPrevState is the board as NEXT_TURN found it, so comparing against it states the rule
+// once rather than enumerating the ways to waste a turn.
+function hasTurnChangedTheBoard(state, toggledPieceId) {
+	// The very toggle piecesReducer is about to apply. It has to run first because dropping a
+	// piece is what commits its aim (direction = selectedDirection), so the board this turn
+	// actually leaves behind does not exist until it has.
+	return pz.hasBoardChanged(pz.toggle(state, toggledPieceId), state.piecesPrevState);
+}
+
+function isPieceBeingDropped(state, toggledPieceId) {
+	if (state.hasTurnEnded) {
+		return true;
+	}
+
+	return (
+		hasPieceEndedTurn(state.pieces, state.pieceState, toggledPieceId) && hasTurnChangedTheBoard(state, toggledPieceId)
+	);
 }
 
 function isSniperSelectedForSnipe(snipe, pieceId) {

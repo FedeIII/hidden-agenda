@@ -350,14 +350,15 @@ function getThreeFrontDirections(direction) {
 	return [directions.getPrevious(index), directions.get(index), directions.getFollowing(index)];
 }
 
-function getDirectedPiece(piece, direction, pieces) {
-	const inSniperLineOf = getSnipersInSight(piece, piece.position, pieces);
-	const throughSniperLineOf = getUniqueValues([...inSniperLineOf, ...piece.throughSniperLineOf]);
-
+// Aiming is not moving, so it records no sniper lines. It used to recompute them from the piece's
+// own cell and union them in, which could only ever add lines the piece never crossed: a move
+// already records its whole path, destination included, and a piece that merely turns has crossed
+// nothing at all. Worse, getMovementPositions walks from a cell to itself by way of its right-hand
+// neighbour, so turning also marked the piece as having stepped through a cell one over.
+function getDirectedPiece(piece, direction) {
 	return {
 		...piece,
 		selectedDirection: direction,
-		throughSniperLineOf,
 	};
 }
 
@@ -366,7 +367,7 @@ function changeSelectedPieceDirection(pieces, direction) {
 
 	return pieces.map(piece => {
 		if (piece.id === selectedPiece.id) {
-			return getDirectedPiece(piece, direction, pieces);
+			return getDirectedPiece(piece, direction);
 		}
 
 		return piece;
@@ -815,6 +816,34 @@ function setCeoBuffs(piece, _index, pieces) {
 // CHECKS //
 ////////////
 
+// Either pair may be absent — an undefined position is a piece still in its HQ, an undefined
+// direction one that faces nowhere yet — and areCoordsEqual answers undefined for those, so
+// absence has to be settled before the coordinates are compared.
+function areSameCoords(coords1, coords2) {
+	if (!coords1 || !coords2) {
+		return !coords1 && !coords2;
+	}
+
+	return !!areCoordsEqual(coords1, coords2);
+}
+
+// Everything a turn can leave behind: where each piece stands — a cell, an HQ or the cemetery —
+// and which way it faces. Selection, highlights, CEO buffs and the sniper-line marks are all
+// turn-scoped bookkeeping and deliberately excluded, which is also what lets this be compared
+// against piecesPrevState: that snapshot is taken on NEXT_TURN, before those are recomputed.
+function hasBoardChanged(pieces, otherPieces) {
+	return pieces.some(piece => {
+		const other = getPieceById(piece.id, otherPieces);
+
+		return (
+			!other ||
+			!piece.killed !== !other.killed ||
+			!areSameCoords(piece.position, other.position) ||
+			!areSameCoords(piece.direction, other.direction)
+		);
+	});
+}
+
 function isPieceBlocked(selectedPiece, pieces, position1CellAhead, position2CellsAhead) {
 	return (
 		pieces.filter(
@@ -1021,6 +1050,7 @@ export const pz = {
 	isCeo,
 	isSniper,
 	isSniperOnBoard,
+	hasBoardChanged,
 	hasGameFinished,
 	isTogglePieceOnCellClick,
 	isMovePieceOnCellClick,

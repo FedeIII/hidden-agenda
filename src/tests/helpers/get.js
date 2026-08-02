@@ -103,6 +103,16 @@ export default function createGet(page) {
 			};
 		},
 
+		// The button is the only thing hasTurnEnded shows, and Button styles an inactive one with
+		// a not-allowed cursor.
+		get nextTurn() {
+			return {
+				get isActive() {
+					return page.locator('#next-turn').evaluate(el => getComputedStyle(el).cursor === 'pointer');
+				},
+			};
+		},
+
 		storedPieceIn(team) {
 			return {
 				get id() {

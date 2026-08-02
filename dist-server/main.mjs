@@ -478,18 +478,16 @@ function getThreeFrontDirections(direction) {
 		directions.getFollowing(index)
 	];
 }
-function getDirectedPiece(piece, direction, pieces) {
-	const throughSniperLineOf = getUniqueValues([...getSnipersInSight(piece, piece.position, pieces), ...piece.throughSniperLineOf]);
+function getDirectedPiece(piece, direction) {
 	return {
 		...piece,
-		selectedDirection: direction,
-		throughSniperLineOf
+		selectedDirection: direction
 	};
 }
 function changeSelectedPieceDirection(pieces, direction) {
 	const selectedPiece = getSelectedPiece(pieces);
 	return pieces.map((piece) => {
-		if (piece.id === selectedPiece.id) return getDirectedPiece(piece, direction, pieces);
+		if (piece.id === selectedPiece.id) return getDirectedPiece(piece, direction);
 		return piece;
 	});
 }
@@ -723,6 +721,16 @@ function setCeoBuffs(piece, _index, pieces) {
 		buffed: isNextToCeo(piece, pieces)
 	};
 }
+function areSameCoords(coords1, coords2) {
+	if (!coords1 || !coords2) return !coords1 && !coords2;
+	return !!areCoordsEqual(coords1, coords2);
+}
+function hasBoardChanged(pieces, otherPieces) {
+	return pieces.some((piece) => {
+		const other = getPieceById(piece.id, otherPieces);
+		return !other || !piece.killed !== !other.killed || !areSameCoords(piece.position, other.position) || !areSameCoords(piece.direction, other.direction);
+	});
+}
 function isPieceBlocked(selectedPiece, pieces, position1CellAhead, position2CellsAhead) {
 	return pieces.filter((piece) => isPieceAtPosition(piece, position1CellAhead) || isFriendlyAtPosition(piece, position2CellsAhead, selectedPiece)).length !== 0;
 }
@@ -852,6 +860,7 @@ var pz = {
 	isCeo,
 	isSniper,
 	isSniperOnBoard,
+	hasBoardChanged,
 	hasGameFinished,
 	isTogglePieceOnCellClick,
 	isMovePieceOnCellClick,
@@ -1214,8 +1223,12 @@ function hasPieceEndedTurn(pieces, pieceState, toggledPieceId) {
 	}
 	return false;
 }
-function isPieceBeingDropped({ hasTurnEnded, pieces, pieceState }, toggledPieceId) {
-	return hasTurnEnded || hasPieceEndedTurn(pieces, pieceState, toggledPieceId);
+function hasTurnChangedTheBoard(state, toggledPieceId) {
+	return pz.hasBoardChanged(pz.toggle(state, toggledPieceId), state.piecesPrevState);
+}
+function isPieceBeingDropped(state, toggledPieceId) {
+	if (state.hasTurnEnded) return true;
+	return hasPieceEndedTurn(state.pieces, state.pieceState, toggledPieceId) && hasTurnChangedTheBoard(state, toggledPieceId);
 }
 function isSniperSelectedForSnipe(snipe, pieceId) {
 	return snipe && pz.isSniper(pieceId);

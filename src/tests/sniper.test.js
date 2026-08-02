@@ -196,6 +196,46 @@ test.describe('SNIPER', () => {
 		expect(direction).toEqual(DIRECTION.up.right);
 	});
 
+	// Selecting a deployed sniper goes straight to MOVEMENT, because turning is the only move it
+	// has — so letting go of it again used to look exactly like finishing one, and handed the turn
+	// on for nothing. Hovering is how a cell is aimed at; only the last one before the click counts.
+	test('does NOT end the turn when it is left aiming where it already aimed', async ({ page, clickOn, get }) => {
+		await clickOn.team(0).sniper();
+		await clickOn.cell(3, 3);
+		await clickOn.cell(2, 3);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).sniper();
+		await page.hover('#hex-4-3');
+		await page.hover('#hex-3-2');
+		await clickOn.cell(2, 3);
+
+		const direction = await get.pieceIn(3, 3).direction;
+		expect(direction).toEqual(DIRECTION.up.right);
+
+		const isNextTurnActive = await get.nextTurn.isActive;
+		expect(isNextTurnActive).toBeFalsy();
+	});
+
+	test('does end the turn when it is left aiming somewhere new', async ({ page, clickOn, get }) => {
+		await clickOn.team(0).sniper();
+		await clickOn.cell(3, 3);
+		await clickOn.cell(2, 3);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).sniper();
+		await page.hover('#hex-4-3');
+		await clickOn.cell(3, 2);
+
+		const direction = await get.pieceIn(3, 3).direction;
+		expect(direction).toEqual(DIRECTION.left);
+
+		const isNextTurnActive = await get.nextTurn.isActive;
+		expect(isNextTurnActive).toBeTruthy();
+	});
+
 	test('blocks line of sight for other pieces placement', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).sniper();
 		await clickOn.cell(2, 0);

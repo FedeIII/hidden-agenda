@@ -156,9 +156,14 @@ Rules that fall out of that sequence:
 - **Facing is a preview until you confirm.** Hovering changes what the piece shows, but the committed
   direction is only written when you put the piece down (`pz.js#toggledPiece`).
 - **Selecting is free; confirming is not.** Clicking a piece and then clicking it again puts it back
-  without spending the turn. Two exceptions: a spy can no longer be deselected once it has taken its
-  first step (`pz.js#hasToToggle`), and a **deployed sniper is committed the moment you select it** —
-  clicking it again spends the turn on a rotation, even a rotation to where it already pointed.
+  without spending the turn. One exception: a spy can no longer be deselected once it has taken its
+  first step (`pz.js#hasToToggle`).
+- **Nothing spends the turn unless it changes the board.** What is confirmed is measured against the
+  board as the turn began, and an activation that leaves every piece where it stood, facing the way
+  it faced, is not one (`pz.js#hasBoardChanged`). Picking up a deployed sniper and putting it down
+  again costs nothing, and neither does sweeping it round and back onto the heading it already had.
+  Nor does walking a spy off its cell and back onto it if it arrives on the facing it left with — the
+  turn is still there to spend.
 - **A piece that cannot move can still be put back.** Selecting a blocked agent and clicking away
   simply deselects it — no turn spent.
 
@@ -308,11 +313,11 @@ stood when the turn began; walking next to a CEO does not buff the walker until 
 Snipers are the reason a move can be undone, and the only thing in the game that does **not** belong
 to the player taking the turn.
 
-**Marking.** During a turn, any piece that **moves into, out of, through, or turns while standing in**
-an enemy sniper's line of fire is marked as seen by that sniper
-(`pz.js#getSnipersInSight`, `getDirectedPiece`). A whole path is checked, not just its endpoints — a
-piece that crosses a line and keeps going is just as marked as one that stops in it. Snipers only
-ever mark **enemy** pieces.
+**Marking.** During a turn, any piece that **moves into, out of, or through** an enemy sniper's line
+of fire is marked as seen by that sniper (`pz.js#getSnipersInSight`). A whole path is checked, not
+just its endpoints — a piece that crosses a line and keeps going is just as marked as one that stops
+in it. Snipers only ever mark **enemy** pieces, and only movement marks: a piece that turns on the
+spot has crossed nothing, even one standing in a line already.
 
 **Whose shot it is.** `SNIPE!` belongs to **everyone except the player on turn**. A sniper answers a
 move, so the player who made that move is the one person who may not take the shot — and every other
@@ -347,9 +352,11 @@ the shot happens — there is no arming it and then thinking better of it.
 **Deployment is protected.** No piece may be deployed into an enemy sniper's line of fire, so nothing
 ever arrives already marked.
 
-**Turning a sniper does not mark the pieces already standing in its new line.** Marks come from
-movement, not from being looked at. Sweeping a sniper round to face a stationary enemy sets up the
-shot for the moment that enemy moves — it does not take it.
+**Turning a sniper does not mark the pieces already standing in its new line, and turning under one
+does not mark the piece that turned.** Marks come from movement, not from being looked at, and that
+holds in both directions. Sweeping a sniper round to face a stationary enemy sets up the shot for the
+moment that enemy moves — it does not take it; and a piece caught in a line can turn where it stands
+without handing over a second shot at a move it made last turn.
 
 ---
 

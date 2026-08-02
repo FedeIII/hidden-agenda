@@ -202,6 +202,18 @@ Play it over the internet. Also a complete change of toolchain underneath, and t
     other seat is allowed both. Hot-seat keeps one live button, since one screen cannot tell who
     reached for it
   * 176 tests → **182**
+* **v3.0.2**
+  * A turn that leaves the board exactly as it found it no longer ends. Picking up a deployed sniper
+    and putting it down again handed the turn on having changed nothing — selecting a sniper that is
+    already on the board goes straight to MOVEMENT, because turning is the only move it has — and so
+    did sweeping it round and back onto the heading it already had, and walking a spy off its cell and
+    back onto it arriving on the facing it left with. The rule is stated once now, as a comparison
+    against the board as `NEXT TURN` found it, instead of enumerated per piece
+  * Aiming no longer records sniper lines. It recomputed them from the piece's own cell on every
+    hover, so a piece standing in an enemy's crosshairs handed it a fresh shot just by turning on the
+    spot — and, since a walk from a cell to itself goes by way of its right-hand neighbour, for a cell
+    it never entered either. A move already records its whole path, which is where marks come from
+  * 182 tests → **201**
 
 ### v2.1.0
 * Drag and drop controls for pieces
@@ -331,6 +343,11 @@ Play it over the internet. Also a complete change of toolchain underneath, and t
 * ~~Pieces are not allowed to spawn over other pieces~~
 * ~~Switch selected agent allows to direct it without moving it first~~
 * ~~Agent direction after sliding~~
+* ~~Selecting a deployed sniper and putting it back spends the turn, as does turning it away and back
+  onto the heading it already had~~
+* ~~A spy walked off its cell and back onto it, arriving on the facing it left with, spends the turn~~
+* ~~Aiming a piece marks it as having crossed the sniper lines covering its own cell, and the one to
+  its right~~
 
 Found while writing [RULES.md](RULES.md) and reproduced against the domain code — see its Appendix B:
 

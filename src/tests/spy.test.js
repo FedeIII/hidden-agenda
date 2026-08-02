@@ -231,6 +231,53 @@ test.describe('SPY', () => {
 		expect(direction).toEqual(DIRECTION.up.right);
 	});
 
+	// Its two moves are enough to leave a cell and come back to it, and the return leg sets the
+	// facing. Arrive the way you came and the board is untouched, which is not a turn.
+	test('does NOT end the turn when it walks back onto its own cell facing the same way', async ({
+		page,
+		clickOn,
+		get,
+	}) => {
+		await clickOn.team(0).spy();
+		await clickOn.cell(3, 3);
+		await clickOn.cell(2, 2);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).spy();
+		await clickOn.cell(4, 3);
+		await clickOn.cell(3, 3);
+		await clickOn.team(0).spy();
+
+		const pieceId = await get.pieceIn(3, 3).id;
+		expect(pieceId).toEqual('pz-0-S');
+
+		const direction = await get.pieceIn(3, 3).direction;
+		expect(direction).toEqual(DIRECTION.up.left);
+
+		const isNextTurnActive = await get.nextTurn.isActive;
+		expect(isNextTurnActive).toBeFalsy();
+	});
+
+	test('does end the turn when it walks back onto its own cell facing a new way', async ({ page, clickOn, get }) => {
+		await clickOn.team(0).spy();
+		await clickOn.cell(3, 3);
+		await clickOn.cell(2, 2);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).spy();
+		await clickOn.cell(3, 2);
+		await clickOn.cell(3, 3);
+		await clickOn.team(0).spy();
+
+		const direction = await get.pieceIn(3, 3).direction;
+		expect(direction).toEqual(DIRECTION.right);
+
+		const isNextTurnActive = await get.nextTurn.isActive;
+		expect(isNextTurnActive).toBeTruthy();
+	});
+
 	test('can NOT move if there is a piece in the next cell', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(1).agent(1);
 		await clickOn.cell(2, 2);
