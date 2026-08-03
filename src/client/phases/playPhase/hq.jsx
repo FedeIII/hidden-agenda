@@ -38,7 +38,7 @@ function HQ({ team }) {
 
 	const stored = useMemo(() => getNotStartedTeamPieces(pieces, team), [pieces, team]);
 
-	const createScene = useCallback(() => createHqScene(team), [team]);
+	const createScene = useCallback(element => createHqScene(team, element), [team]);
 	const scene = useMemo(() => ({ pieces: stored }), [stored]);
 	const layout = useThreeView(storeRef, createScene, scene);
 

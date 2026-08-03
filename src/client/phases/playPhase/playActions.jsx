@@ -25,7 +25,7 @@ import AccuseMenu from './accuseMenu';
 // Not gated on canAct like every other action here: sniping is the rest of the table's answer to
 // the move the player on turn has just made, so it is theirs and not the mover's.
 function useSnipe() {
-	const [{ pieces }, dispatch] = useContext(StateContext);
+	const [{ pieces, snipe: armed }, dispatch] = useContext(StateContext);
 	const canSnipe = useCanSnipe();
 
 	const isSniperOnBoard = pz.isSniperOnBoard(pieces);
@@ -36,7 +36,7 @@ function useSnipe() {
 		}
 	}, [isSniperOnBoard, canSnipe, dispatch]);
 
-	return [canSnipe, onSnipe];
+	return [canSnipe, onSnipe, armed];
 }
 
 function useAccuseMenu() {
@@ -193,7 +193,7 @@ function AlignmentReminder(props) {
 
 function PlayActions() {
 	const canAct = useCanAct();
-	const [canSnipe, onSnipe] = useSnipe();
+	const [canSnipe, onSnipe, isSnipeArmed] = useSnipe();
 	const [isAccusedShown, showAccuseMenu, hideAccuseMenu] = useAccuseMenu();
 	const [isRevealShown, isRevealActive, onReveal, hideReveal] = useRevealMenu();
 	const [isAlignmentWarningShown, isAlignmentShown, showWarning, onWarningConfirm, hideAlignment] =
@@ -204,8 +204,11 @@ function PlayActions() {
 	return (
 		<Actions>
 			<Action>
+				{/* A toggle, and it says so: with a shot lined up the table can either take it or
+				    stand down, and standing down is what gives the turn back to the player who
+				    moved. */}
 				<Button id="snipe" small active={canSnipe} onClick={onSnipe}>
-					SNIPE!
+					{isSnipeArmed ? 'STAND DOWN' : 'SNIPE!'}
 				</Button>
 			</Action>
 			<Action>

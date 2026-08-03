@@ -133,6 +133,11 @@ function createStage() {
 	// Shadow maps are the single most expensive thing we could switch on, and the suite renders
 	// through SwiftShader. Contact shadows are a painted texture instead — see boardScene.
 	renderer.shadowMap.enabled = false;
+	// Views composite rather than each clearing its own rectangle: the canvas is wiped once at the
+	// start of a frame and every view then paints over what is already there, with only the depth
+	// buffer reset between them. That is what lets a carried piece be drawn by the board, on top of
+	// the tray it was lifted out of.
+	renderer.autoClear = false;
 
 	document.body.appendChild(canvas);
 
@@ -234,20 +239,58 @@ function createStage() {
 			// reports its painted extent with a little slack around it, and a scissor that reached
 			// past its own element would clear a strip of whichever view is next door — which is
 			// exactly what it did, taking a bite out of the HQ tray beside the board.
-			const painted = view.extent();
+			// Unless the view says it has something in the air, in which case it is allowed the whole
+			// of the scrolling container to draw it in. Nothing else in the scene reaches past the
+			// bounds the camera was fitted to, so widening the scissor reveals only the thing that
+			// asked for it.
+			const painted = view.overlay() ? null : view.extent();
 
-			const left = Math.max(rect.left + painted.left, rect.left, clip.left, 0);
-			const right = Math.min(rect.left + painted.right, rect.right, clip.right, width);
-			const top = Math.max(rect.top + painted.top, rect.top, clip.top, 0);
-			const bottom = Math.min(rect.top + painted.bottom, rect.bottom, clip.bottom, height);
+			const left = painted ? Math.max(rect.left + painted.left, rect.left, clip.left, 0) : Math.max(clip.left, 0);
+			const right = painted
+				? Math.min(rect.left + painted.right, rect.right, clip.right, width)
+				: Math.min(clip.right, width);
+			const top = painted ? Math.max(rect.top + painted.top, rect.top, clip.top, 0) : Math.max(clip.top, 0);
+			const bottom = painted
+				? Math.min(rect.top + painted.bottom, rect.bottom, clip.bottom, height)
+				: Math.min(clip.bottom, height);
 
 			// Scrolled out of sight, or clipped away entirely. Costs nothing.
 			if (right - left < 1 || bottom - top < 1) {
 				continue;
 			}
 
-			onScreen.push({ rect, scissor: { left, top, right, bottom }, scene: view.scene, camera: view.camera });
+			// The viewport has to go with it. A scissor on its own does not let a view draw
+			// outside its element: the viewport is a hard edge, and a token halfway out of an HQ
+			// tray came out cut off at the board's own left edge, to the pixel. So a view that
+			// asked for the overlay is given the whole rectangle to project into, and told to
+			// re-frame itself so every pixel it already had stays exactly where it was.
+			const viewport = painted ? rect : { left, top, right, bottom, width: right - left, height: bottom - top };
+
+			if (view.widen) {
+				view.widen(
+					painted
+						? null
+						: {
+								left: viewport.left - rect.left,
+								top: viewport.top - rect.top,
+								width: viewport.width,
+								height: viewport.height,
+							},
+				);
+			}
+
+			onScreen.push({
+				viewport,
+				scissor: { left, top, right, bottom },
+				scene: view.scene,
+				camera: view.camera,
+				order: view.order,
+			});
 		}
+
+		// The board goes last so a piece it is carrying is drawn over the trays rather than under
+		// them. Views are otherwise in mount order, which is HQ, HQ, board, HQ, HQ.
+		onScreen.sort((a, b) => a.order - b.order);
 
 		if (!repaint) {
 			return;
@@ -261,17 +304,21 @@ function createStage() {
 		renderer.clear();
 		renderer.setScissorTest(true);
 
-		for (const { rect, scissor, scene, camera } of onScreen) {
+		for (const { viewport, scissor, scene, camera } of onScreen) {
 			// The viewport is the whole anchor element, because that is what the camera was fitted
-			// to and what the DOM overlay was projected against. The scissor is the part of it
-			// still visible. WebGL counts from the bottom left; the DOM counts from the top left.
-			renderer.setViewport(rect.left, height - rect.bottom, rect.width, rect.height);
+			// to and what the DOM overlay was projected against — or the overlay rectangle, for a
+			// view that asked for one and has re-framed itself to match. The scissor is the part of
+			// it still visible. WebGL counts from the bottom left; the DOM counts from the top left.
+			renderer.setViewport(viewport.left, height - viewport.bottom, viewport.width, viewport.height);
 			renderer.setScissor(
 				scissor.left,
 				height - scissor.bottom,
 				scissor.right - scissor.left,
 				scissor.bottom - scissor.top,
 			);
+			// Colour composites; depth does not. Each view is its own little world and must not be
+			// occluded by whatever the last one left in the depth buffer.
+			renderer.clearDepth();
 			renderer.render(scene, camera);
 		}
 
@@ -336,7 +383,16 @@ function createStage() {
 		 * @returns a handle: invalidate() marks this one view for a repaint, remove() takes it out.
 		 */
 		addView(view) {
-			const entry = { ...view, rect: { width: 0, height: 0, left: 0, top: 0 }, dirty: true };
+			// Defaults AFTER the spread, not before: a scene that simply has no opinion passes the
+			// key through as undefined, and a default that was merely spread over would be replaced
+			// by it — which is a call to undefined once a frame, inside the loop.
+			const entry = {
+				...view,
+				order: view.order || 0,
+				overlay: view.overlay || (() => false),
+				rect: { width: 0, height: 0, left: 0, top: 0 },
+				dirty: true,
+			};
 
 			views.add(entry);
 			pending = true;

@@ -713,15 +713,17 @@ function hasAvailableDirectionsForSniper(position, sniper, pieces) {
 		);
 }
 
+// Assigns the highlight rather than only ever setting it, so the same function can put a snipe
+// away again. It used to light snipers up and have no way of turning them off, which left the
+// only exit from an armed snipe being to fire it.
 function highlightSniperWithSight(piece, snipersWithSight) {
-	if (isSniper(piece.id) && snipersWithSight.includes(piece.id)) {
-		return {
-			...piece,
-			highlight: true,
-		};
+	if (!isSniper(piece.id)) {
+		return piece;
 	}
 
-	return piece;
+	const highlight = snipersWithSight.includes(piece.id);
+
+	return piece.highlight === highlight ? piece : { ...piece, highlight };
 }
 
 function highlightSnipersWithSight(pieces) {
@@ -732,6 +734,11 @@ function highlightSnipersWithSight(pieces) {
 	);
 
 	return pieces.map(piece => highlightSniperWithSight(piece, snipersWithSight));
+}
+
+// Standing down: nobody is lit, and the shot that was being lined up is not taken.
+function clearSniperSights(pieces) {
+	return pieces.map(piece => highlightSniperWithSight(piece, []));
 }
 
 function isSniperOnBoard(pieces) {
@@ -1036,6 +1043,7 @@ export const pz = {
 	highlightSnipersWithSight,
 	isInSniperSight,
 	isAnyPieceThroughSniperLine,
+	clearSniperSights,
 
 	// CLAIM CONTROL
 	claimControl,

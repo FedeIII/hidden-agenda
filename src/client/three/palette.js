@@ -35,9 +35,12 @@ const DARKEN_LEVEL_BY_CELL = [
 ];
 
 // The five shades the flat board actually uses, as polished's darken(level * 6 / 100, '#a1abb7')
-// resolves them. These are ALBEDO — what the surface is, not what it comes out as; a lit board
-// under tone mapping lands darker and with more separation between the levels than the flat one,
-// which is the point of lighting it.
+// resolves them. These are ALBEDO — what the surface is, not what it comes out as. A tile's top
+// face now lands within a few percent of its own value, which is the intent: the lit board is the
+// flat board with sides on it, and the chequer separates further than the flat one's does because
+// the chamfers and walls sit either side of the face. Everything on the board is authored this way,
+// so if the whole scene looks too dark or too bright the answer is in lighting.js, not here — this
+// is where the colours are decided, not where they are dimmed.
 //
 // Written out rather than computed, and — more to the point — never applied by multiplying a
 // Color: under three.js colour management a Color's channels are LINEAR, so multiplying by 0.64

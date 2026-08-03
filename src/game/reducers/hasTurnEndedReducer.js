@@ -60,7 +60,23 @@ function togglePieceState(state, pieceId) {
 	return isPieceBeingDropped(state, pieceId) || isSniperSelectedForSnipe(state.snipe, pieceId);
 }
 
+// Lining a shot up takes the turn back off the player who just moved: they may not pass it on
+// until the table has answered. That is the rule, and it is why arming a snipe sets this false.
+//
+// It is also how the game used to deadlock. There was no way to put an armed snipe away, so a
+// player who lined one up and then decided against it — or hit the button by accident — left a
+// turn that could not be passed and a board where nothing could be picked up, because a piece
+// cannot be toggled while a snipe is armed either. Pressing SNIPE again now stands down, and the
+// turn goes back to what it was.
+//
+// Which is worked out rather than remembered: a turn has ended when the board is not what it was
+// at the start of it and no piece is still in hand. Nothing can have moved in between, since an
+// armed snipe is exactly the state in which nothing can move.
 function snipeState(state) {
+	if (state.snipe) {
+		return !pz.getSelectedPiece(state.pieces) && pz.hasBoardChanged(state.pieces, state.piecesPrevState);
+	}
+
 	if (pz.isAnyPieceThroughSniperLine(state.pieces)) {
 		return false;
 	}

@@ -42,6 +42,7 @@ function Piece({ id, selectedDirection, selected, highlight, box }) {
 		event =>
 			startDrag(event, {
 				previewSrc: previewSrc(team, type, selectedDirection),
+				pieceId: id,
 				// Beginning a drag selects the piece, so one gesture can pick it up and place
 				// it. Unlike the old item() callback this will not deselect an already selected
 				// piece, which used to leave the drop with nothing to move.

@@ -145,6 +145,11 @@ export function boxStyle(projector, x, z, y, halfWidth, halfDepth) {
  */
 export default function createProjector({ bounds, padding = 0.04, elevation = BOARD_ELEVATION }) {
 	const camera = new PerspectiveCamera();
+	// What the renderer is handed, which is not always the camera the maths is done with: see
+	// `widen`. `camera` is the one that answers questions about where things are, and it is never
+	// touched by anything the renderer is doing this frame — every DOM overlay box, and every
+	// pointer position the drag controller turns into a place on the board, comes through it.
+	const renderCamera = new PerspectiveCamera();
 	const scratch = new Vector3();
 
 	let width = 1;
@@ -152,13 +157,16 @@ export default function createProjector({ bounds, padding = 0.04, elevation = BO
 	let painted = { left: 0, top: 0, right: 1, bottom: 1 };
 
 	return {
-		camera,
+		camera: renderCamera,
 
 		resize(nextWidth, nextHeight) {
 			width = Math.max(nextWidth, 1);
 			height = Math.max(nextHeight, 1);
 
 			fitCamera(camera, bounds, width, height, padding, elevation);
+			// copy() takes the view offset with it, so a resize mid-flight lands back on the element's
+			// own box and the next frame widens it again.
+			renderCamera.copy(camera);
 
 			// What this view actually paints into, which is not the same as the box it was given.
 			// The board is fitted by width and centred in whatever height the layout hands it, so
@@ -188,6 +196,36 @@ export default function createProjector({ bounds, padding = 0.04, elevation = BO
 			return painted;
 		},
 
+		/**
+		 * Draw into a rectangle bigger than the element, without moving anything already in it.
+		 *
+		 * A scissor is not enough on its own. The viewport is a hard edge — WebGL clips a primitive
+		 * to it whatever the scissor allows — so a token carried out of an HQ tray came out sliced
+		 * off at the board's own left edge, right down to the pixel. Widening the viewport alone
+		 * would rescale the board inside it, which would move every hexagon out from under the
+		 * invisible box that gets clicked; so the frustum is pushed off centre by exactly the amount
+		 * that puts the element's own rectangle back on the pixels it already had. The extra
+		 * rectangle around it is then extra, rather than zoom.
+		 *
+		 * @param box the rectangle to draw into, in the element's own pixels — its left and top are
+		 *            usually negative — or null to go back to the element's own box.
+		 */
+		widen(box) {
+			if (!box) {
+				if (renderCamera.view && renderCamera.view.enabled) {
+					renderCamera.clearViewOffset();
+				}
+
+				return;
+			}
+
+			// "Full size" is the element, and the sub-window is bigger than it and offset backwards,
+			// which is the reverse of what setViewOffset is usually for. The arithmetic is linear and
+			// does not mind. It also sets the aspect from the full size, which is the element's — so
+			// the camera the board was fitted to is unchanged.
+			renderCamera.setViewOffset(width, height, box.left, box.top, box.width, box.height);
+		},
+
 		// To CSS pixels, relative to the container's top left corner — which is exactly what an
 		// absolutely positioned overlay wants.
 		project(x, y, z) {
@@ -196,6 +234,36 @@ export default function createProjector({ bounds, padding = 0.04, elevation = BO
 			return {
 				x: (scratch.x * 0.5 + 0.5) * width,
 				y: (-scratch.y * 0.5 + 0.5) * height,
+			};
+		},
+
+		/**
+		 * And back again: a pixel on screen to the point on a horizontal plane it is pointing at.
+		 *
+		 * This is what lets a piece be dragged. The pointer is somewhere in the page and the token
+		 * has to be somewhere in the scene, and the two are only related through this camera — so
+		 * the ray it casts is followed down to the height the token floats at, and that is where
+		 * the token goes. Points outside the container work exactly as well as points inside it,
+		 * which is the whole reason a piece can be carried out of an HQ and over the board.
+		 */
+		unproject(x, y, planeY) {
+			scratch.set((x / width) * 2 - 1, -(y / height) * 2 + 1, 0.5).unproject(camera);
+			scratch.sub(camera.position).normalize();
+
+			// Parallel to the plane, or behind the camera: nothing sensible to return.
+			if (Math.abs(scratch.y) < 1e-6) {
+				return null;
+			}
+
+			const along = (planeY - camera.position.y) / scratch.y;
+
+			if (along < 0) {
+				return null;
+			}
+
+			return {
+				x: camera.position.x + scratch.x * along,
+				z: camera.position.z + scratch.z * along,
 			};
 		},
 	};

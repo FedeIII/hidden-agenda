@@ -17,8 +17,10 @@ function nextTurnState(pieces) {
 	return pz.removeIsThroughSniperLine(pieces).map(pz.setCeoBuffs);
 }
 
-function snipeState(pieces) {
-	return pz.highlightSnipersWithSight(pieces);
+// SNIPE is a toggle: pressing it lines the shot up, pressing it again puts it away. `state` is
+// the board before the action, so `state.snipe` is whether one was already being lined up.
+function snipeState({ pieces, snipe }) {
+	return snipe ? pz.clearSniperSights(pieces) : pz.highlightSnipersWithSight(pieces);
 }
 
 function claimControlState(payload, state) {
@@ -42,7 +44,7 @@ function piecesReducer(state, action) {
 		case NEXT_TURN:
 			return [...nextTurnState(state.pieces)];
 		case SNIPE:
-			return [...snipeState(state.pieces)];
+			return [...snipeState(state)];
 		case CLAIM_CONTROL:
 			return [...claimControlState(action.payload, state)];
 		case CANCEL_CONTROL:

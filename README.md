@@ -171,7 +171,25 @@ The board is in 3D.
   * Legal cells stand up out of the tray and take a red rim; a selected piece lifts and lights its
     rim; a lit sniper pulses; and where a piece may be *pointed* is shown in blue, because "where I
     may go" and "where I may point" must never share a colour
+  * **Dragging carries the piece.** The actual token comes out of its tray, rides under the cursor
+    across the table and settles onto the cell it is dropped on — no dragged image anywhere. Which
+    piece was pressed and whether the move is legal are still decided exactly where they were
+  * **Pieces travel.** Deploying by clicking sends the piece arcing out of its HQ to the cell, and
+    so does a drop; height comes from the distance left, so a long deploy lofts and a one-cell move
+    barely leaves the board
   * No WebGL, or a lost context, and the original flat board comes straight back. `?flat` forces it
+* **Fixed** — a snipe that was lined up could not be put away again, and since a piece cannot be
+  picked up while one is armed and the turn cannot be passed either, a player who thought better of
+  the shot left the game with nothing anybody could do. SNIPE! is a toggle now, and says so
+* **Fixed** — a piece picked up out of an HQ vanished for as long as the cursor was over that HQ, and
+  came back sliced in half at the board's left edge. Opening the scissor is not enough to draw
+  outside a view: the viewport clips a shape to itself whatever the scissor allows, so the board now
+  widens both and re-frames its projection by exactly the amount that leaves every hexagon where it
+  already was
+* **Fixed** — the whole board was being rendered at about half the colour it was painted in. The
+  lights were summing to half of what a colour needs to render as itself, and metalness compounded
+  it: with no environment map to reflect there is nothing to gain from it, only diffuse to lose. A
+  token now reads as its own artwork and an HQ rack as its own team colour
 * **Fixed** — the board's quiet chequer was being flattened by a colour-space mistake, and a piece
   whose art had not decoded yet had a box with no height, which made it impossible to drag
 * **A sniped CEO now takes its HQ with it**, like a CEO killed any other way. The cascade was written
@@ -387,6 +405,9 @@ Play it over the internet. Also a complete change of toolchain underneath, and t
 * Port to electron
 
 ## Known Bugs
+* ~~A piece dragged out of an HQ was invisible over that HQ, and cut in half at the board's edge~~
+* ~~Pieces and HQ racks rendered at about half the colour they were painted in~~
+* ~~A snipe that was lined up and then declined deadlocked the game~~
 * ~~Claim control after turn ended~~
 * ~~Snipers turning don't update the `throughSniperLineOf` prop of pieces already in the board~~
 * ~~Snipers killing don't undo the consecuences~~

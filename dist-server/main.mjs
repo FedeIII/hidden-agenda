@@ -667,15 +667,19 @@ function hasAvailableDirectionsForSniper(position, sniper, pieces) {
 	return directions.getAll().reduce((hasAvailableDirections, direction) => hasAvailableDirections || isDirectionAvailableForSniper(position, direction, sniper, pieces), false);
 }
 function highlightSniperWithSight(piece, snipersWithSight) {
-	if (isSniper(piece.id) && snipersWithSight.includes(piece.id)) return {
+	if (!isSniper(piece.id)) return piece;
+	const highlight = snipersWithSight.includes(piece.id);
+	return piece.highlight === highlight ? piece : {
 		...piece,
-		highlight: true
+		highlight
 	};
-	return piece;
 }
 function highlightSnipersWithSight(pieces) {
 	const snipersWithSight = getUniqueValues(pieces.filter((piece) => isInSniperSight(piece)).reduce((snipers, piece) => [...snipers, ...piece.throughSniperLineOf], []));
 	return pieces.map((piece) => highlightSniperWithSight(piece, snipersWithSight));
+}
+function clearSniperSights(pieces) {
+	return pieces.map((piece) => highlightSniperWithSight(piece, []));
 }
 function isSniperOnBoard(pieces) {
 	return !!pieces.find((piece) => getType(piece.id) === SNIPER$2 && cells_default.inBoard(piece.position));
@@ -849,6 +853,7 @@ var pz = {
 	highlightSnipersWithSight,
 	isInSniperSight,
 	isAnyPieceThroughSniperLine,
+	clearSniperSights,
 	claimControl: claimControl$1,
 	claimControlPieceState,
 	cancelControl: cancelControl$1,
@@ -1237,6 +1242,7 @@ function togglePieceState(state, pieceId) {
 	return isPieceBeingDropped(state, pieceId) || isSniperSelectedForSnipe(state.snipe, pieceId);
 }
 function snipeState$2(state) {
+	if (state.snipe) return !pz.getSelectedPiece(state.pieces) && pz.hasBoardChanged(state.pieces, state.piecesPrevState);
 	if (pz.isAnyPieceThroughSniperLine(state.pieces)) return false;
 	return state.hasTurnEnded;
 }
@@ -1264,8 +1270,8 @@ function directedPieceState(pieces, direction) {
 function nextTurnState(pieces) {
 	return pz.removeIsThroughSniperLine(pieces).map(pz.setCeoBuffs);
 }
-function snipeState$1(pieces) {
-	return pz.highlightSnipersWithSight(pieces);
+function snipeState$1({ pieces, snipe }) {
+	return snipe ? pz.clearSniperSights(pieces) : pz.highlightSnipersWithSight(pieces);
 }
 function claimControlState(payload, state) {
 	const { team } = payload;
@@ -1281,7 +1287,7 @@ function piecesReducer(state, action) {
 		case MOVE_PIECE: return [...movedPieceState$1(state, action.payload)];
 		case DIRECT_PIECE: return [...directedPieceState(state.pieces, action.payload)];
 		case NEXT_TURN: return [...nextTurnState(state.pieces)];
-		case SNIPE: return [...snipeState$1(state.pieces)];
+		case SNIPE: return [...snipeState$1(state)];
 		case CLAIM_CONTROL: return [...claimControlState(action.payload, state)];
 		case CANCEL_CONTROL: return [...cancelControlState(action.payload, state)];
 		default: return state.pieces;
@@ -1357,7 +1363,7 @@ function snipeState(pieces) {
 }
 function snipeReducer(state, action) {
 	switch (action.type) {
-		case SNIPE: return snipeState(state.pieces);
+		case SNIPE: return state.snipe ? false : snipeState(state.pieces);
 		case NEXT_TURN: return false;
 		default: return state.snipe;
 	}

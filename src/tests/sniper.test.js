@@ -445,6 +445,78 @@ test.describe('SNIPER', () => {
 		});
 	});
 
+	// Lining a shot up takes the turn off the player who just moved until the table has answered.
+	// There was no way to answer "no": the button did nothing on a second press, a piece cannot be
+	// picked up while a snipe is armed, and the turn could not be passed — so a player who armed
+	// one and thought better of it left the game with nothing anybody could do.
+	test.describe('standing down', () => {
+		async function aShotLinedUp(page, clickOn) {
+			await clickOn.team(1).agent(1);
+			await clickOn.cell(2, 1);
+			await clickOn.cell(1, 1);
+
+			await page.click('#next-turn');
+
+			await clickOn.team(0).sniper();
+			await clickOn.cell(3, 3);
+			await clickOn.cell(2, 2);
+
+			await page.click('#next-turn');
+
+			await clickOn.team(1).agent(1);
+			await clickOn.cell(0, 1);
+			await clickOn.cell(0, 1);
+
+			await page.click('#snipe');
+		}
+
+		test('gives the turn back when the shot is declined', async ({ page, clickOn, get }) => {
+			await aShotLinedUp(page, clickOn);
+
+			expect(await get.nextTurn.isActive).toBe(false);
+
+			await page.click('#snipe');
+
+			expect(await get.nextTurn.isActive).toBe(true);
+			expect(await get.pieceIn(0, 1).id).toEqual('pz-1-A1');
+
+			await page.click('#next-turn');
+			await expect(page.locator('.game')).toContainText("Player's turn: SARA");
+		});
+
+		test('puts the sniper out again', async ({ page, clickOn, get }) => {
+			await aShotLinedUp(page, clickOn);
+
+			expect(await get.pieceIn(3, 3).isHighlighted).toBe(true);
+
+			await page.click('#snipe');
+
+			expect(await get.pieceIn(3, 3).isHighlighted).toBe(false);
+		});
+
+		test('says which of the two it is about to do', async ({ page, clickOn }) => {
+			await expect(page.locator('#snipe')).toHaveText('SNIPE!');
+
+			await aShotLinedUp(page, clickOn);
+			await expect(page.locator('#snipe')).toHaveText('STAND DOWN');
+
+			await page.click('#snipe');
+			await expect(page.locator('#snipe')).toHaveText('SNIPE!');
+		});
+
+		test('can still take the shot after thinking about it', async ({ page, clickOn, get }) => {
+			await aShotLinedUp(page, clickOn);
+
+			await page.click('#snipe');
+			await page.click('#snipe');
+
+			await clickOn.team(0).sniper();
+
+			expect(await get.cementery(0).agent).toEqual('x 1');
+			expect(await get.nextTurn.isActive).toBe(true);
+		});
+	});
+
 	test.describe('CEO buff', () => {
 		test.beforeEach(async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).ceo();

@@ -10,6 +10,7 @@ import {
 } from 'three';
 import { SIZES } from './assets';
 import addLights from './lighting';
+import { noteScreenPosition } from './flight';
 import { COLUMN_PITCH, R, ROW_PITCH, slotKeyForPiece, storeSlots, TRAY_ELEVATION } from './layout';
 import { HQ_TRAY } from './palette';
 import createProjector, { boxStyle } from './view';
@@ -87,11 +88,13 @@ function sharedAsset(key, build) {
 	return shared[key];
 }
 
-export default function createHqScene(team) {
+export default function createHqScene(team, element) {
 	const scene = new Scene();
 	const colours = HQ_TRAY[team];
 
-	addLights(scene, { key: 1.5, rim: 0.7, fill: 0.55 });
+	// Flatter than the board — a rack is a shelf, not a table with a light over it — but summing to
+	// the same place, so a token in its socket is the same colour as the same token on the board.
+	addLights(scene, { key: 2.7, rim: 1.25, fill: 1, ambient: 0.68 });
 
 	const slots = storeSlots();
 
@@ -106,7 +109,7 @@ export default function createHqScene(team) {
 		),
 		sharedAsset(
 			`deckMaterial-${team}`,
-			() => new MeshStandardMaterial({ color: colours.deck, roughness: 0.55, metalness: 0.4 }),
+			() => new MeshStandardMaterial({ color: colours.deck, roughness: 0.55, metalness: 0.12 }),
 		),
 	);
 	scene.add(deck);
@@ -125,7 +128,7 @@ export default function createHqScene(team) {
 			sharedAsset('lip', () => hexRing(SOCKET_RADIUS * 0.9, SOCKET_RADIUS)),
 			sharedAsset(
 				`lipMaterial-${team}`,
-				() => new MeshStandardMaterial({ color: colours.frame, roughness: 0.35, metalness: 0.7 }),
+				() => new MeshStandardMaterial({ color: colours.frame, roughness: 0.35, metalness: 0.35 }),
 			),
 		);
 
@@ -155,6 +158,7 @@ export default function createHqScene(team) {
 	const byKey = new Map(slots.map(slot => [slot.key, slot]));
 	const tokens = new Map();
 	let signature = null;
+	let dragging = null;
 
 	return {
 		scene,
@@ -187,6 +191,17 @@ export default function createHqScene(team) {
 		 * that touched none of them. A store only cares which pieces are still in it and whether
 		 * one of them is picked up.
 		 */
+		// The piece being dragged is drawn by the board, following the pointer. This tray stops
+		// drawing it, or it would be in two places at once — in the player's hand and still in its
+		// socket. The DOM keeps it exactly where it was either way; only the picture changes.
+		setDragging(pieceId) {
+			dragging = pieceId;
+
+			for (const [id, token] of tokens) {
+				token.object.visible = id !== dragging;
+			}
+		},
+
 		setState({ pieces }) {
 			const next = pieces.map(piece => `${piece.id}${piece.selected ? '!' : ''}`).join();
 
@@ -196,6 +211,7 @@ export default function createHqScene(team) {
 
 			signature = next;
 
+			const rect = element.getBoundingClientRect();
 			const stored = new Set();
 
 			for (const piece of pieces) {
@@ -223,6 +239,13 @@ export default function createHqScene(team) {
 					snipe: false,
 					buffed: false,
 				});
+				tokens.get(piece.id).object.visible = piece.id !== dragging;
+
+				// Where this socket is in the page, so that when the piece leaves the tray the board
+				// knows where to start drawing its flight from.
+				const at = projector.project(slot.x, 0, slot.z);
+
+				noteScreenPosition(piece.id, rect.left + at.x, rect.top + at.y);
 			}
 
 			for (const [pieceId, token] of tokens) {

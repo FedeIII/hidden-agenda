@@ -4,10 +4,11 @@ import { getTileGeometry, getTileMaterials, SIZES } from './assets';
 import hexPrismGeometry, { ORIENTATION } from './geometry';
 import addLights from './lighting';
 import { allRenderedCells, cellToWorld, COLUMN_PITCH, directionToAngle, isPlayableCell, R, ROW_PITCH } from './layout';
+import { lastScreenPosition, noteScreenPosition, setHand } from './flight';
 import { AIM, BOARD, HIGHLIGHT, HOVER, KEYLINE } from './palette';
-import { prefersReducedMotion } from './stage';
+import getStage, { prefersReducedMotion } from './stage';
 import createProjector, { boxStyle } from './view';
-import createToken from './token';
+import createToken, { CARRY_LIFT } from './token';
 
 // The board: a hexagonal tray with thirty-seven tiles inlaid in it, twenty-four ghost cells
 // around the edge that exist only to be pointed at, and the pieces standing on top.
@@ -16,6 +17,10 @@ import createToken from './token';
 // flat edges north and south — which is a nicer thing to discover than to design.
 
 const TILE_TOP = SIZES.tileHeight;
+
+// Far enough from where it is going that it is worth letting it be drawn outside the board's own
+// rectangle — a piece coming out of an HQ tray spends most of its journey over other things.
+const TRAVELLING = 0.4;
 
 // Legal cells stand up out of the tray like buttons. Y only, and small: it is the best tabletop
 // reading of "you may go here", and being vertical it cannot move a single overlay box.
@@ -69,9 +74,9 @@ function createPlinth() {
 			}),
 		),
 		sharedAsset('plinthMaterials', () => [
-			new MeshStandardMaterial({ color: BOARD.plinth, roughness: 0.85, metalness: 0.15 }),
-			new MeshStandardMaterial({ color: BOARD.plinthEdge, roughness: 0.4, metalness: 0.6 }),
-			new MeshStandardMaterial({ color: BOARD.plinth, roughness: 0.85, metalness: 0.15 }),
+			new MeshStandardMaterial({ color: BOARD.plinth, roughness: 0.85, metalness: 0.1 }),
+			new MeshStandardMaterial({ color: BOARD.plinthEdge, roughness: 0.4, metalness: 0.3 }),
+			new MeshStandardMaterial({ color: BOARD.plinth, roughness: 0.85, metalness: 0.1 }),
 		]),
 	);
 
@@ -88,8 +93,11 @@ function createPlinth() {
 function createHighlight() {
 	const group = new Group();
 
-	const wash = flat('wash', 0, SIZES.tileRadius * 0.84, HIGHLIGHT, 0.18);
-	const rim = flat('rim', SIZES.tileRadius * 0.855, SIZES.tileRadius * 0.9, HIGHLIGHT, 0.95);
+	// Faint. Deploying a piece out of an HQ makes every empty cell legal, so this is the wash on
+	// thirty-seven tiles at once as often as it is the wash on two — and at anything heavier the
+	// board stops being a board and becomes a red rectangle.
+	const wash = flat('wash', 0, SIZES.tileRadius * 0.84, HIGHLIGHT, 0.09);
+	const rim = flat('rim', SIZES.tileRadius * 0.855, SIZES.tileRadius * 0.9, HIGHLIGHT, 0.8);
 	const keyline = flat('keyline', SIZES.tileRadius * 0.9, SIZES.tileRadius * 0.912, KEYLINE, 0.85);
 
 	wash.position.y = TILE_TOP + 0.006;
@@ -118,7 +126,7 @@ function createAimMarker() {
 	return marker;
 }
 
-export default function createBoardScene() {
+export default function createBoardScene(element) {
 	const scene = new Scene();
 
 	addLights(scene);
@@ -157,7 +165,7 @@ export default function createBoardScene() {
 		sharedAsset('centreGeometry', () => hexRing(SIZES.tileRadius * 0.14, SIZES.tileRadius * 0.3)),
 		sharedAsset(
 			'centreMaterial',
-			() => new MeshStandardMaterial({ color: BOARD.centre, roughness: 0.35, metalness: 0.8 }),
+			() => new MeshStandardMaterial({ color: BOARD.centre, roughness: 0.35, metalness: 0.45 }),
 		),
 	);
 	// Parented to its tile rather than placed in world space, so it rides up with the tile when
@@ -201,6 +209,38 @@ export default function createBoardScene() {
 	// Which cell each token is standing on, so it can ride up with a tile that rises under it.
 	const standingOn = new Map();
 	let signature = null;
+	let carrying = null;
+	let travelling = false;
+
+	// A point in the page, on the plane a token's base sits on. Everything the hand does goes
+	// through this: the pointer is in the document and the piece is in the scene, and the camera is
+	// the only thing that relates them.
+	function toBoard(clientX, clientY, planeY) {
+		const rect = element.getBoundingClientRect();
+
+		if (rect.width < 1 || rect.height < 1) {
+			return null;
+		}
+
+		return projector.unproject(clientX - rect.left, clientY - rect.top, planeY);
+	}
+
+	// The frame loop settles when nothing is animating, so anything that changes the scene from
+	// outside it — a piece being picked up or put down — has to say so.
+	function nudge() {
+		const stage = getStage();
+
+		if (stage) {
+			stage.invalidateAll();
+		}
+	}
+
+	function screenOf(token) {
+		const rect = element.getBoundingClientRect();
+		const at = projector.project(token.object.position.x, TILE_TOP, token.object.position.z);
+
+		return { x: rect.left + at.x, y: rect.top + at.y };
+	}
 
 	// Pieces stand on the tiles, not in them. One group carries the lot up to the tile surface so
 	// a token never has to know how thick the board it is standing on happens to be.
@@ -212,22 +252,109 @@ export default function createBoardScene() {
 		if (!tokens.has(pieceId)) {
 			const token = createToken(pieceId);
 
+			// A piece arriving on the board has usually been somewhere visible a moment ago — in its
+			// HQ socket, or under the pointer at the end of a drag. Starting it there and letting it
+			// fly to its cell is what turns "it is now over here" into a move you can follow.
+			const from = lastScreenPosition(pieceId);
+			const at = from && toBoard(from.x, from.y, TILE_TOP);
+
 			tokens.set(pieceId, token);
 			standing.add(token.object);
+
+			if (at) {
+				token.placeAt(at.x, at.z, CARRY_LIFT * 0.5);
+			}
 		}
 
 		return tokens.get(pieceId);
 	}
 
-	return {
+	const board = {
 		scene,
 		camera: projector.camera,
+
+		// Drawn after the trays, so a piece being carried passes over them rather than under.
+		order: 1,
 
 		resize(width, height) {
 			projector.resize(width, height);
 		},
 
 		extent: projector.extent,
+
+		// While a piece is in the air it has to be drawn outside the board's own rectangle — over
+		// the HQ tray it came out of, over the gap between them. Saying so here is what opens the
+		// scissor and the viewport both; the rest of the time the board is scissored down to what it
+		// actually paints.
+		overlay: () => !!carrying || travelling,
+
+		// And this is what keeps the board itself still when that happens — the projection is
+		// re-framed into the wider viewport rather than stretched into it.
+		widen: projector.widen,
+
+		/**
+		 * THE HAND
+		 *
+		 * Picking a piece up, carrying it, and letting it go. The DOM still decides everything —
+		 * which piece was pressed, which cell it was released over, whether that is a legal move —
+		 * and this only draws the answer. Nothing here dispatches anything.
+		 */
+
+		grab(pieceId) {
+			const onBoard = tokens.has(pieceId);
+			const token = tokenFor(pieceId);
+
+			carrying = { pieceId, onBoard };
+			token.set({ ...token.state(), carried: true });
+			nudge();
+
+			return true;
+		},
+
+		carryTo(clientX, clientY) {
+			const token = carrying && tokens.get(carrying.pieceId);
+			const at = token && toBoard(clientX, clientY, TILE_TOP + CARRY_LIFT);
+
+			if (!at) {
+				return;
+			}
+
+			// Straight to the pointer with no easing at all. A carried piece that lags behind the
+			// cursor feels like a webpage; one that is exactly under it feels like a game.
+			token.placeAt(at.x, at.z, CARRY_LIFT);
+			noteScreenPosition(carrying.pieceId, clientX, clientY);
+		},
+
+		drop() {
+			if (!carrying) {
+				return;
+			}
+
+			const { pieceId, onBoard } = carrying;
+			const token = tokens.get(pieceId);
+
+			carrying = null;
+			nudge();
+
+			if (!token) {
+				return;
+			}
+
+			if (onBoard) {
+				// It was already a piece on the board, so it stays one: it settles back down where
+				// it was until the next state says otherwise.
+				token.set({ ...token.state(), carried: false });
+
+				return;
+			}
+
+			// It came out of an HQ and the game has not accepted it yet. Put it away — the tray will
+			// show it again — and if the drop turns out to have been legal, the state that follows
+			// builds it afresh from the point it was let go of, so the flight carries on unbroken.
+			standing.remove(token.object);
+			token.dispose();
+			tokens.delete(pieceId);
+		},
 
 		/**
 		 * Where each cell's invisible DOM twin has to go, ready to hand to an element's `style`.
@@ -338,6 +465,12 @@ export default function createBoardScene() {
 
 				onBoard.add(piece.id);
 				standingOn.set(piece.id, `${piece.position[0]}-${piece.position[1]}`);
+
+				// A carried piece is where the pointer is, not where the game thinks it is. It gets
+				// its cell back the moment it is let go of.
+				if (carrying && carrying.pieceId === piece.id) {
+					continue;
+				}
 				token.set({
 					x,
 					z,
@@ -351,8 +484,14 @@ export default function createBoardScene() {
 			}
 
 			// A piece that left the board was killed, or was rolled back by a sniper. Either way
-			// it stops existing here rather than sliding off.
+			// it stops existing here rather than sliding off. The exception is the piece in the
+			// player's hand: the game does not think it is on the board — it is not, yet — but it
+			// is the one thing on screen the player is actually holding.
 			for (const [pieceId, token] of tokens) {
+				if (carrying && carrying.pieceId === pieceId) {
+					continue;
+				}
+
 				if (!onBoard.has(pieceId)) {
 					standing.remove(token.object);
 					token.dispose();
@@ -365,7 +504,11 @@ export default function createBoardScene() {
 		},
 
 		update(delta) {
-			let animating = false;
+			// A piece in hand is moving by definition, whatever the tweens think: the pointer is
+			// what moves it, and the pointer does not go through this. Without saying so the loop
+			// settles and the carried piece freezes wherever it was last drawn.
+			let animating = !!carrying;
+			let inFlight = !!carrying;
 
 			const snap = prefersReducedMotion();
 
@@ -390,16 +533,35 @@ export default function createBoardScene() {
 				// has to come up with the tile rather than be left half sunk in it.
 				const tile = tiles.get(standingOn.get(pieceId));
 				token.object.position.y = tile ? tile.rise : 0;
+
+				if (token.distanceToGo() > TRAVELLING) {
+					inFlight = true;
+				}
+
+				// So that a piece picked up off the board starts its flight from where it is drawn,
+				// not from where it was last laid out.
+				const at = screenOf(token);
+				noteScreenPosition(pieceId, at.x, at.y);
 			}
+
+			travelling = inFlight;
 
 			return animating;
 		},
 
 		dispose() {
+			setHand(null);
+
 			for (const token of tokens.values()) {
 				token.dispose();
 			}
 			tokens.clear();
 		},
 	};
+
+	// The drag controller sits above the whole app; the board is the only thing that can draw a
+	// piece anywhere on screen, so it is the one that offers to.
+	setHand(board);
+
+	return board;
 }

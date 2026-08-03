@@ -161,22 +161,36 @@ export const getFadeTexture = () =>
  * MATERIALS
  */
 
+// A word about metalness, because it is not the dial it looks like.
+//
+// There is no environment map in this scene and there is not going to be one — an irradiance cube
+// is a texture fetch per fragment in a renderer that is fill-bound and runs through SwiftShader in
+// the test suite. But metalness is a claim about reflecting the surroundings: it scales a surface's
+// diffuse by (1 - metalness) and hands what it took to a specular term that here has nothing but
+// two directional lights to reflect. So with no environment, metalness is very nearly pure
+// subtraction. It is what took the HQ racks down to 0.45 of their own colour and the token barrels
+// below half of theirs, all of it looking like the palette was too dark when the palette was fine.
+//
+// A little still earns its keep on a chamfer, where the two lights it does have to work with are
+// exactly the ones that draw the bright edge. Past about 0.4 it is just a darker colour written
+// the long way round.
+
 // One set per distinct shade rather than per cell: the board's quiet chequer only has five levels
 // in it, so thirty-seven tiles share five sets of three.
 export function getTileMaterials(row, cell) {
 	const colors = tileColors(row, cell);
 
 	return cached(`tile-${colors.face}`, () => [
-		new MeshStandardMaterial({ color: colors.face, roughness: 0.68, metalness: 0.06 }),
-		new MeshStandardMaterial({ color: colors.chamfer, roughness: 0.3, metalness: 0.35 }),
-		new MeshStandardMaterial({ color: colors.wall, roughness: 0.55, metalness: 0.22 }),
+		new MeshStandardMaterial({ color: colors.face, roughness: 0.68, metalness: 0.05 }),
+		new MeshStandardMaterial({ color: colors.chamfer, roughness: 0.3, metalness: 0.22 }),
+		new MeshStandardMaterial({ color: colors.wall, roughness: 0.55, metalness: 0.14 }),
 	]);
 }
 
 export const getCollarMaterial = team =>
 	cached(
 		`collar-${team}`,
-		() => new MeshStandardMaterial({ color: TEAM[team].collar, roughness: 0.5, metalness: 0.3 }),
+		() => new MeshStandardMaterial({ color: TEAM[team].collar, roughness: 0.5, metalness: 0.18 }),
 	);
 
 // The face never changes, so every agent of a team shares one. The chamfer cannot: selection and
@@ -186,25 +200,27 @@ export function createTokenMaterials(pieceId) {
 	const team = pz.getTeam(pieceId);
 	const type = pz.getType(pieceId);
 
+	// The face carries the artwork, so it gets as close to unmodified as a lit surface can: the
+	// point of reusing the PNG is that a token looks like the piece the flat game drew.
 	const face = cached(
 		`faceMaterial-${team}-${type}`,
 		() =>
 			new MeshStandardMaterial({
 				map: getFaceTexture(team, type),
-				roughness: 0.42,
-				metalness: 0.1,
+				roughness: 0.45,
+				metalness: 0.04,
 			}),
 	);
 
 	const chamfer = new MeshStandardMaterial({
 		color: TEAM[team].rim,
 		roughness: 0.28,
-		metalness: 0.7,
+		metalness: 0.4,
 		emissive: SELECTED,
 		emissiveIntensity: 0,
 	});
 
-	const wall = new MeshStandardMaterial({ color: TEAM[team].body, roughness: 0.34, metalness: 0.55 });
+	const wall = new MeshStandardMaterial({ color: TEAM[team].body, roughness: 0.34, metalness: 0.2 });
 
 	return { face, chamfer, wall };
 }

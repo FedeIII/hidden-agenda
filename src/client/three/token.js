@@ -25,10 +25,20 @@ import { prefersReducedMotion } from './stage';
 
 const LIFT = SIZES.tokenHeight * 1.2;
 
+// A carried piece rides higher than a selected one — high enough to read as being off the board
+// and in the player's hand, and to clear the tokens it is passing over.
+export const CARRY_LIFT = SIZES.tokenHeight * 3.4;
+
 // Selection should feel immediate; a buff is ambient and can arrive after the eye has finished
 // with the move. Rates, not durations — frame-rate independent, nothing to get wrong, and they
 // settle rather than stop, which is what gives a chip weight.
-const RATE = { lift: 22, travel: 13, turn: 16, glow: 14, halo: 6 };
+const RATE = { lift: 22, travel: 10, turn: 16, glow: 14, halo: 6 };
+
+// How high a piece rides while it is still on its way, as a fraction of the distance it has left.
+// A piece coming out of an HQ lofts right across the table and settles as it arrives; a piece
+// moving one cell barely leaves the board. Nothing has to decide which is which — the arc is a
+// function of the distance, so it lands exactly when the travel does.
+const ARC = 0.42;
 
 // How close is close enough to stop. An exponential approach never quite arrives, and chasing the
 // last thousandth of a board unit — a fiftieth of a pixel — keeps every view redrawing for half a
@@ -129,23 +139,54 @@ export default function createToken(pieceId) {
 
 	let pulsing = false;
 	let clock = 0;
+	// The last thing it was told, so the hand can pick the piece up and put it down again without
+	// having to know anything else about it.
+	let told = { x: 0, z: 0 };
 
 	return {
 		pieceId,
 		object: group,
 
 		/**
+		 * Puts the piece somewhere at once, with no travel: how a carried token follows the pointer,
+		 * and how one that has just been picked up starts from where it was picked up rather than
+		 * from wherever it happened to be standing.
+		 */
+		placeAt(x, z, lift = 0) {
+			current.x = x;
+			current.z = z;
+			current.lift = lift;
+			current.placed = true;
+
+			wanted.x = x;
+			wanted.z = z;
+			wanted.lift = lift;
+		},
+
+		/** How far it still has to travel, in board units. */
+		distanceToGo() {
+			return Math.hypot(current.x - wanted.x, current.z - wanted.z);
+		},
+
+		/**
 		 * Where the piece is and what is true of it. Called on every state change, never per frame
 		 * — what happens between one call and the next is this token's own business.
 		 */
-		set({ x, z, direction, selected, snipe, buffed, immediate }) {
+		state() {
+			return told;
+		},
+
+		set(next) {
+			const { x, z, direction, selected, snipe, buffed, immediate, carried } = next;
+
+			told = next;
 			wanted.x = x;
 			wanted.z = z;
 			// Three.js turns anticlockwise about +y; the board's directions are compass bearings,
 			// which turn the other way. The angles themselves are the same six the flat renderer
 			// writes into a CSS rotate() — both take them from layout.js.
 			wanted.angle = MathUtils.degToRad(-directionToAngle(direction));
-			wanted.lift = selected ? LIFT : 0;
+			wanted.lift = carried ? CARRY_LIFT : selected ? LIFT : 0;
 			wanted.glow = selected || snipe ? 1 : 0;
 			wanted.halo = buffed ? 0.32 : 0;
 
@@ -201,16 +242,21 @@ export default function createToken(pieceId) {
 				current.glow = glow;
 			}
 
+			// The whole flight, in one line: the further it still has to go, the higher it is.
+			const hop = Math.min(Math.hypot(current.x - wanted.x, current.z - wanted.z) * ARC, CARRY_LIFT);
+			const height = current.lift + hop;
+
 			group.position.set(current.x, 0, current.z);
-			rig.position.y = current.lift;
+			rig.position.y = height;
 			rig.rotation.y = current.angle;
 			chamfer.emissiveIntensity = current.glow * 0.85;
 
 			// The shadow spreads and lightens as the chip comes up, which is the cheapest possible
-			// cue that it is off the board rather than merely bright.
-			const settled = 1 - current.lift / LIFT;
+			// cue that it is off the board rather than merely bright — and the whole cue that a
+			// carried piece is being held over the board rather than sitting on it.
+			const settled = Math.max(0, 1 - height / LIFT);
 			shadow.material.opacity = 0.45 + 0.35 * settled;
-			shadow.scale.setScalar(1 + (1 - settled) * 0.35);
+			shadow.scale.setScalar(1 + Math.min(height / LIFT, 3) * 0.35);
 
 			halo.visible = current.halo > 0.005;
 			halo.material.opacity = current.halo;

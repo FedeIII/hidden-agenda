@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import useCellAction from 'Hooks/useCellAction';
+import { getHand, setDragging } from 'Client/three/flight';
 
 // Replaces react-dnd + react-dnd-html5-backend + dnd-core + redux (67 kB of the bundle).
 //
@@ -77,7 +78,7 @@ export function DragProvider({ children }) {
 	const gesture = useRef(null);
 	const suppressClick = useRef(false);
 
-	const startDrag = useCallback((event, { previewSrc, onStart }) => {
+	const startDrag = useCallback((event, { previewSrc, pieceId, onStart }) => {
 		// Primary button only; touch and pen report button 0 too.
 		if (typeof event.button === 'number' && event.button !== 0) {
 			return;
@@ -91,8 +92,10 @@ export function DragProvider({ children }) {
 			width: rect.width,
 			height: rect.height,
 			previewSrc,
+			pieceId,
 			onStart,
 			dragging: false,
+			carried: false,
 		};
 	}, []);
 
@@ -116,6 +119,23 @@ export function DragProvider({ children }) {
 
 				current.dragging = true;
 				current.onStart();
+
+				// The renderer picks the piece up itself, and then there is nothing for a flat
+				// picture of it to do. Without one it stays a dragged image, which is what this
+				// looked like before and is the thing that gave it away as a web page.
+				const hand = getHand();
+
+				current.carried = !!(hand && current.pieceId && hand.grab(current.pieceId));
+
+				if (current.carried) {
+					setDragging(current.pieceId);
+				}
+			}
+
+			if (current.carried) {
+				getHand().carryTo(event.clientX, event.clientY);
+
+				return;
 			}
 
 			setGhost({
@@ -132,6 +152,16 @@ export function DragProvider({ children }) {
 
 			gesture.current = null;
 			setGhost(null);
+
+			if (current && current.carried) {
+				const hand = getHand();
+
+				if (hand) {
+					hand.drop();
+				}
+
+				setDragging(null);
+			}
 
 			if (!current || !current.dragging) {
 				// A tap. Leave it alone: the piece's onClick handles selection.

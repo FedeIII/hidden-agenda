@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { onDragChange } from './flight';
 import getStage, { hasStageFailed, onStageFailure } from './stage';
 import isWebGLAvailable from './support';
 
@@ -53,7 +54,7 @@ export default function useThreeView(elementRef, createScene, state) {
 			return;
 		}
 
-		const scene = createScene();
+		const scene = createScene(element);
 		sceneRef.current = scene;
 		scene.setState(stateRef.current);
 
@@ -89,12 +90,28 @@ export default function useThreeView(elementRef, createScene, state) {
 			camera: scene.camera,
 			onResize: measure,
 			extent: scene.extent,
+			overlay: scene.overlay,
+			widen: scene.widen,
+			order: scene.order,
 			update: delta => scene.update(delta),
 		});
 
 		viewRef.current = handle;
 
+		// A scene that draws the piece in the player's hand needs telling when that changes, and one
+		// that has to stop drawing it needs telling too. Both answer the same question.
+		const forgetDrag = scene.setDragging
+			? onDragChange(pieceId => {
+					scene.setDragging(pieceId);
+					handle.invalidate();
+				})
+			: null;
+
 		return () => {
+			if (forgetDrag) {
+				forgetDrag();
+			}
+
 			handle.remove();
 			scene.dispose();
 			sceneRef.current = null;
