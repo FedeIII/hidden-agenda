@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
+import { PHASES } from 'Domain/phases';
 import { DEFAULT_SKIN } from 'Domain/skins';
 import useSession from './useSession';
 
@@ -21,4 +22,36 @@ export function useSkinAttribute(skin) {
 	useEffect(() => {
 		document.documentElement.dataset.skin = skin;
 	}, [skin]);
+}
+
+// The draw stands, and the host may overrule it — up to the point where the game starts.
+//
+// Two windows, and they are the two where nobody is reading anybody: the waiting room, and the
+// friend-and-foe cards. Once the board is up the furniture stops moving. A player mid-turn is
+// holding a mental model of four teams and somebody else's face, and re-dressing the table under
+// them is not a courtesy.
+//
+// Hot-seat has no host because it has no seats — one screen, one mouse, and who reaches for it is a
+// rule between the people in the room, exactly as it is for the snipe.
+export function useCanChangeSkin() {
+	const session = useSession();
+
+	if (session.mode === 'local') {
+		return session.phase === PHASES.ALIGNMENT;
+	}
+
+	if (session.status !== 'ready' || !session.seatId) {
+		return false;
+	}
+
+	const inWindow = session.phase === PHASES.START || session.phase === PHASES.ALIGNMENT;
+
+	return inWindow && session.seatId === session.hostSeatId;
+}
+
+export function useSetSkin() {
+	const session = useSession();
+	const { setSkin } = session.actions;
+
+	return useCallback(skin => setSkin(skin), [setSkin]);
 }

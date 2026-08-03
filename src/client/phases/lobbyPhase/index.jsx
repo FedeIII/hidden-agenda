@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { Button, Buttons } from 'Client/components/button';
 import { Title, Subtitle } from 'Client/components/title';
 import useSession from 'Hooks/useSession';
+import SkinPicker from 'Client/components/skinPicker';
 import { MIN_PLAYERS, MAX_PLAYERS } from 'Domain/py';
 import {
 	LobbyContainer,
@@ -26,6 +27,8 @@ const REASONS = {
 	server_full: 'The server is at its room limit. Try again shortly.',
 	slow_down: 'Too many attempts. Wait a moment.',
 	not_host: 'Only the player who made the room can start it.',
+	skin_locked: 'The style cannot be changed once the game has started.',
+	bad_skin: 'No such style.',
 };
 
 function explain(reason) {
@@ -115,6 +118,11 @@ function WaitingRoom({ session }) {
 				Players ({seats.length}/{MAX_PLAYERS})
 			</Subtitle>
 			<Seats seats={seats} hostSeatId={hostSeatId} seatId={seatId} />
+
+			{/* Host only, and it renders nothing for anyone else. Changing it here re-dresses the
+			    waiting room on every screen at once, which is the point: the table should be able to
+			    see what it is about to play in. */}
+			<SkinPicker />
 
 			<Buttons>
 				{isHost ? (

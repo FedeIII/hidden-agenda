@@ -181,6 +181,10 @@ The interface has three faces.
   which team is a separate mark in that team's own colour, placed where each direction's material
   would put it — an index tab on the Dossier copy, a hatched finish callout on the Blueprint sheet, an
   anodised plate in a brass bezel in the Vault. Both codings survive; they stop sharing one mark
+* **The host can overrule the draw** — in the waiting room and on the friend-and-foe screen, and
+  nowhere else. Changing it re-dresses every screen in the room at once; once the board is up the
+  furniture stops moving, because a player mid-turn is holding a model of four teams and somebody
+  else's face. Hot-seat has no host, so the control is simply there while the table looks at its cards
 * `?skin=dossier|blueprint|vault` pins the look in a local game, the way `?flat` pins the renderer
 
 Under it, and deliberately: a skin is custom properties on `<html>`, not a theme threaded through

@@ -110,6 +110,19 @@ function createLocalSession(test, { rng = Math.random } = {}) {
 
 			listeners.forEach(listener => listener());
 		},
+		// Whoever is holding the mouse may overrule the draw while the table is still looking at its
+		// cards. Refused outside that window rather than merely un-offered: the UI hides the control
+		// during play, and this is what makes that a rule instead of an omission.
+		setSkin(skin) {
+			if (value.phase !== PHASES.ALIGNMENT || !isSkin(skin)) {
+				return;
+			}
+
+			// Marked drawn so the choice is not overwritten if the phase is entered again.
+			drawn = true;
+			value = { ...value, skin };
+			listeners.forEach(listener => listener());
+		},
 	};
 }
 
@@ -129,6 +142,7 @@ export function createTransport({ mode = 'local' } = {}) {
 				joinRoom: store.joinRoom,
 				start: store.start,
 				ready: store.ready,
+				setSkin: store.setSkin,
 				// The server owns the phase online, so nothing to advance.
 				advance: () => {},
 			},
@@ -153,6 +167,7 @@ export function createTransport({ mode = 'local' } = {}) {
 			joinRoom: () => {},
 			start: () => {},
 			ready: () => {},
+			setSkin: session.setSkin,
 			advance: session.advance,
 		},
 		close: () => {},

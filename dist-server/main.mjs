@@ -1532,6 +1532,15 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = nul
 		room.updatedAt = now();
 		return { room };
 	}
+	const SKIN_CHANGEABLE_IN = [PHASES.START, PHASES.ALIGNMENT];
+	function setSkin(room, seat, skin) {
+		if (room.hostSeatId !== seat.id) return { error: "not_host" };
+		if (!SKIN_CHANGEABLE_IN.includes(room.phase)) return { error: "skin_locked" };
+		if (!isSkin(skin)) return { error: "bad_skin" };
+		room.skin = skin;
+		room.updatedAt = now();
+		return { room };
+	}
 	function markReady(room, seat) {
 		if (room.phase !== PHASES.ALIGNMENT) return { error: "not_in_alignment" };
 		seat.ready = true;
@@ -1563,6 +1572,7 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = nul
 		seatByToken,
 		seatById,
 		start,
+		setSkin,
 		markReady,
 		setConnected,
 		remove,
@@ -1811,6 +1821,7 @@ var CLIENT = {
 	REJOIN: "rejoin",
 	START: "start",
 	READY: "ready",
+	SKIN: "skin",
 	ACTION: "action",
 	PING: "ping"
 };
@@ -1992,6 +2003,14 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 			persistence.save(room);
 		});
 	}
+	function handleSkin(socket, message) {
+		return withSeat(socket, (room, seat) => {
+			const { error } = rooms.setSkin(room, seat, message.skin);
+			if (error) return send(seat.id, errorMessage(error));
+			broadcastRoom(room);
+			persistence.save(room);
+		});
+	}
 	function handleReady(socket) {
 		return withSeat(socket, (room, seat) => {
 			const { error } = rooms.markReady(room, seat);
@@ -2028,6 +2047,7 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 			case CLIENT.REJOIN: return handleRejoin(socket, message);
 			case CLIENT.START: return handleStart(socket);
 			case CLIENT.READY: return handleReady(socket);
+			case CLIENT.SKIN: return handleSkin(socket, message);
 			case CLIENT.ACTION: return handleAction(socket, message);
 			case CLIENT.PING: return socket.send(JSON.stringify({ type: SERVER.PONG }));
 			default: return socket.send(JSON.stringify(errorMessage("unknown_message")));

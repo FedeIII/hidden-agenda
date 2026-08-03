@@ -73,6 +73,77 @@ test.describe('a room owns its skin', () => {
 		expect(roomMessage(room).skin).toBe(SKINS.VAULT);
 	});
 
+	test('the host can change it while the room is filling up', () => {
+		const rooms = createRoomStore({ skin: SKINS.DOSSIER });
+		const room = rooms.create();
+		const { seat: host } = rooms.addSeat(room, 'Nadia');
+
+		expect(rooms.setSkin(room, host, SKINS.VAULT)).toEqual({ room });
+		expect(roomMessage(room).skin).toBe(SKINS.VAULT);
+	});
+
+	test('the host can still change it while the table looks at its cards', () => {
+		const rooms = createRoomStore({ skin: SKINS.DOSSIER });
+		const room = rooms.create();
+		const { seat: host } = rooms.addSeat(room, 'Nadia');
+		rooms.addSeat(room, 'Halloran');
+		rooms.start(room);
+
+		expect(rooms.setSkin(room, host, SKINS.BLUEPRINT).error).toBeUndefined();
+		expect(room.skin).toBe(SKINS.BLUEPRINT);
+	});
+
+	test('nobody but the host can change it', () => {
+		const rooms = createRoomStore({ skin: SKINS.DOSSIER });
+		const room = rooms.create();
+		rooms.addSeat(room, 'Nadia');
+		const { seat: guest } = rooms.addSeat(room, 'Halloran');
+
+		expect(rooms.setSkin(room, guest, SKINS.VAULT)).toEqual({ error: 'not_host' });
+		expect(room.skin).toBe(SKINS.DOSSIER);
+	});
+
+	test('not once the game has started', () => {
+		// The furniture stops moving when the board goes up. A player mid-turn is holding a model of
+		// four teams and somebody else's face, and re-dressing the table under them is not a courtesy.
+		const rooms = createRoomStore({ skin: SKINS.DOSSIER });
+		const room = rooms.create();
+		const { seat: host } = rooms.addSeat(room, 'Nadia');
+		const { seat: guest } = rooms.addSeat(room, 'Halloran');
+		rooms.start(room);
+		rooms.markReady(room, host);
+		rooms.markReady(room, guest);
+
+		expect(room.phase).toBe('play');
+		expect(rooms.setSkin(room, host, SKINS.VAULT)).toEqual({ error: 'skin_locked' });
+		expect(room.skin).toBe(SKINS.DOSSIER);
+	});
+
+	test('refuses a skin that does not exist', () => {
+		const rooms = createRoomStore({ skin: SKINS.DOSSIER });
+		const room = rooms.create();
+		const { seat: host } = rooms.addSeat(room, 'Nadia');
+
+		expect(rooms.setSkin(room, host, 'wire')).toEqual({ error: 'bad_skin' });
+		expect(rooms.setSkin(room, host, undefined)).toEqual({ error: 'bad_skin' });
+		expect(room.skin).toBe(SKINS.DOSSIER);
+	});
+
+	test('changing it does not bump the version', () => {
+		// The skin rides the room frame, not the snapshot. Bumping the version would make every client
+		// throw away and rebuild a board that has not changed, and drop the actions it is holding.
+		const rooms = createRoomStore({ skin: SKINS.DOSSIER });
+		const room = rooms.create();
+		const { seat: host } = rooms.addSeat(room, 'Nadia');
+		rooms.addSeat(room, 'Halloran');
+		rooms.start(room);
+
+		const before = room.version;
+		rooms.setSkin(room, host, SKINS.VAULT);
+
+		expect(room.version).toBe(before);
+	});
+
 	test('adding the skin did not widen the room frame', () => {
 		// The skin is public; alignments never are. Adding a public field to the frame every seat
 		// receives is exactly the kind of change that could quietly carry a secret with it, so this

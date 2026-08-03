@@ -224,6 +224,22 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 		});
 	}
 
+	// Re-dressing the room. Broadcasts the room frame and nothing else: the skin travels with the
+	// seat list, not in the snapshot, so nobody's board is rebuilt and nobody's outstanding actions
+	// are invalidated by a change of furniture.
+	function handleSkin(socket, message) {
+		return withSeat(socket, (room, seat) => {
+			const { error } = rooms.setSkin(room, seat, message.skin);
+
+			if (error) {
+				return send(seat.id, errorMessage(error));
+			}
+
+			broadcastRoom(room);
+			persistence.save(room);
+		});
+	}
+
 	function handleReady(socket) {
 		return withSeat(socket, (room, seat) => {
 			const { error } = rooms.markReady(room, seat);
@@ -280,6 +296,8 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 				return handleStart(socket);
 			case CLIENT.READY:
 				return handleReady(socket);
+			case CLIENT.SKIN:
+				return handleSkin(socket, message);
 			case CLIENT.ACTION:
 				return handleAction(socket, message);
 			case CLIENT.PING:

@@ -9,6 +9,11 @@ import { DEFAULT_SKIN, SKIN_NAMES } from 'Domain/skins';
 
 const skinOf = page => page.evaluate(() => document.documentElement.dataset.skin);
 
+// Online, changing the skin is a round trip: click, server, broadcast, re-render. Reading the
+// attribute straight after a click is a race — it passes on a quiet machine and fails the moment the
+// suite runs fully parallel, which is exactly how the first version of these specs behaved.
+const expectSkin = (page, skin) => expect.poll(() => skinOf(page)).toBe(skin);
+
 test.describe('the main menu', () => {
 	test('is always the file room', async ({ page }) => {
 		// The first screen a player ever sees is not a draw. A game starts as a form on a desk.
@@ -213,11 +218,15 @@ test.describe('an online room', () => {
 		await guest.click('#lobby-join');
 		await expect(guest.locator('#lobby-room-code')).toBeVisible();
 
+		// Gate on the picker rather than the room code: the code arrives with the seat frame, the skin
+		// with the room frame, so reading the baseline off the code alone can catch the default.
+		await expect(host.locator('#skin-picker')).toBeVisible();
+
 		// The waiting room already looks like the game will, on both screens.
 		const roomSkin = await skinOf(host);
 
 		expect(SKIN_NAMES).toContain(roomSkin);
-		expect(await skinOf(guest)).toBe(roomSkin);
+		await expectSkin(guest, roomSkin);
 
 		// And it survives the game starting, for both of them.
 		await expect(host.locator('#lobby-seat-BEA')).toBeVisible();
@@ -226,8 +235,8 @@ test.describe('an online room', () => {
 		await expect(host.locator('#alignments-btn')).toBeVisible();
 		await expect(guest.locator('#alignments-btn')).toBeVisible();
 
-		expect(await skinOf(host)).toBe(roomSkin);
-		expect(await skinOf(guest)).toBe(roomSkin);
+		await expectSkin(host, roomSkin);
+		await expectSkin(guest, roomSkin);
 
 		await host.click('#alignments-btn');
 		await guest.click('#alignments-btn');
@@ -235,24 +244,154 @@ test.describe('an online room', () => {
 		await expect(host.locator('#pz-0-A1')).toBeVisible();
 		await expect(guest.locator('#pz-0-A1')).toBeVisible();
 
-		expect(await skinOf(host)).toBe(roomSkin);
-		expect(await skinOf(guest)).toBe(roomSkin);
+		await expectSkin(host, roomSkin);
+		await expectSkin(guest, roomSkin);
 
 		await hostContext.close();
 		await guestContext.close();
 	});
 
-	test('a room ignores ?skin, because the table has to agree', async ({ page }) => {
+	test('a room ignores ?skin, because the table has to agree', async ({ browser }) => {
 		// A player who pins a skin in their own URL must not end up looking at a different table from
 		// everybody else. Online the pin is inert: the room's own skin wins.
-		await page.goto('/?skin=vault');
+		//
+		// The host sets the room to a known style rather than this spec trusting the server's HA_SKIN,
+		// so the expectation holds even when the suite has quietly reused a game server that was
+		// started without it — which is exactly what a stray `./dev.sh` leaves behind.
+		const hostContext = await browser.newContext({ viewport: { width: 800, height: 600 } });
+		const guestContext = await browser.newContext({ viewport: { width: 800, height: 600 } });
+		const host = await hostContext.newPage();
+		const guest = await guestContext.newPage();
+
+		await host.goto('/');
+		await host.click('#play-online-btn');
+		await host.fill('#lobby-name', 'ANA');
+		await host.click('#lobby-create');
+		await expect(host.locator('#lobby-room-code')).toBeVisible();
+		const code = await host.locator('#lobby-room-code').innerText();
+
+		await host.click('#skin-option-blueprint');
+		await expectSkin(host, 'blueprint');
+
+		// The guest asks for vault in their own URL, and gets the room's blueprint.
+		await guest.goto(`/?skin=vault#/r/${code}`);
+		await guest.fill('#lobby-name', 'BEA');
+		await guest.fill('#lobby-code', code);
+		await guest.click('#lobby-join');
+		await expect(guest.locator('#lobby-room-code')).toBeVisible();
+
+		await expectSkin(guest, 'blueprint');
+
+		await hostContext.close();
+		await guestContext.close();
+	});
+});
+
+// ── The host may overrule the draw ────────────────────────────────────────────────────────────
+// Two windows, and they are the two where nobody is reading anybody: the waiting room and the
+// friend-and-foe cards. After that the board is up and the furniture stops moving.
+test.describe('changing the style', () => {
+	test('hot-seat: not offered on the main menu', async ({ page }) => {
+		await page.goto('/');
+
+		await expect(page.locator('#skin-picker')).toHaveCount(0);
+	});
+
+	test('hot-seat: offered at friend & foe, and it sticks into the game', async ({ page }) => {
+		await page.goto('/?skin=dossier');
+		await page.fill('#player-name1', 'Fede');
+		await page.fill('#player-name2', 'Sara');
+		await page.click('#start-btn');
+		await page.waitForSelector('#alignments-btn');
+
+		await expect(page.locator('#skin-picker')).toBeVisible();
+		await page.click('#skin-option-vault');
 		expect(await skinOf(page)).toBe('vault');
 
-		await page.click('#play-online-btn');
-		await page.fill('#lobby-name', 'ANA');
-		await page.click('#lobby-create');
-		await expect(page.locator('#lobby-room-code')).toBeVisible();
+		// Overruling the draw is a choice, not a preview: it survives into the game.
+		for (const _player of [1, 2]) {
+			await page.click('#alingnment-card-friend');
+			await page.click('#alingnment-card-foe');
+			await page.click('#alignments-btn');
+		}
 
-		expect(await skinOf(page)).toBe(DEFAULT_SKIN);
+		await page.click('#alignments-btn');
+		await page.waitForSelector('#pz-0-A1');
+
+		expect(await skinOf(page)).toBe('vault');
+	});
+
+	test('hot-seat: gone once the game has started', async ({ page }) => {
+		await page.goto('/?skin=dossier');
+		await page.fill('#player-name1', 'Fede');
+		await page.fill('#player-name2', 'Sara');
+		await page.click('#start-btn');
+		await page.waitForSelector('#alignments-btn');
+
+		for (const _player of [1, 2]) {
+			await page.click('#alingnment-card-friend');
+			await page.click('#alingnment-card-foe');
+			await page.click('#alignments-btn');
+		}
+
+		await page.click('#alignments-btn');
+		await page.waitForSelector('#pz-0-A1');
+
+		await expect(page.locator('#skin-picker')).toHaveCount(0);
+	});
+
+	test('online: the host changes it and the whole room follows', async ({ browser }) => {
+		const hostContext = await browser.newContext({ viewport: { width: 800, height: 600 } });
+		const guestContext = await browser.newContext({ viewport: { width: 800, height: 600 } });
+		const host = await hostContext.newPage();
+		const guest = await guestContext.newPage();
+
+		await host.goto('/');
+		await host.click('#play-online-btn');
+		await host.fill('#lobby-name', 'ANA');
+		await host.click('#lobby-create');
+		await expect(host.locator('#lobby-room-code')).toBeVisible();
+		const code = await host.locator('#lobby-room-code').innerText();
+
+		await guest.goto(`/#/r/${code}`);
+		await guest.fill('#lobby-name', 'BEA');
+		await guest.fill('#lobby-code', code);
+		await guest.click('#lobby-join');
+		await expect(guest.locator('#lobby-room-code')).toBeVisible();
+
+		// The host has the control in the waiting room; a guest does not, in the same room.
+		await expect(host.locator('#skin-picker')).toBeVisible();
+		await expect(guest.locator('#skin-picker')).toHaveCount(0);
+
+		await host.click('#skin-option-blueprint');
+		await expectSkin(guest, 'blueprint');
+		await expectSkin(host, 'blueprint');
+
+		// Still the host's to change while the table is looking at its cards.
+		await expect(host.locator('#lobby-seat-BEA')).toBeVisible();
+		await host.click('#lobby-start');
+		await expect(host.locator('#alignments-btn')).toBeVisible();
+		await expect(guest.locator('#alignments-btn')).toBeVisible();
+
+		await expect(host.locator('#skin-picker')).toBeVisible();
+		await expect(guest.locator('#skin-picker')).toHaveCount(0);
+
+		await host.click('#skin-option-vault');
+		await expectSkin(host, 'vault');
+		await expectSkin(guest, 'vault');
+
+		// And gone for everyone once the board is up, on both screens.
+		await host.click('#alignments-btn');
+		await guest.click('#alignments-btn');
+		await expect(host.locator('#pz-0-A1')).toBeVisible();
+		await expect(guest.locator('#pz-0-A1')).toBeVisible();
+
+		await expect(host.locator('#skin-picker')).toHaveCount(0);
+		await expect(guest.locator('#skin-picker')).toHaveCount(0);
+		await expectSkin(host, 'vault');
+		await expectSkin(guest, 'vault');
+
+		await hostContext.close();
+		await guestContext.close();
 	});
 });

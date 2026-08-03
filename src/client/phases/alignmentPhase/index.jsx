@@ -7,6 +7,7 @@ import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/ali
 import { TEAM_NAMES } from 'Domain/teams';
 import useSession from 'Hooks/useSession';
 import { dealAlignments } from 'Domain/deal';
+import SkinPicker from 'Client/components/skinPicker';
 import { AlignmentPhaseContainer } from './components';
 
 // Dealt once for the whole table instead of a card at a time off a shared deck. Phase 1 of
@@ -167,6 +168,8 @@ function OnlineAlignment({ onReady }) {
 			<Subtitle id="alignment-ready-count">
 				{readyCount}/{session.seats.length} ready
 			</Subtitle>
+
+			<SkinPicker />
 		</AlignmentPhaseContainer>
 	);
 }
@@ -209,6 +212,10 @@ function HotSeatAlignment({ onReady }) {
 					{playerTurn ? 'NEXT PLAYER' : 'START'}
 				</Button>
 			</Buttons>
+
+			{/* The last moment the table can agree on how the evening should look. After this the
+			    board is up and the furniture stops moving. */}
+			<SkinPicker />
 		</AlignmentPhaseContainer>
 	);
 }

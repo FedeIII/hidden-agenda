@@ -12,6 +12,7 @@ export const CLIENT = {
 	REJOIN: 'rejoin',
 	START: 'start',
 	READY: 'ready',
+	SKIN: 'skin',
 	ACTION: 'action',
 	PING: 'ping',
 };

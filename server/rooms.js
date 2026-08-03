@@ -123,6 +123,36 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 		return { room };
 	}
 
+	// The host may re-dress the room while it is still filling up or while the table is looking at
+	// its cards, and not once the game is running: changing the furniture mid-turn is the interface
+	// moving under people who are trying to read each other. All three checks live here rather than
+	// in index.js — unlike the host check on `start` — because the rule is the point of the feature
+	// and this is where it can be tested without a socket.
+	const SKIN_CHANGEABLE_IN = [PHASES.START, PHASES.ALIGNMENT];
+
+	function setSkin(room, seat, skin) {
+		if (room.hostSeatId !== seat.id) {
+			return { error: 'not_host' };
+		}
+
+		if (!SKIN_CHANGEABLE_IN.includes(room.phase)) {
+			return { error: 'skin_locked' };
+		}
+
+		if (!isSkin(skin)) {
+			return { error: 'bad_skin' };
+		}
+
+		room.skin = skin;
+		room.updatedAt = now();
+
+		// Deliberately no version bump. The skin is not game state — it rides the room frame, not the
+		// snapshot — so bumping it would make every client throw away and rebuild a board that has
+		// not changed, and would invalidate the outstanding actions they are holding.
+
+		return { room };
+	}
+
 	function markReady(room, seat) {
 		if (room.phase !== PHASES.ALIGNMENT) {
 			return { error: 'not_in_alignment' };
@@ -164,6 +194,7 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 		seatByToken,
 		seatById,
 		start,
+		setSkin,
 		markReady,
 		setConnected,
 		remove,

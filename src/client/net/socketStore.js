@@ -354,6 +354,9 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		joinRoom,
 		start: () => send({ type: 'start' }),
 		ready: () => send({ type: 'ready' }),
+		// Host only, and the server says so — this just asks. No optimistic update: the whole point
+		// of the skin being the room's is that every seat changes together, off one frame.
+		setSkin: skin => send({ type: 'skin', skin }),
 
 		close() {
 			closedByUs = true;
