@@ -1,4 +1,5 @@
 import { PHASES } from 'Domain/phases';
+import { DEFAULT_SKIN, isSkin, pickSkin } from 'Domain/skins';
 import { createLocalStore } from 'Game/store';
 import { createSocketStore } from './socketStore';
 import playMock from 'Client/state/mocks/play';
@@ -26,6 +27,22 @@ function readTestParam() {
 	return new URLSearchParams(window.location.search).get('test');
 }
 
+// `?skin=blueprint` pins the look, the way `?flat` pins the renderer and `?test=` pins the phase.
+// It exists for two reasons: it is the only way to see a direction on demand without restarting
+// games until the draw goes your way, and it is what keeps the browser suite deterministic — every
+// spec walks the real start → alignment flow, so without a pin each run would assert against a
+// randomly chosen skin. Local only: online, the room's skin is the server's to decide, or the table
+// would not agree with itself.
+export function readSkinOverride() {
+	if (typeof window === 'undefined') {
+		return null;
+	}
+
+	const requested = new URLSearchParams(window.location.search).get('skin');
+
+	return isSkin(requested) ? requested : null;
+}
+
 export function readRoomCode() {
 	if (typeof window === 'undefined') {
 		return null;
@@ -48,7 +65,9 @@ function initialLocalPhase(test) {
 	return PHASES.START;
 }
 
-function createLocalSession(test) {
+function createLocalSession(test, { rng = Math.random } = {}) {
+	const pinned = readSkinOverride();
+
 	let value = {
 		mode: 'local',
 		status: 'local',
@@ -59,9 +78,15 @@ function createLocalSession(test) {
 		seats: [],
 		hostSeatId: null,
 		error: null,
-		// Local state is always present; there is nothing to wait for.
+		// The main menu is always the file room. A game becomes a table later, and that is where
+		// it gets a look of its own.
+		skin: pinned || DEFAULT_SKIN,
 		synced: true,
 	};
+
+	// Pinned by the URL, or dropped into a mid-game state by `?test=`, means no draw: a spec that
+	// skips the alignment phase must still get a predictable skin.
+	let drawn = !!pinned || !!test;
 
 	const listeners = new Set();
 
@@ -72,8 +97,17 @@ function createLocalSession(test) {
 
 			return () => listeners.delete(listener);
 		},
+		// Hot-seat picks its skin on the way in to the friend-and-foe cards — the moment the game
+		// stops being a form and becomes a game — and then keeps it for the rest of the table's
+		// evening. Dossier is in the draw, so staying is a real outcome rather than a miss.
 		advance(phase) {
-			value = { ...value, phase };
+			if (phase === PHASES.ALIGNMENT && !drawn) {
+				drawn = true;
+				value = { ...value, phase, skin: pickSkin(rng) };
+			} else {
+				value = { ...value, phase };
+			}
+
 			listeners.forEach(listener => listener());
 		},
 	};

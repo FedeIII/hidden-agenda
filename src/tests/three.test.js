@@ -229,7 +229,7 @@ test.describe('WITHOUT WEBGL', () => {
 	// gets the board the game shipped with rather than a blank rectangle. ?flat is the same path a
 	// lost context takes.
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/?flat');
+		await page.goto('/?flat&skin=dossier');
 	});
 
 	test('falls back to the flat board', async ({ page, goToPlay }) => {

@@ -1,3 +1,4 @@
+import { DEFAULT_SKIN, isSkin } from 'Domain/skins';
 import { createGameReducer, createInitialState } from 'Game/reducer';
 import {
 	syncState,
@@ -107,6 +108,9 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		seats: [],
 		hostSeatId: null,
 		error: null,
+		// Until the room frame arrives this is a client with no room, so it shows the menu's own
+		// look. The server's choice replaces it, and every seat receives the same one.
+		skin: DEFAULT_SKIN,
 		// Whether an authoritative snapshot has arrived. The server sends seat, room and snapshot
 		// as separate frames, so there is a window where the phase says "play" but the state is
 		// still the empty initial one — and rendering the board against no players throws.
@@ -209,6 +213,10 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 					phase: message.phase,
 					seats: message.seats,
 					hostSeatId: message.hostSeatId,
+					// The room's look, chosen once when it was made. It arrives with the seat list
+					// rather than in the snapshot because it is not game state — it survives being
+					// redacted, and a seat that has not been dealt anything yet still needs it.
+					skin: isSkin(message.skin) ? message.skin : DEFAULT_SKIN,
 				});
 				break;
 

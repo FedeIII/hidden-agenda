@@ -79,6 +79,7 @@ Things worth knowing before touching the suite:
 - Helpers are factories over a `page`, wired up as fixtures in `src/tests/fixtures.js`. Most specs take `{ page, clickOn, get, drag, goToPlay }`.
 - An **uncaught page error fails the test that provoked it** (`failOnPageError` fixture). The suite was once fully green while clicking an empty cell threw a TypeError, because nothing watched for it.
 - Playwright bundles a pinned chromium on purpose: browser auto-updates are what caused the fixture rot above.
+- **The shared `page` fixture navigates to `?skin=dossier`, and a spec that navigates for itself has to carry the param too.** A hot-seat game draws one of three skins on the way into the alignment phase, so without the pin every spec would be asserting against a different look each run — which fails as a click landing a pixel off rather than as anything that mentions a skin. Online specs need nothing: the test server's `HA_SKIN` covers them.
 - **Online specs share one game server and one IP.** In production the server refuses more than 10 room joins per minute per address, which caps how many online specs there can be — they all join from one address, two joins each. Rather than weaken that, `JOINS_PER_IP_PER_MINUTE` reads `HA_JOINS_PER_MINUTE`, and `playwright.config.mjs` sets it to 60 for the test server. Do not lower the default; raise the env var. Tripping the limit fails in a way that looks nothing like a rate limit.
 - **The e2e suite runs `dist-server/main.mjs`, not `server/` source.** The playwright config rebuilds it before starting, because testing against a stale server bundle is otherwise silently possible — it cost real debugging time once.
 - **The browser has WebGL 2 through SwiftShader**, so the e2e suite exercises the 3D renderer, in software, on every spec. That is deliberate — it is the path players get — but it is why the suite went from about 45 seconds to a little over two minutes, and why the renderer drops multisampling and pixel ratio when it detects a software rasteriser. Anything that makes the board fill more pixels per frame shows up here first.
@@ -90,6 +91,31 @@ Things worth knowing before touching the suite:
 `?test=play` or `?test=endgame` replaces `initialState` with `src/client/state/mocks/{play,endgame}.js` and makes `Game` start directly in that phase. Useful for reaching a board position without clicking through. Note neither mock has a piece on the board — both start with all 32 in their HQs.
 
 `?flat` turns the 3D renderer off and gives you the original CSS board, which is the fastest way to tell whether a bug is in the game or in the renderer.
+
+`?skin=dossier|blueprint|vault` pins the visual direction instead of drawing one. **Local mode only** — online the room's skin wins, because the table has to agree. It exists because otherwise the only way to see a direction is to restart games until the draw goes your way, and because the browser suite needs it: every spec walks the real start → alignment flow, and that flow draws a skin.
+
+## The three skins
+
+The interface comes in three committed visual directions — **Dossier** (the file room: manila, typewriter, rubber stamps), **Blueprint** (industrial secrets: cyanotype, chalk line work, drafted controls) and **Vault** (the attaché case: gunmetal, brass, bevels). `src/domain/skins.js` holds the names and `pickSkin(rng)`; `src/client/theme/` holds what they look like.
+
+**The names are in `domain` for the same reason the phases are: the server sends them.** Nothing about how a skin looks belongs there.
+
+Who chooses, and when:
+
+- **The main menu is always Dossier.** A game starts as a form on a desk; it only gets a look of its own later. `?test=` also pins it, so a spec dropped straight into a mid-game state is deterministic.
+- **Hot-seat draws on the way in to the friend-and-foe cards** — the moment the game stops being a form — and keeps it for the rest of the evening. That is `createLocalSession#advance` in `net/transport.js`. Dossier is in the draw, so staying is a real outcome rather than a missed one.
+- **Online, the room owns it.** `createRoomStore#create` draws it once with the server's `rng`, it lives on the room next to the phase, and `roomMessage` sends it — so every seat is told the same one in the same frame as the seat list, and the waiting room already looks like the game will. `HA_SKIN` pins it (set in `playwright.config.mjs`, same shape as `HA_JOINS_PER_MINUTE`: don't lower the default, override the env). A client's own `?skin=` is inert online.
+- The skin lives on **the session** in both modes, so `useSkin()` has no branch in it. `useSkinAttribute` writes it to `data-skin` on `<html>` — on the document rather than a wrapper, because the canvas is a sibling of `.game` and sits *under* it, so a background inside the app is a filter over everything the renderer drew.
+
+**It is custom properties, not a `ThemeProvider`, and that is not a preference.** styled-components injects a rule per distinct interpolated value and reclaims none, so a theme threaded through templates mints a second and third class for every component in the app — the same leak the projected-pixel rule in the 3D section exists to prevent. `theme/skinStyle.js` builds one static `:root[data-skin=…]` block per skin at module load; switching skin is one attribute write and nothing is re-injected. The consequence to respect: **everything a skin changes has to be expressible as a value**, which is why there are tokens for a `clip-path`, a rotation and a `background-image`, and why a direction that wants no ornament sets the token to `none` rather than omitting it.
+
+Three things a skin may not touch, each of which would break the game rather than merely restyle it:
+
+- **Any length that decides where a hexagon lands.** Every hexagon and every piece is a transparent DOM element laid on the projection of its own tile, and the drag controller and the whole suite hit-test against those boxes.
+- **A border's width.** Its colour, freely. The turn strip sits above the board, so a 2px rule in one direction and none in another moves every tile down two pixels — which is why the title tokens are `2px solid transparent` where a direction wants no rule. `skin.test.js` asserts a cell's size and its offset *within the board* are identical across all three. Absolute position is deliberately not asserted: the strip is set in each direction's own face and carries its own button border, so the whole board legitimately sits a pixel or two higher in one than another, and the boxes move with it.
+- **The feedback colours.** A legal cell's red and a selected piece's `brightness(2)` are the one piece of vocabulary a returning player owns, and `helpers/get.js` reads them as literal computed strings. They are absent from the token table on purpose.
+
+The one thing about the *board* a skin does change is the plinth the tiles are seated in — `palette.js#boardColors(skin)`, fed to `boardScene`. Its materials are cached per skin, because `sharedAsset` is a module-level cache and a key that ignored the skin would hand the second room the first room's colours. Tiles, tokens and trays are settled and identical in all three.
 
 ## Architecture
 

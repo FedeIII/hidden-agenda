@@ -1,3 +1,4 @@
+import { DEFAULT_SKIN } from 'Domain/skins';
 import { redactFor } from './redact';
 
 // One JSON envelope per message: { type, ...fields }. Deliberately small — the client is not
@@ -62,6 +63,9 @@ export function roomMessage(room) {
 		code: room.code,
 		phase: room.phase,
 		hostSeatId: room.hostSeatId,
+		// The room's visual direction. Public by design and identical for every recipient: the
+		// whole point is that the table looks like one table.
+		skin: room.skin || DEFAULT_SKIN,
 		seats: room.seats.map(({ id, name, ready, connected }) => ({ id, name, ready, connected })),
 	};
 }

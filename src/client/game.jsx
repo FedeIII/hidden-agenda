@@ -6,6 +6,7 @@ import { withState, StateContext } from 'State';
 import { pz } from 'Domain/pieces';
 import { PHASES } from 'Domain/phases';
 import useSession from 'Hooks/useSession';
+import useSkin, { useSkinAttribute } from 'Hooks/useSkin';
 import { Title } from 'Client/components/title';
 import ConnectionBanner from 'Client/components/connectionBanner';
 import LobbyPhase from 'Phases/lobbyPhase';
@@ -25,6 +26,11 @@ function Game() {
 	const [{ pieces }] = useContext(StateContext);
 	const session = useSession();
 	const online = session.mode === 'online';
+
+	// One attribute on <html>, and every token in the app resolves against it. Locally the session
+	// draws it on the way into the alignment phase; online it is the room's, so the whole table
+	// changes together the moment the room frame lands.
+	useSkinAttribute(useSkin());
 
 	// Was a <Redirect> inside PlayPhase. Deriving it keeps it idempotent. Online the server says
 	// so instead, since it is the one that knows the game is over.

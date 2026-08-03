@@ -42,6 +42,28 @@ function dealAlignments(playerNames, rng = Math.random) {
 	});
 }
 //#endregion
+//#region src/domain/skins.js
+var SKINS = {
+	DOSSIER: "dossier",
+	BLUEPRINT: "blueprint",
+	VAULT: "vault"
+};
+var SKIN_NAMES = Object.values(SKINS);
+var DEFAULT_SKIN = SKINS.DOSSIER;
+function isSkin(value) {
+	return SKIN_NAMES.includes(value);
+}
+/**
+* Picks a skin for a game.
+*
+* Takes an `rng` for the same reason `deal.js` does — the server calls it with its own, and a
+* test needs to be able to make the choice deterministic. Dossier stays in the draw: keeping the
+* style you started the menu in is one of the three outcomes, not a failure to change.
+*/
+function pickSkin(rng = Math.random) {
+	return SKIN_NAMES[Math.floor(rng() * SKIN_NAMES.length) % SKIN_NAMES.length];
+}
+//#endregion
 //#region src/domain/pieces/constants.js
 var AGENT$3 = "A";
 var CEO$3 = "C";
@@ -1444,7 +1466,8 @@ function isCodeShaped(value) {
 function createToken() {
 	return randomUUID();
 }
-function createRoomStore({ now = () => Date.now(), rng = Math.random } = {}) {
+var PINNED_SKIN = isSkin(process.env.HA_SKIN) ? process.env.HA_SKIN : null;
+function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = null } = {}) {
 	const rooms = /* @__PURE__ */ new Map();
 	function get(code) {
 		return rooms.get(code) || null;
@@ -1459,6 +1482,7 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random } = {}) {
 			seats: [],
 			version: 0,
 			hostSeatId: null,
+			skin: skin || PINNED_SKIN || pickSkin(rng),
 			createdAt: now(),
 			updatedAt: now()
 		};
@@ -1823,6 +1847,7 @@ function roomMessage(room) {
 		code: room.code,
 		phase: room.phase,
 		hostSeatId: room.hostSeatId,
+		skin: room.skin || DEFAULT_SKIN,
 		seats: room.seats.map(({ id, name, ready, connected }) => ({
 			id,
 			name,

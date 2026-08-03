@@ -1,6 +1,5 @@
 import styled, { css } from 'styled-components';
 import { narrow, narrowOrShort } from 'Client/components/breakpoints';
-import { TEAM_COLORS } from 'Domain/teams';
 
 export const EndPhaseContainer = styled.div`
 	position: relative;
@@ -21,10 +20,12 @@ export const EndPhaseContainer = styled.div`
 	}
 `;
 
+// Sits inside a team-coloured card, so it takes the card's ink rather than the page's.
 export const Score = styled.div`
 	text-align: center;
 	font-size: 50px;
 	padding: 15px;
+	color: inherit;
 
 	${narrowOrShort} {
 		font-size: 30px;
@@ -47,11 +48,28 @@ export const PieceCountContainer = styled.div`
 export const PieceCountTitle = styled.span`
 	display: inline-block;
 	margin-bottom: 8px;
+	color: inherit;
+	opacity: 0.72;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+`;
+
+// The two score tables. Knurled along the foot in Vault, plain in the other two — the texture token
+// is `none` there rather than absent, which is what lets one rule serve all three.
+const asTable = css`
+	background: var(--ha-panel);
+	background-image: var(--ha-panel-texture);
+	background-repeat: no-repeat;
+	background-position: bottom;
+	background-size: 100% 5px;
+	border: 1px solid var(--ha-panel-edge);
+	border-radius: var(--ha-panel-radius);
+	box-shadow: var(--ha-panel-shadow);
+	color: var(--ha-ink);
 `;
 
 export const PieceTable = styled.div`
-	background-color: lightslategray;
-	border: 2px solid gray;
+	${asTable}
 	display: flex;
 	flex-direction: row;
 	justify-content: space-around;
@@ -73,11 +91,9 @@ export const PieceRow = styled.div`
 	margin: 0 0 8px;
 `;
 
-const pointsColor = ({ team }) => TEAM_COLORS[team] || 'white';
-
 export const PieceCell = styled.span`
 	display: flex;
-	color: ${pointsColor};
+	color: ${({ team }) => (team === undefined || team === null ? 'var(--ha-ink)' : `var(--ha-team-${team})`)};
 	flex-flow: column;
 	align-items: center;
 	flex-basis: 33%;
@@ -104,8 +120,7 @@ export const Scores = styled.div`
 `;
 
 export const PointsTable = styled.div`
-	background-color: lightslategray;
-	border: 2px solid gray;
+	${asTable}
 	padding: 12px 10px;
 	margin-bottom: 20px;
 	display: flex;
@@ -118,18 +133,22 @@ export const PointsTable = styled.div`
 `;
 
 export const Winner = styled.div`
-	color: white;
+	color: var(--ha-ink-dim);
 	align-self: center;
 	margin: 30px auto 10px;
 	font-size: 18px;
 	font-weight: bold;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
 `;
 
 export const PlayerWinner = styled.div`
-	color: white;
+	color: var(--ha-ink);
 	align-self: center;
 	font-size: 32px;
 	font-weight: bold;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
 `;
 
 /* ---------------------------------------------------------------------------------------------
@@ -158,7 +177,7 @@ export const ScoreRow = styled.div`
 	align-items: center;
 	gap: 10px;
 	padding: 5px 2px;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+	border-bottom: 1px solid var(--ha-rule);
 
 	&:last-of-type {
 		border-bottom: none;
@@ -181,7 +200,7 @@ export const BreakdownHead = styled.div`
 `;
 
 export const PlayerName = styled.div`
-	color: white;
+	color: var(--ha-ink);
 	font-weight: bold;
 	font-size: 15px;
 	letter-spacing: 0;
@@ -189,7 +208,7 @@ export const PlayerName = styled.div`
 `;
 
 export const Base = styled.div`
-	color: white;
+	color: var(--ha-ink);
 	font-size: 15px;
 	font-weight: bold;
 	letter-spacing: 0;
@@ -201,10 +220,10 @@ export const Base = styled.div`
 const groupTint = ({ alignment }) =>
 	alignment === 'friend'
 		? css`
-				border-color: mediumseagreen;
+				border-color: var(--ha-friend);
 			`
 		: css`
-				border-color: indianred;
+				border-color: var(--ha-foe);
 			`;
 
 export const AlignmentGroup = styled.div`
@@ -219,7 +238,8 @@ export const AlignmentGroup = styled.div`
 `;
 
 /* Same colours as the alignment cards dealt at the start of the game: the green/red frame says
-   friend or foe, the chip inside says which team. */
+   friend or foe, the chip inside says which team — with the team's own rim as a hairline, so black
+   and dark red stay apart on any of the three grounds. */
 export const AlignmentPill = styled.span`
 	display: inline-flex;
 	align-items: center;
@@ -229,9 +249,9 @@ export const AlignmentPill = styled.span`
 	font-size: 11px;
 	font-weight: bold;
 	letter-spacing: 0;
-	background-color: ${({ team }) => TEAM_COLORS[team]};
-	color: ${({ team }) => (team === '2' || team === '3' ? 'black' : 'white')};
-	border: 1px solid rgba(0, 0, 0, 0.35);
+	background: var(--ha-team-${({ team }) => team});
+	color: var(--ha-team-${({ team }) => team}-ink);
+	border: 1px solid var(--ha-team-${({ team }) => team}-line);
 `;
 
 export const Amount = styled.span`
@@ -239,7 +259,7 @@ export const Amount = styled.span`
 	font-weight: bold;
 	letter-spacing: 0;
 	font-variant-numeric: tabular-nums;
-	color: white;
+	color: var(--ha-ink);
 	margin-left: auto;
 	/* Without this "+ 135" breaks at the space and the sign lands on its own line above the
 	   number, which is exactly what made the old table unreadable. */
@@ -257,14 +277,14 @@ export const RevealCost = styled.span`
 	font-weight: bold;
 	letter-spacing: 0;
 	font-variant-numeric: tabular-nums;
-	color: #ffd479;
+	color: var(--ha-accent);
 	padding-left: 6px;
-	border-left: 1px dashed rgba(255, 255, 255, 0.35);
+	border-left: 1px dashed var(--ha-rule);
 	white-space: nowrap;
 `;
 
 export const Total = styled.div`
-	color: white;
+	color: var(--ha-ink);
 	font-size: 26px;
 	font-weight: bold;
 	letter-spacing: 0;

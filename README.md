@@ -34,6 +34,11 @@ production, so online play works locally with no configuration — host a game i
 | `./dev.sh --clean` | drop persisted rooms first |
 | `./dev.sh --no-open` | don't open a browser |
 
+The client takes three URL handles, all local-only: `?flat` turns the 3D renderer off, `?test=play`
+or `?test=endgame` drops you into a mid-game state, and `?skin=dossier|blueprint|vault` pins the
+visual direction instead of letting the game draw one. `HA_SKIN` does the same for every room the
+server makes.
+
 Rooms are persisted to `.dev-rooms/` so a server rebuild doesn't drop the game in progress, and the
 per-IP join limit is lifted, since every tab here shares one address.
 
@@ -153,6 +158,38 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.2.0
+The interface has three faces.
+
+* **Three visual directions**, each committed to its own material world rather than being a palette
+  swap of the others
+  * **Dossier** — the file room. Manila card, typewriter, rubber stamps that sit slightly crooked and
+    press when you push them, and the board sunk into a dark blotter well
+  * **Blueprint** — industrial secrets, taken literally: cyanotype ground with the drawing grid on
+    it, chalk line work, ferro red for anything armed, and controls whose corner is cut rather than
+    rounded
+  * **Vault** — the attaché case. Milled gunmetal, oxblood and brass, bevelled switches that sink
+    when pressed, knurling along the foot of a panel, and the deepest board recess of the three
+* **The main menu is always Dossier.** A game starts as a form on a desk and only gets a look of its
+  own once the table sits down to its cards
+* **Hot-seat draws its skin on the way in to friend & foe** and keeps it for the rest of the evening.
+  Dossier is in the draw, so staying is a real outcome rather than a missed one
+* **Online, the room owns its skin.** Whoever opens the room draws it, the server keeps it beside the
+  phase, and it goes out in the same frame as the seat list — so the waiting room already looks like
+  the game will, on every screen, without the clients negotiating anything
+* **The alignment cards now carry two facts on two channels.** Green and red still say friend or foe;
+  which team is a separate mark in that team's own colour, placed where each direction's material
+  would put it — an index tab on the Dossier copy, a hatched finish callout on the Blueprint sheet, an
+  anodised plate in a brass bezel in the Vault. Both codings survive; they stop sharing one mark
+* `?skin=dossier|blueprint|vault` pins the look in a local game, the way `?flat` pins the renderer
+
+Under it, and deliberately: a skin is custom properties on `<html>`, not a theme threaded through
+styled-components, so switching one is a single attribute write and not a second and third CSS class
+for every component in the app. A skin may change colour, type, a border's colour and ornament — and
+may not change a border's *width* or anything else with a length, because the invisible boxes a click
+lands on are projected from the board's own size. The feedback colours are untouched in all three:
+red still means *you may go there*.
+
 ### v3.1.0
 The board is in 3D.
 
@@ -405,6 +442,7 @@ Play it over the internet. Also a complete change of toolchain underneath, and t
 * Port to electron
 
 ## Known Bugs
+* ~~The interface said nothing about the game it was wrapped around~~
 * ~~A piece dragged out of an HQ was invisible over that HQ, and cut in half at the board's edge~~
 * ~~Pieces and HQ racks rendered at about half the colour they were painted in~~
 * ~~A snipe that was lined up and then declined deadlocked the game~~

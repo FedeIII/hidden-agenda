@@ -3,12 +3,16 @@ import { narrow, short } from './breakpoints';
 import { TEAM_COLORS } from 'Domain/teams';
 import { HQ_TRAY } from 'Client/three/palette';
 
+// Every branch states its own ink, including the two light cards. They used to leave it inherited
+// and got the browser's default black, which stopped being black the moment <body> took a skin's
+// colour — and a white 135 on a white card is not a score.
 const hqColor = ({ team }) => {
 	switch (team) {
 		default:
 		case '0':
 			return css`
 				background-color: ${TEAM_COLORS[2]};
+				color: #1b1e23;
 			`;
 		case '1':
 			return css`
@@ -23,6 +27,7 @@ const hqColor = ({ team }) => {
 		case '3':
 			return css`
 				background-color: ${TEAM_COLORS[3]};
+				color: #2b2410;
 			`;
 	}
 };
@@ -40,10 +45,18 @@ const hqColor = ({ team }) => {
 const asGlass = ({ dimensional, team }) => {
 	if (dimensional) {
 		return css`
-			background-color: rgba(12, 17, 25, 0.14);
+			background-color: var(--ha-hq-glass);
+			background-image: var(--ha-panel-texture);
+			background-repeat: no-repeat;
+			background-position: bottom;
+			background-size: 100% 5px;
+			/* The team colour stays on the frame, where it reads as identity. It comes from the
+			   tray palette rather than the tokens because it has to match the rack the renderer
+			   drew behind it, to the pixel. */
 			border-color: ${HQ_TRAY[team].frame};
-			color: white;
-			box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.28);
+			border-radius: var(--ha-panel-radius);
+			color: var(--ha-ink);
+			box-shadow: var(--ha-hq-inner);
 		`;
 	}
 };

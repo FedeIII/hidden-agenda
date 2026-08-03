@@ -5,7 +5,7 @@ import hexPrismGeometry, { ORIENTATION } from './geometry';
 import addLights from './lighting';
 import { allRenderedCells, cellToWorld, COLUMN_PITCH, directionToAngle, isPlayableCell, R, ROW_PITCH } from './layout';
 import { lastScreenPosition, noteScreenPosition, setHand } from './flight';
-import { AIM, BOARD, HIGHLIGHT, HOVER, KEYLINE } from './palette';
+import { AIM, BOARD, boardColors, HIGHLIGHT, HOVER, KEYLINE } from './palette';
 import getStage, { prefersReducedMotion } from './stage';
 import createProjector, { boxStyle } from './view';
 import createToken, { CARRY_LIFT } from './token';
@@ -63,7 +63,12 @@ function flat(key, inner, outer, color, opacity) {
 	);
 }
 
-function createPlinth() {
+// The geometry is shared by every skin — it is the same plinth — but the materials are cached per
+// skin, because sharedAsset is a module-level cache and a key that ignored the skin would hand the
+// second room the first room's colours.
+function createPlinth(skin) {
+	const colors = boardColors(skin);
+
 	const plinth = new Mesh(
 		sharedAsset('plinth', () =>
 			hexPrismGeometry({
@@ -73,10 +78,10 @@ function createPlinth() {
 				orientation: ORIENTATION.flat,
 			}),
 		),
-		sharedAsset('plinthMaterials', () => [
-			new MeshStandardMaterial({ color: BOARD.plinth, roughness: 0.85, metalness: 0.1 }),
-			new MeshStandardMaterial({ color: BOARD.plinthEdge, roughness: 0.4, metalness: 0.3 }),
-			new MeshStandardMaterial({ color: BOARD.plinth, roughness: 0.85, metalness: 0.1 }),
+		sharedAsset(`plinthMaterials-${skin}`, () => [
+			new MeshStandardMaterial({ color: colors.plinth, roughness: 0.85, metalness: 0.1 }),
+			new MeshStandardMaterial({ color: colors.plinthEdge, roughness: 0.4, metalness: 0.3 }),
+			new MeshStandardMaterial({ color: colors.plinth, roughness: 0.85, metalness: 0.1 }),
 		]),
 	);
 
@@ -126,11 +131,11 @@ function createAimMarker() {
 	return marker;
 }
 
-export default function createBoardScene(element) {
+export default function createBoardScene(element, skin) {
 	const scene = new Scene();
 
 	addLights(scene);
-	scene.add(createPlinth());
+	scene.add(createPlinth(skin));
 
 	const cells = allRenderedCells();
 	const tiles = new Map();

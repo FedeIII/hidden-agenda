@@ -4,6 +4,7 @@ import { areCoordsInList } from 'Domain/utils';
 import { CELLS_BY_ROW, ROW_NUMBERS } from 'Domain/cells';
 import { StateContext } from 'State';
 import createBoardScene from 'Client/three/boardScene';
+import useSkin from 'Hooks/useSkin';
 import useThreeView from 'Client/three/useThreeView';
 import { TableBoardStyled, BoardRow } from './components';
 import Hexagon from './hexagon';
@@ -43,6 +44,7 @@ function renderRow(row, numberOfCells, board) {
 function TableBoard() {
 	const [{ pieces, pieceState, snipe }] = useContext(StateContext);
 	const boardRef = useRef(null);
+	const skin = useSkin();
 
 	// Which cell the pointer is on. React state rather than something imperative, because it only
 	// changes when the pointer crosses a cell boundary — a few times a second while moving, not
@@ -84,7 +86,10 @@ function TableBoard() {
 		[pieces, highlightedPositions, snipe, aim, hovered],
 	);
 
-	const layout = useThreeView(boardRef, createBoardScene, scene);
+	// Bound to the skin so a change rebuilds the scene, which only ever happens once per game —
+	// the board does not exist until the phase after the skin is settled.
+	const createScene = useCallback(element => createBoardScene(element, skin), [skin]);
+	const layout = useThreeView(boardRef, createScene, scene);
 
 	const board = { pieces, highlightedPositions, layout, aim, onHover: layout ? onHover : undefined };
 

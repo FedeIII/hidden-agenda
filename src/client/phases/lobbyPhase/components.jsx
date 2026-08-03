@@ -1,5 +1,9 @@
 import styled from 'styled-components';
 
+// The waiting room, which is the first place an online table sees the skin the server drew for it:
+// the room frame carries it alongside the seat list, so by the time a code is on screen everyone
+// looking at that code is looking at the same material.
+
 export const LobbyContainer = styled.div`
 	display: flex;
 	flex-direction: column;
@@ -18,17 +22,18 @@ export const Panel = styled.div`
 `;
 
 export const RoomCode = styled.div`
-	font-family: monospace;
+	font-family: var(--ha-face-data);
 	font-size: 42px;
-	letter-spacing: 10px;
-	padding-left: 10px;
-	color: #fff;
+	letter-spacing: 0.24em;
+	padding-left: 0.24em;
+	color: var(--ha-ink);
 `;
 
 export const ShareHint = styled.div`
-	font-family: monospace;
+	font-family: var(--ha-face-data);
 	font-size: 12px;
-	color: #cfd6de;
+	color: var(--ha-ink-dim);
+	letter-spacing: var(--ha-track-label);
 	word-break: break-all;
 	text-align: center;
 `;
@@ -38,35 +43,50 @@ export const SeatList = styled.ul`
 	margin: 0;
 	padding: 0;
 	width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
 `;
 
 export const SeatRow = styled.li`
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	font-family: monospace;
+	font-family: var(--ha-face-data);
 	font-size: 15px;
+	letter-spacing: var(--ha-track-label);
 	padding: 7px 10px;
-	margin-bottom: 4px;
-	color: #fff;
-	background: rgba(0, 0, 0, ${({ dim }) => (dim ? 0.15 : 0.35)});
+	color: var(--ha-ink);
+	background: var(--ha-panel);
+	border: 1px solid var(--ha-panel-edge);
+	border-radius: var(--ha-panel-radius);
 	opacity: ${({ dim }) => (dim ? 0.55 : 1)};
 `;
 
 export const SeatTag = styled.span`
 	font-size: 11px;
-	color: #a1abb7;
+	color: var(--ha-ink-faint);
+	text-transform: uppercase;
 `;
 
 export const Field = styled.input`
-	font-family: monospace;
+	font-family: var(--ha-face-data);
 	font-size: 17px;
 	padding: 8px 10px;
 	width: 100%;
 	box-sizing: border-box;
 	text-align: center;
+	background: var(--ha-field-bg);
+	color: var(--ha-field-ink);
+	border: var(--ha-field-edge);
+	border-radius: var(--ha-panel-radius);
 	text-transform: ${({ code }) => (code ? 'uppercase' : 'none')};
-	letter-spacing: ${({ code }) => (code ? '6px' : 'normal')};
+	letter-spacing: ${({ code }) => (code ? '0.3em' : 'var(--ha-track-label)')};
+
+	&:focus-visible {
+		outline: 2px solid var(--ha-accent);
+		outline-offset: 1px;
+	}
 `;
 
 export const Row = styled.div`
@@ -76,8 +96,9 @@ export const Row = styled.div`
 `;
 
 export const Notice = styled.div`
-	font-family: monospace;
+	font-family: var(--ha-face-data);
 	font-size: 13px;
 	padding: 6px 10px;
-	color: ${({ bad }) => (bad ? '#ffb4b4' : '#cfd6de')};
+	letter-spacing: var(--ha-track-label);
+	color: ${({ bad }) => (bad ? 'var(--ha-accent)' : 'var(--ha-ink-dim)')};
 `;

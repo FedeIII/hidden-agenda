@@ -2,7 +2,6 @@ import styled, { css } from 'styled-components';
 import { Button } from 'Client/components/button';
 import { narrow, short, narrowOrShort } from 'Client/components/breakpoints';
 import { BOARD_ASPECT } from 'Client/three/layout';
-import { TEAM_COLORS } from 'Domain/teams';
 
 export const PlayPhaseContainer = styled.div`
 	position: relative;
@@ -65,6 +64,11 @@ export const Action = styled.div`
 	flex-basis: 33%;
 	display: flex;
 	justify-content: center;
+	/* The controls used to be one segmented strip held together by shared borders. Each direction
+	   now gives a control an edge of its own — a stamp outline, a cut corner, a bevel — so they
+	   need air between them instead. */
+	gap: 8px;
+	align-items: center;
 	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
 
 	/* An action holds more than one button: the middle one grows to ACCUSE + the alignment cards
@@ -76,23 +80,24 @@ export const Action = styled.div`
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: center;
+		gap: 5px;
 		max-width: 100%;
 	}
 `;
 
 export const ActionCancelButton = styled(Button)`
-	margin-left: 8px;
 	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
 `;
 
 export const AlignmentWarningStyled = styled.div`
-	color: white;
+	color: var(--ha-ink);
 	text-align: center;
 `;
 
 export const AlignmentWarningMessage = styled.span`
 	display: block;
 	margin-bottom: 8px;
+	letter-spacing: var(--ha-track-label);
 `;
 
 // The board's own height, now that its rows have none. A spacer rather than a height, because
@@ -114,6 +119,9 @@ const withBoardHeight = ({ dimensional }) => {
 	}
 };
 
+// Deliberately no background, in any skin. The canvas is a sibling of .game and sits UNDER it, so
+// anything painted here is a filter over every tile the renderer drew — which is why the well a
+// direction seats its board in is the 3D plinth (three/palette.js#boardColors) and not a CSS fill.
 export const TableBoardStyled = styled.div`
 	position: relative;
 	width: 45%;
@@ -167,7 +175,7 @@ const asRack = ({ dimensional }) => {
 			background-image: none;
 			/* A hairline where the rack ends, so the cementery below it reads as the shelf under
 			   the rack rather than as the panel running out of content. */
-			box-shadow: 0 1px 0 rgba(255, 255, 255, 0.16);
+			box-shadow: 0 1px 0 var(--ha-rule);
 		`;
 	}
 };
@@ -205,6 +213,7 @@ export const HqButton = styled(Button)`
 		padding: 4px 2px;
 	}
 `;
+
 export const HqMessage = styled.span`
 	position: absolute;
 	font-size: 16px;
@@ -226,25 +235,35 @@ export const RevealContainer = styled.div`
 `;
 
 export const RevealMessage = styled.span`
-	color: white;
+	color: var(--ha-ink);
 	margin-bottom: 8px;
+	letter-spacing: var(--ha-track-label);
 `;
 
+// A card you press, so it takes the control tokens rather than a fill of its own.
 export const RevealCard = styled.div`
-	color: white;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background-color: black;
+	font-family: var(--ha-face);
+	letter-spacing: var(--ha-track);
+	text-transform: uppercase;
+	color: var(--ha-control-ink);
+	background: var(--ha-control-bg);
+	border: var(--ha-control-edge);
+	border-radius: var(--ha-control-radius);
+	clip-path: var(--ha-control-clip);
+	text-shadow: var(--ha-control-ink-shadow);
 	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
-	margin-right: 8px;
-	padding: 8px;
+	padding: 8px 12px;
 	min-width: 30%;
 `;
 
 export const RevealActions = styled.div`
 	display: flex;
 	flex-direction: row;
+	gap: 8px;
+	align-items: center;
 
 	/* Same shape as an Action: two cards and CANCEL side by side, which is more than a phone is
 	   wide once a card carries a revealed team name instead of "Friend". */
@@ -252,6 +271,7 @@ export const RevealActions = styled.div`
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: center;
+		gap: 5px;
 		max-width: 100%;
 	}
 `;
@@ -266,14 +286,16 @@ const onHide = ({ hide }) => {
 
 export const ActionButton = styled(Button)`
 	${onHide}
-	border-left: 1px solid darkgray !important;
 	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
-
-	&:first-of-type {
-		border-left: none !important;
-	}
 `;
 
+// Accusing names a team, so the button wears that team's colour as a filled chip rather than as
+// text. Coloured text meant team 0 had to be faked as darkgray to be legible at all, and it still
+// disappeared against a dark panel; a chip with the team's own rim as a hairline works on manila,
+// on cyanotype and on gunmetal alike — the same problem the tokens solve for the cards.
 export const AccuseTeam = styled(ActionButton)`
-	color: ${({ team }) => (team == 0 ? 'darkgray' : TEAM_COLORS[team])};
+	background: var(--ha-team-${({ team }) => team});
+	color: var(--ha-team-${({ team }) => team}-ink);
+	border: 1px solid var(--ha-team-${({ team }) => team}-line);
+	text-shadow: none;
 `;

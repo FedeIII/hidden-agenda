@@ -6,7 +6,11 @@
 // instead of arguing with it. The 3D layer is meant to look like the game it replaces, lit.
 
 // No three.js import here on purpose: styled-components read these too, and a palette is not a
-// reason to drag a renderer into the flat path.
+// reason to drag a renderer into the flat path. theme/tokens.js is safe for the same reason — it is
+// a table of strings and imports nothing but the skin names.
+import { DEFAULT_SKIN } from 'Domain/skins';
+import { SKIN_PLINTH } from 'Client/theme/tokens';
+
 export const BACKDROP = '#445873';
 
 /**
@@ -21,6 +25,14 @@ export const BOARD = {
 	// every other cell is linear. It keeps a mark of its own here.
 	centre: '#d8c188',
 };
+
+// The plinth is the ONE thing about the board that a skin changes: the surface the tiles are
+// seated in, so a blotter, a cyanotype and a milled recess each read as their own table. The tiles,
+// the tokens and the trays are settled and identical in all three — and so are the feedback
+// colours, because where a piece may go is vocabulary a returning player already owns.
+export function boardColors(skin) {
+	return { ...BOARD, ...(SKIN_PLINTH[skin] || SKIN_PLINTH[DEFAULT_SKIN]) };
+}
 
 // Straight out of hexagon/styledHelpers.js: DARKEN_LEVEL_BY_CELL, applied as level * 6 / 100.
 // prettier-ignore

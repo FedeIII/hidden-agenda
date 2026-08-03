@@ -9,7 +9,11 @@ export const test = base.extend({
 	// is already on the app, with no ordering question against beforeEach hooks. Specs in the
 	// `domain` project never ask for a page, so no browser is started for them.
 	page: async ({ page }, use) => {
-		await page.goto('/');
+		// `?skin=dossier` pins the look. Every spec walks the real start → alignment flow, and the
+		// hot-seat game draws a skin on the way in, so without this the suite would assert against
+		// a randomly chosen one each run. A spec that navigates for itself has to carry the param
+		// too — see three.test.js — unless it goes online, where the server's HA_SKIN covers it.
+		await page.goto('/?skin=dossier');
 		await page.addStyleTag({ content: '.piece-styled {transition: none !important;}' });
 
 		await use(page);

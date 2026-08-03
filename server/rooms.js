@@ -1,5 +1,6 @@
 import { PHASES } from 'Domain/phases';
 import { dealAlignments } from 'Domain/deal';
+import { isSkin, pickSkin } from 'Domain/skins';
 import { MIN_PLAYERS, MAX_PLAYERS } from 'Domain/py';
 import { createInitialState, gameReducer } from 'Game/reducer';
 import { startGame, setAlignment } from 'Game/actions';
@@ -10,9 +11,14 @@ import { createCode, createToken } from './codes';
 
 export const MAX_ROOMS = 200;
 
+// Pins the look of every new room. Set in playwright.config.mjs so the browser suite is not
+// asserting against a different skin on every run — the same shape as HA_JOINS_PER_MINUTE, and for
+// the same reason: do not weaken the default, override it in the environment that needs it.
+const PINNED_SKIN = isSkin(process.env.HA_SKIN) ? process.env.HA_SKIN : null;
+
 export { MIN_PLAYERS, MAX_PLAYERS };
 
-export function createRoomStore({ now = () => Date.now(), rng = Math.random } = {}) {
+export function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = null } = {}) {
 	const rooms = new Map();
 
 	function get(code) {
@@ -32,6 +38,12 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random } = 
 			seats: [],
 			version: 0,
 			hostSeatId: null,
+			// Drawn once, when the room is made, by whoever opened it — and then it is the room's,
+			// not theirs. Everyone who joins receives it in the same frame as the seat list, so the
+			// waiting room already looks like the game will. Held on the room rather than in game
+			// state for two reasons: it is not a secret, so redaction has no business touching it,
+			// and a seat needs it before it has been dealt anything at all.
+			skin: skin || PINNED_SKIN || pickSkin(rng),
 			createdAt: now(),
 			updatedAt: now(),
 		};
