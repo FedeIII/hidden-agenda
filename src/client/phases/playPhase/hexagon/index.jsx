@@ -9,7 +9,19 @@ import Piece from '../piece/index';
 
 import HexagonStyled from './styled';
 
-function Hexagon({ row, cell, piece, highlighted, edge, aim }) {
+// The token's own footprint, near enough the whole cell. Centred — which means it covers the
+// cell's centre, so a click on an occupied cell lands on the piece and bubbles to the hexagon,
+// running both handlers. That is exactly what the flat renderer does (its <img> overhangs the
+// cell and covers the centre too), and a good deal of the game's behaviour is built on it.
+//
+// In percentages, so it follows the hexagon's box without arithmetic — and never as a transform,
+// which belongs to the piece's facing and is read back as a matrix.
+// Shifted up, because the token is drawn STANDING on the tile: its height projects about a fifth
+// of a cell up the screen, so a box centred on the cell would leave the top of the chip outside
+// its own hit target and clicking there would reach the row behind it.
+const TOKEN_BOX = { left: '6%', top: '-6%', width: '88%', height: '96%' };
+
+function Hexagon({ row, cell, piece, highlighted, edge, aim, box, onHover }) {
 	const [_state, dispatch] = useContext(StateContext);
 	const cellAction = useCellAction();
 	const { isClickSuppressed } = useDragController();
@@ -33,6 +45,10 @@ function Hexagon({ row, cell, piece, highlighted, edge, aim }) {
 	// Hovering a cell points the selected piece towards it. TableBoard passes aim as null unless
 	// the piece has finished moving, which is what stops a hover hijacking a move.
 	const onMouseEnter = useCallback(() => {
+		if (onHover) {
+			onHover([row, cell]);
+		}
+
 		if (!aim) {
 			return;
 		}
@@ -42,7 +58,7 @@ function Hexagon({ row, cell, piece, highlighted, edge, aim }) {
 		if (areCoordsInList(intendedDirection, aim.directions)) {
 			dispatch(directPiece(intendedDirection));
 		}
-	}, [aim, dispatch, row, cell]);
+	}, [aim, dispatch, onHover, row, cell]);
 
 	return (
 		<HexagonStyled
@@ -51,10 +67,12 @@ function Hexagon({ row, cell, piece, highlighted, edge, aim }) {
 			row={row}
 			cell={cell}
 			edge={edge}
+			projected={!!box}
+			style={box}
 			onClick={onClick}
 			onMouseEnter={onMouseEnter}
 		>
-			{piece && <Piece {...piece} />}
+			{piece && <Piece {...piece} box={box && TOKEN_BOX} />}
 		</HexagonStyled>
 	);
 }

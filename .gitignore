@@ -7,3 +7,6 @@ playwright-report/
 blob-report/
 
 .playwright-rooms/
+
+# Rooms dev.sh persists, so a server rebuild doesn't drop the game in progress.
+.dev-rooms/

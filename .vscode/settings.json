@@ -1,0 +1,20 @@
+{
+	// There is no TypeScript in this project. tsconfig.json exists only to give playwright and the
+	// editor the import aliases (see the note inside it), but the editor cannot tell the difference:
+	// it detects a tsconfig and contributes `tsc: build` and `tsc: watch` tasks for it. Running one —
+	// from the task list, or as a build step before a debug session — asks tsc to compile 86 .js
+	// files in place, and every one fails with "Cannot write file … because it would overwrite input
+	// file". `noEmit` in tsconfig.json makes that harmless; this stops the tasks being offered at all.
+	"typescript.tsc.autoDetect": "off",
+
+	// The build output and the server bundle are committed artifacts. Keeping them out of search
+	// results matters more here than usual: docs/assets/*.js is a megabyte of bundled minified
+	// client, so any search for a symbol otherwise matches the build as well as the source it came
+	// from.
+	"search.exclude": {
+		"docs/**": true,
+		"dist-server/**": true,
+		".dev-rooms/**": true,
+		".playwright-rooms/**": true
+	}
+}

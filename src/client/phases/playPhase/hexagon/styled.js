@@ -122,6 +122,41 @@ const getHexagonProperties =
 		`;
 	};
 
+// In 3D the hexagon stops drawing itself and becomes the thing you click: an invisible box laid
+// exactly over the tile the renderer painted.
+//
+// A box, not a hexagon — one column pitch wide and one row pitch tall, which tiles the plane
+// exactly. A cell's right edge is its neighbour's left edge to the pixel, and its bottom edge is
+// the next row's top edge, so every point on the board belongs to exactly one cell. Using the
+// hexagons' true bounding boxes instead would overlap adjacent rows by a quarter of their height,
+// and which of two invisible boxes a click landed on would come down to DOM order.
+//
+// It stays opacity: 0 rather than hidden. Invisible either way, but a transparent element is
+// still laid out, still hit-tested by elementFromPoint, still reports its computed border, and is
+// still visible as far as the DOM is concerned — none of which is true of visibility: hidden.
+//
+// Where the box actually IS arrives through the style prop, not through here: styled-components
+// mints and keeps a class for every distinct value it is interpolated with, so a projected pixel
+// offset in this template would leak a rule per hexagon per layout, forever.
+const onProjected = ({ projected }) => {
+	if (projected) {
+		return css`
+			position: absolute;
+			padding-bottom: 0;
+			margin: 0;
+			opacity: 0;
+			background: none;
+
+			/* The two rotated copies that made the hexagon shape. They stick out past the box,
+			   which for something being hit-tested is a liability rather than a look. */
+			&:before,
+			&:after {
+				display: none;
+			}
+		`;
+	}
+};
+
 const HexagonStyled = styled.div`
 	width: calc((100% - ${TOTAL_MARGIN}px) / ${MAX_NUMBER_OF_CELLS});
 	height: 0;
@@ -161,6 +196,11 @@ const HexagonStyled = styled.div`
 			${getHexagonProperties(CELL_HOVER_AFTER)};
 		}
 	}
+
+	/* Last, so it wins — but deliberately without touching the red border onHighlighted sets.
+	   That border is invisible under opacity: 0 and is read by the suite to tell a legal cell
+	   from an illegal one; box-sizing: border-box keeps it from resizing the box either way. */
+	${onProjected}
 `;
 
 export default HexagonStyled;

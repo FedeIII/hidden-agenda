@@ -549,13 +549,14 @@ function killPieces(pieces, movedId) {
 
 	const withKills = pieces.map(piece => (isSamePosition(piece, movedPiece) ? killedPiece(piece, movedId) : piece));
 
-	const killedCeo = withKills.find(piece => isCeo(piece.id) && piece.teamKilledBy);
+	return cascadeCeoKills(withKills);
+}
 
-	if (!killedCeo) {
-		return withKills;
-	}
-
-	return killWholeTeam(withKills, killedCeo);
+// A dead CEO takes its team's still-undeployed pieces with it whoever pulled the trigger — a move
+// onto its cell or a sniper. Both paths mark the corpse in killedPiece and come through here, which
+// is what a snipe used to skip: the CEO died alone and the marker stayed on it forever.
+function cascadeCeoKills(pieces) {
+	return pieces.filter(piece => isCeo(piece.id) && piece.teamKilledBy).reduce(killWholeTeam, pieces);
 }
 
 function killedPiece(piece, killedById) {
@@ -650,7 +651,9 @@ function removeIsThroughSniperLine(pieces) {
 }
 
 function killSnipedPiece(pieces, prevPieces, sniperId) {
-	return pieces.map(piece => {
+	// The rollback runs first: every survivor goes back to its previous-turn self, so the cascade
+	// then reads the HQ as it stood before the sniped move, which is the state that survives.
+	const withKills = pieces.map(piece => {
 		if (piece.throughSniperLineOf.length) {
 			return killedPiece(piece, sniperId);
 		}
@@ -664,6 +667,8 @@ function killSnipedPiece(pieces, prevPieces, sniperId) {
 
 		return getPieceById(piece.id, prevPieces);
 	});
+
+	return cascadeCeoKills(withKills);
 }
 
 function getSnipedPositions(pieces, piece) {

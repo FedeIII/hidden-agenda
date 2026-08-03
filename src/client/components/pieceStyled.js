@@ -1,5 +1,6 @@
 import styled, { css } from 'styled-components';
 import { pz } from 'Domain/pieces';
+import { directionToAngle } from 'Client/three/layout';
 
 const brightness = ({ pieceId = '' }) => {
 	if (pz.getTeam(pieceId) === '2') {
@@ -9,38 +10,16 @@ const brightness = ({ pieceId = '' }) => {
 	}
 };
 
-const directionTransformMap = {
-	1: {
-		0: css`
-			transform: rotate(30deg);
-		`,
-		1: css`
-			transform: rotate(-30deg);
-		`,
-	},
-	0: {
-		0: css`
-			transform: rotate(90deg);
-		`,
-		1: css`
-			transform: rotate(-90deg);
-		`,
-	},
-	'-1': {
-		0: css`
-			transform: rotate(150deg);
-		`,
-		1: css`
-			transform: rotate(-150deg);
-		`,
-	},
-};
-
+// The six bearings used to live here as a table of rotate() values, and again in the 3D layer as
+// a table of angles. Two tables that must agree and nothing to make them: if they ever drifted,
+// a piece would point one way flat and another way in 3D, and nothing would fail — the suite
+// asserts this matrix, which would still be right. So there is one table now, and it is the one
+// the renderer turns tokens by.
 const withDirection = ({ selectedDirection }) => {
 	if (selectedDirection) {
-		const [verticalDirection, horizontalDirection] = selectedDirection;
-
-		return directionTransformMap[verticalDirection][horizontalDirection];
+		return css`
+			transform: rotate(${directionToAngle(selectedDirection)}deg);
+		`;
 	}
 };
 
@@ -127,6 +106,32 @@ const onSelected = ({ selected, highlight }) => {
 	}
 };
 
+// In 3D the piece is drawn by the renderer and this <img> becomes its hit box: laid over the
+// token, invisible, and still the thing that is clicked, dragged, hovered and asserted against.
+//
+// Positioned with top and left, never with a transform — the transform is the piece's facing, and
+// it is read back as a matrix to check which way a piece is pointing. A translate in there would
+// change every one of those matrices at once.
+//
+// Width AND height are both set, where the flat renderer sets only width and lets the PNG's
+// aspect supply the rest. That is not tidying: a piece whose image has not decoded yet has no
+// height at all, and a box with no height cannot be clicked or dragged from.
+const onProjected = ({ projected }) => {
+	if (projected) {
+		return css`
+			position: absolute;
+			right: auto;
+			bottom: auto;
+			margin: 0;
+			opacity: 0;
+			/* Not "all". The box itself is set from the projection, and a projection changes when
+			   the window does — a phone rotating, a URL bar collapsing. Transitioning that would
+			   animate the hit box, which is the one thing it must never do. */
+			transition: filter 0.2s ease-in-out;
+		`;
+	}
+};
+
 const PieceStyled = styled.img`
 	position: absolute;
 	/* touch-action: without it a touch drag scrolls the page instead of emitting pointermove,
@@ -155,6 +160,7 @@ const PieceStyled = styled.img`
 	${positionInHQ}
 	${inCementery}
 	${onSelected}
+	${onProjected}
 `;
 
 export default PieceStyled;

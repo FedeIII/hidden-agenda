@@ -1,5 +1,13 @@
 import { defineConfig } from 'vite';
 import { aliases } from './aliases.mjs';
+import { CLIENT_PORT, SERVER_PORT } from './ports.mjs';
+
+// Mirrors what nginx does on the VPS: the page and the websocket share an origin, so the client can
+// always talk to /ws on its own host. Keeps dev, preview and production the same shape.
+const proxy = {
+	'/ws': { target: `ws://127.0.0.1:${SERVER_PORT}`, ws: true },
+	'/healthz': { target: `http://127.0.0.1:${SERVER_PORT}` },
+};
 
 export default defineConfig({
 	// Relative asset URLs, so one build works both under the GitHub Pages subpath
@@ -9,29 +17,18 @@ export default defineConfig({
 	resolve: { alias: aliases },
 
 	server: {
-		// The e2e suite drives http://localhost:8081; fail loudly rather than drift to
-		// another port and leave the tests pointing at nothing.
-		port: 8081,
+		// The e2e suite drives this port too — playwright.config.mjs reads the same module, so the
+		// two cannot drift. Fail loudly rather than pick another one and leave the tests pointing
+		// at nothing.
+		port: CLIENT_PORT,
 		strictPort: true,
-		// Mirrors what nginx does on the VPS: the page and the websocket share an origin, so
-		// the client can always talk to /ws on its own host. Keeps dev, preview and production
-		// the same shape.
-		proxy: {
-			'/ws': { target: 'ws://127.0.0.1:3007', ws: true },
-			'/healthz': { target: 'http://127.0.0.1:3007' },
-		},
+		proxy,
 	},
 
 	preview: {
-		port: 8081,
+		port: CLIENT_PORT,
 		strictPort: true,
-		// Mirrors what nginx does on the VPS: the page and the websocket share an origin, so
-		// the client can always talk to /ws on its own host. Keeps dev, preview and production
-		// the same shape.
-		proxy: {
-			'/ws': { target: 'ws://127.0.0.1:3007', ws: true },
-			'/healthz': { target: 'http://127.0.0.1:3007' },
-		},
+		proxy,
 	},
 
 	build: {

@@ -18,11 +18,14 @@ Node >= 22.12 (`.nvmrc`, `engines`).
 npm install
 npx playwright install chromium   # one-time, for the test suite
 
-npm run go        # dev server on :8081, opens a browser
-npm run build     # production build into docs/   (npm run do is the same thing)
-npm run serve     # serve the build on :8081
+./dev.sh          # the whole dev env: client, game server, server rebuild watcher
+./dev.sh --help   # flags: --preview --inspect --no-server --clean --no-open
 
-npm test              # everything, ~2 min (162 tests)
+npm run go        # client only, no game server — online mode will not connect
+npm run build     # production build into docs/   (npm run do is the same thing)
+npm run serve     # serve the build on the client port
+
+npm test              # everything, ~2 min (217 tests)
 npm run test:domain   # game rules only, no browser, ~2s
 npm run test:e2e      # browser specs
 npm run test:ui       # interactive Playwright runner
@@ -32,6 +35,23 @@ npx playwright test -g 'can kill'    # one test by name
 npm run format        # prettier
 npm run format:check
 ```
+
+`dev.sh` is the one command that gives you a working game: `npm run go` alone serves a client whose `/ws` proxy points at nothing, so online mode cannot connect and the failure looks like a client bug. It pins rooms to `.dev-rooms/` (the server's default `/var/lib` is unwritable here, so persistence would disable itself and every rebuild would drop the game in progress) and lifts `HA_JOINS_PER_MINUTE`, because six seats and a few reloads all join from one address.
+
+**Local dev ports live in `ports.mjs` — 3017 client, 3018 game server, 9559 inspector — and nowhere else.** `vite.config.mjs` and `playwright.config.mjs` import it; `dev.sh` reads it through one `node -e`; `.vscode/launch.json` is the only place that repeats the numbers, because launch configs cannot compute. They are allocated in `~/Projects/LOCAL_PORTS.md`, the machine-wide registry that exists so every project can run at once — **3007 is another project's backend and 9229 is claimed three times over**, and this project used to sit on both. A collision fails as "port is held by pid …", which from inside the editor used to surface as nothing more than "errors exist after running preLaunchTask".
+
+`ports.mjs` governs local dev only. **Production is still 3007**, set explicitly in `deploy/pm2/ecosystem.config.cjs` with nginx proxying to it, and `DEFAULT_PORT` in `server/index.js` still matches — the box has nothing to collide with. Nothing in the committed build depends on any of this: the client derives its socket URL from `window.location.host`, so no port is compiled in and a port change needs no rebuild.
+
+Four things about it worth keeping, each of which leaked a port when it was missing:
+
+- It invokes `node_modules/.bin/vite`, not `npx`. An `npm exec` middleman between the script and the process actually holding the port is what turns Ctrl-C into an orphaned server.
+- It tears down by walking the process tree, children first. `set -m` and one kill per process group is *not* a fix: bash only gives a background job its own group when it can, and a script started without a controlling terminal silently gets none — same script, one run isolated, one not.
+- It traps HUP and PIPE as well as INT and TERM. Closing the editor's terminal panel sends HUP; `./dev.sh | head` sends PIPE. And `cleanup` ignores PIPE and drops `set -e` before it prints anything, or its own first message re-raises the signal and kills the teardown half-done.
+- It `unset`s `NODE_OPTIONS` and `VSCODE_INSPECTOR_OPTIONS`. The editor injects those so its debugger auto-attaches to every node process below the task — including vite and the rebuild watcher — and the debug session's teardown then SIGTERMs the script and takes the env with it. `kosmos/dev.sh` on this machine carries the same line for the same reason.
+
+**`dev.sh` and the test suite cannot run at the same time.** Playwright starts its own pair on the same two ports (`webServer` in `playwright.config.mjs`), and with `reuseExistingServer` outside CI it will quietly test against whatever `dev.sh` left running — including, in `--preview` mode, a `docs/` build you have since changed.
+
+`.vscode/launch.json` and `tasks.json` drive all of this from Cursor: ⇧⌘B runs `dev`, F5 runs **Dev: play** (the env plus a browser debugger), and **Dev: client + server debugger** adds a node debugger to the server for breakpoints on both sides of the socket. The server configs debug `dist-server/main.mjs`, which is legible because that bundle is built `minify: false, sourcemap: true`.
 
 `npm run lint` is eslint flat config (`eslint.config.mjs`) with `js/recommended` plus the react-hooks plugin's full recommended set, which includes the React Compiler rules. **It is clean — keep it that way.** There are no stylistic rules; Prettier owns formatting.
 
@@ -61,12 +81,15 @@ Things worth knowing before touching the suite:
 - Playwright bundles a pinned chromium on purpose: browser auto-updates are what caused the fixture rot above.
 - **Online specs share one game server and one IP.** In production the server refuses more than 10 room joins per minute per address, which caps how many online specs there can be — they all join from one address, two joins each. Rather than weaken that, `JOINS_PER_IP_PER_MINUTE` reads `HA_JOINS_PER_MINUTE`, and `playwright.config.mjs` sets it to 60 for the test server. Do not lower the default; raise the env var. Tripping the limit fails in a way that looks nothing like a rate limit.
 - **The e2e suite runs `dist-server/main.mjs`, not `server/` source.** The playwright config rebuilds it before starting, because testing against a stale server bundle is otherwise silently possible — it cost real debugging time once.
+- **The browser has WebGL 2 through SwiftShader**, so the e2e suite exercises the 3D renderer, in software, on every spec. That is deliberate — it is the path players get — but it is why the suite went from about 45 seconds to a little over two minutes, and why the renderer drops multisampling and pixel ratio when it detects a software rasteriser. Anything that makes the board fill more pixels per frame shows up here first.
 - **It runs the committed `docs/` too, not `src/`.** `npm run serve` is `vite preview`, which serves the build. Unlike the server bundle, nothing rebuilds it for you: **run `npm run build` after any client change or the suite tests the previous one.** The failure is quiet and points the wrong way — a new spec fails asserting behaviour the source clearly has, because the browser never received it.
-- `tsconfig.json` contains no TypeScript. It exists only so Playwright's resolver knows the import aliases, because the domain modules import each other as `Domain/*`. Keep its `paths` in step with `vite.config.mjs`.
+- `tsconfig.json` contains no TypeScript. It exists only so Playwright's resolver knows the import aliases, because the domain modules import each other as `Domain/*`. Keep its `paths` in step with `vite.config.mjs`. **It must keep `noEmit` and stay without `baseUrl`**, and neither is cosmetic: an editor cannot tell this file is not a real TS project, so it contributes a `tsc: build` task for it, and running that asks tsc to compile 86 `.js` files in place — every one failing with *"Cannot write file … because it would overwrite input file"*, which reads as a project that does not compile. `baseUrl` is separately deprecated in TypeScript 6 (what Cursor bundles) and errors, so the `paths` targets are relative (`./src/*`) instead, which is how `paths` works without it. `.vscode/settings.json` also turns the auto-detected tsc tasks off, so both the trigger and the symptom are gone. Verified with Cursor's own bundled compiler, and the domain project still resolves `Domain/*`.
 
 ### Skipping to a mid-game state
 
-`?test=play` or `?test=endgame` replaces `initialState` with `src/client/state/mocks/{play,endgame}.js` and makes `Game` start directly in that phase. Useful for reaching a board position without clicking through.
+`?test=play` or `?test=endgame` replaces `initialState` with `src/client/state/mocks/{play,endgame}.js` and makes `Game` start directly in that phase. Useful for reaching a board position without clicking through. Note neither mock has a piece on the board — both start with all 32 in their HQs.
+
+`?flat` turns the 3D renderer off and gives you the original CSS board, which is the fastest way to tell whether a bug is in the game or in the renderer.
 
 ## Architecture
 
@@ -171,9 +194,44 @@ Clicking a cell and dropping on a cell are the same operation, which is why that
 
 This replaced react-dnd because **HTML5 drag-and-drop does not fire on touch devices** — on a phone the game could only be tapped. Two consequences: pieces need `touch-action: none` and `draggable="false"` (see `components/pieceStyled.js`), and there are touch-drag specs driven through CDP because `page.touchscreen` only taps.
 
-### The board renders 53 hexagons
+### The board renders 61 hexagons
+
+37 playable — `4+5+6+7+6+5+4` — plus a ring of 24 beyond the edge so a piece on the border can still be pointed outwards. (This section used to say 53, which was wrong in both halves.)
 
 `TableBoard` computes highlights and aim **once** and passes them down; `Hexagon` is a real component that owns its own hooks. It used to be a plain function called in a loop that held `useContext`/`useCallback` and recomputed `pz.getHighlightedPositions` for every cell. Keep expensive derivations in `TableBoard`, not per-hexagon.
+
+### The 3D layer is a skin, and the DOM is still the game
+
+`src/client/three/` renders the play phase — board, HQ trays, pieces — in WebGL. **It draws; it does not interact.** Every hexagon and every piece is the same DOM element it always was: it has gone `opacity: 0` and been absolutely positioned onto the screen projection of the tile it stands for. Clicks, drags, hovers, `elementFromPoint` and every assertion in the suite go through that DOM exactly as before.
+
+Five rules hold the arrangement together. Breaking any of them breaks the game quietly rather than loudly:
+
+1. **Overlay boxes are a pure function of the anchor element's `(width, height)`.** The same camera fit produces the scene and the DOM rects, so they cannot disagree. It also makes the boxes *stable*, which is load-bearing: Playwright refuses to click an element whose bounding box moved between two animation frames, so an overlay driven by a tween would make every click in the suite time out. Animate the 3D token; never the box. For the same reason a projected piece transitions `filter` only, never `all`.
+2. **`opacity: 0`, and nothing else.** A transparent element is still laid out, still hit-tested, still reports its computed border, and is still `toBeVisible()`. `visibility: hidden` and `display: none` are none of those, and they also blank `innerText`.
+3. **Position with `top`/`left`, never `transform`.** `transform` is the piece's facing and is read back as a matrix by `helpers/get.js`; a translate in there changes all forty of those assertions at once.
+4. **A hexagon has exactly one child when occupied and none when empty.** `helpers/get.js` resolves a piece as `#hex-r-c > *`, and `online.test.js` asserts it in strict mode. No anchor divs, no labels, no sprites inside a cell.
+5. **A projected pixel value goes through the `style` prop, never through a styled-components template.** styled-components hashes and injects a rule for every distinct value it is interpolated with, and reclaims none of them — a px offset in a template leaks a class per hexagon per layout, forever. Measured: 520 rules per one-pixel resize step, 63,000 after dragging a window across two hundred pixels. `boxStyle()` in `three/view.js` returns something you hand straight to `style`.
+
+| Module | Responsibility |
+| --- | --- |
+| `three/layout.js` | Where everything is, in board units. Pointy-top grid, `cellToWorld`, the HQ's eight sockets, the two camera elevations, and `directionToAngle` — the single table of the six bearings, which `components/pieceStyled.js` now also uses for its CSS `rotate()`. **This module and `palette.js` are deliberately free of any three.js import**, because styled-components read from both; keep it that way or the flat path starts pulling in a renderer it will never run. |
+| `three/view.js` | The camera, and world → CSS pixels. `fitCamera` solves for its own distance and pan, so the board frames itself into whatever box the layout hands it. |
+| `three/stage.js` | One renderer, one fixed full-viewport canvas, many views — each scissored to the DOM element it is anchored to. Owns the frame loop, which stops when there are no views. |
+| `three/geometry.js` | The hex prism, by hand: chamfered, flat-shaded, three material groups, and UVs that put the token art square on the top face. Plus the nose wedge. |
+| `three/{assets,palette,lighting}.js` | Shared geometry, textures and materials; the colours; three lights and no shadow maps. |
+| `three/{boardScene,hqScene}.js` | The two scenes. Each exposes `layout()` (the overlay boxes) and `setState()`, which returns `false` when nothing visible changed. |
+| `three/useThreeView.js` | Binds a scene to a ref and hands back the layout. Returns `null` when there is no renderer, which is what puts the flat board back. |
+
+Things not to undo:
+
+- **The fallback is not decoration.** No WebGL, or a lost context, and `useThreeView` returns `null`, no component gets a `box`, and every one of them renders exactly as it did before the 3D layer existed. `?flat` forces it, and `three.test.js` covers both paths — including one spec asserting the 3D path is genuinely live, because without it a silent WebGL failure would leave the suite green while testing the renderer this replaced.
+- **A colour is never darkened by multiplying a `Color`.** Under three.js colour management a `Color`'s channels are linear, so multiplying by 0.64 does not darken by 36% in the space the value was authored in. The board's five tile shades are written out in `palette.js` as the values `polished`'s `darken()` actually produces.
+- **Overlay hex boxes are a column pitch wide and a row pitch tall**, which tiles the plane exactly — no gaps, no overlaps. Their own bounding boxes would overlap adjacent rows by a quarter of their height, and which of two invisible boxes a click landed on would come down to DOM order.
+- The board's height comes from a `::before` spacer on `TableBoardStyled` in 3D mode, because its rows no longer have any. It only bites in the stacked phone layout; everywhere else `Board` has a height and the board is a stretched flex item. Do not turn it into a real height: the landscape phone layout has **zero** slack before the action bar falls off the bottom.
+- Rendering is fill-bound, not draw-call-bound. Two things measured: turning multisampling off when the renderer is software (a quarter off the suite's wall clock), and scissoring each view down to the rectangle its scene actually paints into, `projector.extent()` (another third off a click). Repainting views individually rather than all together was tried, saved nothing, and left trays blank.
+- **The context is created with the attributes it is meant to have, once.** A second `getContext` on a canvas returns the first context and silently discards the attributes — so the software-renderer probe lives on a throwaway canvas in `support.js`. Probing the real one is how this ran 4× multisampling on a CPU rasteriser for a while whilst the code said it did not.
+- Nothing moves at rest: the loop drops to ten polls a second when no view is animating and nothing has asked to be drawn, and stops entirely when the last view goes. `prefers-reduced-motion` removes the travel, the lift and the sniper's pulse, because continuous motion is something this layer introduced and the flat renderer never had.
+- A known limitation, not a bug to chase: on a phone held sideways the HQ store is about 34px tall, so a socket projects to roughly 13×8 pixels. Small, but unambiguous — every piece hit-tests to itself. The flat renderer's answer at that breakpoint was pieces that overlapped almost completely, where which one a tap reached came down to DOM order.
 
 ### Path aliases
 
@@ -191,5 +249,5 @@ This replaced react-dnd because **HTML5 drag-and-drop does not fire on touch dev
 ## Conventions
 
 - Prettier owns formatting (tabs, 120 columns, single quotes, trailing commas). Run `npm run format` before committing. `docs/` and `*.md` are ignored.
-- `dependencies` is empty on purpose and reserved for what the *server process* will need at runtime (`ws`, from Phase 1). Everything the browser needs is compiled into the committed bundle, so it all belongs in `devDependencies` — this keeps `npm ci --omit=dev` on the VPS down to almost nothing. There is a note in `package.json` saying so.
+- `dependencies` is empty on purpose and reserved for what the *server process* will need at runtime (`ws`, from Phase 1). Everything the browser needs is compiled into the committed bundle, so it all belongs in `devDependencies` — this keeps `npm ci --omit=dev` on the VPS down to almost nothing. There is a note in `package.json` saying so. **`three` is a `devDependency` for exactly that reason**, despite being the largest thing the browser downloads: it took the client bundle from 282 kB to about 880 kB raw (236 kB gzipped). Assets are content-hashed and cached for a year, so that is a one-off per release.
 - Releases, per git history: bump `package.json` version, add the entry under README `## Changelog`, strike through the finished `Roadmap`/`Known Bugs` line, commit as `vX.Y.Z`. Behaviour fixes land with a regression test.

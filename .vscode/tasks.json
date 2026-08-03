@@ -1,0 +1,108 @@
+{
+	"version": "2.0.0",
+	// Ports come from ports.mjs (3017 client, 3018 game server, 9559 inspector), allocated in
+	// ~/Projects/LOCAL_PORTS.md so this project can run alongside the others.
+	//
+	// Every "dev" task here binds those same ports, so only one of them can run at a time. Switching
+	// between launch configs means stopping the previous task first — otherwise the second one exits
+	// on "port is held by pid ...", which is what it will say in the terminal.
+	//
+	// About the problem matchers: `isBackground` needs one, but a *matching* pattern is a trap here.
+	// A pattern that matched the script's own ✗ line filed a markerless problem, and all the editor
+	// then said was "Errors exist after running preLaunchTask 'dev (inspect)'" — no port, no reason,
+	// nothing in the Problems panel. With a pattern that never matches, a failure surfaces the way it
+	// should: the task exits non-zero, the editor reports the exit code, and the reason is sitting in
+	// the terminal that is already revealed.
+	"tasks": [
+		{
+			// The default build task (⇧⌘B). Everything else here is a convenience wrapper.
+			//
+			// The background block is what tells the editor the env is up, so a launch config waits
+			// for it instead of racing vite. beginsPattern is the banner dev.sh prints before it can
+			// fail at all — anything earlier and a preflight failure is invisible.
+			"label": "dev",
+			"type": "shell",
+			"command": "./dev.sh --no-open",
+			"isBackground": true,
+			"problemMatcher": {
+				"pattern": { "regexp": "^__never_matches__$" },
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ".*hidden-agenda dev env.*",
+					"endsPattern": ".*dev env ready.*"
+				}
+			},
+			"group": { "kind": "build", "isDefault": true },
+			"presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+			"icon": { "id": "play", "color": "terminal.ansiGreen" }
+		},
+		{
+			// Same, with the game server under the node inspector on :9559 so "Attach: game server"
+			// can connect to it. Used by the "Dev + server debugger" compound.
+			"label": "dev (inspect)",
+			"type": "shell",
+			"command": "./dev.sh --no-open --inspect",
+			"isBackground": true,
+			"problemMatcher": {
+				"pattern": { "regexp": "^__never_matches__$" },
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ".*hidden-agenda dev env.*",
+					"endsPattern": ".*dev env ready.*"
+				}
+			},
+			"presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+			"icon": { "id": "debug-alt", "color": "terminal.ansiGreen" }
+		},
+		{
+			// The client only. Pair with the "Debug: game server" launch config, which starts the
+			// server itself — running both would fight over :3018.
+			"label": "dev (client only)",
+			"type": "shell",
+			"command": "./dev.sh --no-open --no-server",
+			"isBackground": true,
+			"problemMatcher": {
+				"pattern": { "regexp": "^__never_matches__$" },
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ".*hidden-agenda dev env.*",
+					"endsPattern": ".*dev env ready.*"
+				}
+			},
+			"presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+		},
+		{
+			// Serves the committed docs/ build, which is what the e2e suite drives — the mode to
+			// reproduce a spec failure in.
+			"label": "dev (preview build)",
+			"type": "shell",
+			"command": "./dev.sh --no-open --preview",
+			"isBackground": true,
+			"problemMatcher": {
+				"pattern": { "regexp": "^__never_matches__$" },
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ".*hidden-agenda dev env.*",
+					"endsPattern": ".*dev env ready.*"
+				}
+			},
+			"presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+		},
+
+		{ "label": "build", "type": "npm", "script": "build", "problemMatcher": [] },
+		{ "label": "build:server", "type": "npm", "script": "build:server", "problemMatcher": [] },
+		{ "label": "build:all", "type": "npm", "script": "build:all", "problemMatcher": [] },
+		{
+			"label": "test",
+			"type": "npm",
+			"script": "test",
+			"group": { "kind": "test", "isDefault": true },
+			"problemMatcher": []
+		},
+		{ "label": "test:domain", "type": "npm", "script": "test:domain", "problemMatcher": [] },
+		{ "label": "test:e2e", "type": "npm", "script": "test:e2e", "problemMatcher": [] },
+		{ "label": "test:ui", "type": "npm", "script": "test:ui", "problemMatcher": [] },
+		{ "label": "lint", "type": "npm", "script": "lint", "problemMatcher": ["$eslint-stylish"] },
+		{ "label": "format", "type": "npm", "script": "format", "problemMatcher": [] }
+	]
+}

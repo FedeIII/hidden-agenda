@@ -570,10 +570,10 @@ function getFreeCellsUntilPiece(positions, pieces) {
 function killPieces(pieces, movedId) {
 	const movedPiece = getPieceById(movedId, pieces);
 	if (!movedPiece || !cells_default.inBoard(movedPiece.position)) return pieces;
-	const withKills = pieces.map((piece) => isSamePosition(piece, movedPiece) ? killedPiece(piece, movedId) : piece);
-	const killedCeo = withKills.find((piece) => isCeo(piece.id) && piece.teamKilledBy);
-	if (!killedCeo) return withKills;
-	return killWholeTeam(withKills, killedCeo);
+	return cascadeCeoKills(pieces.map((piece) => isSamePosition(piece, movedPiece) ? killedPiece(piece, movedId) : piece));
+}
+function cascadeCeoKills(pieces) {
+	return pieces.filter((piece) => isCeo(piece.id) && piece.teamKilledBy).reduce(killWholeTeam, pieces);
 }
 function killedPiece(piece, killedById) {
 	const dead = {
@@ -637,14 +637,14 @@ function removeIsThroughSniperLine(pieces) {
 	}));
 }
 function killSnipedPiece(pieces, prevPieces, sniperId) {
-	return pieces.map((piece) => {
+	return cascadeCeoKills(pieces.map((piece) => {
 		if (piece.throughSniperLineOf.length) return killedPiece(piece, sniperId);
 		if (piece.highlight) return {
 			...piece,
 			highlight: false
 		};
 		return getPieceById(piece.id, prevPieces);
-	});
+	}));
 }
 function getSnipedPositions(pieces, piece) {
 	return pieces.filter((eachPiece) => isSniper(eachPiece.id) && !isSameTeam(piece, eachPiece) && eachPiece.position).reduce((snipedPositions, sniper) => ({

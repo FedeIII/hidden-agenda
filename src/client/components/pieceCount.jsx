@@ -13,9 +13,20 @@ const PieceCount = styled.div`
 	width: 100%;
 `;
 
+// The count sits on the HQ card, so its colour is chosen against that card's team fill. Over the
+// 3D tray there is no fill to read against and the card carries a colour of its own, so it
+// inherits instead.
+function countColor({ team, dimensional }) {
+	if (dimensional) {
+		return 'inherit';
+	}
+
+	return team === '1' || team === '2' ? 'white' : 'black';
+}
+
 const PieceTypeCount = styled.span`
 	display: flex;
-	color: ${({ team }) => (team === '1' || team === '2' ? 'white' : 'black')};
+	color: ${countColor};
 	flex-flow: column;
 	align-items: center;
 	flex-basis: 25%;
@@ -31,11 +42,16 @@ function PieceType({ type, team }) {
 	return <PieceStyled src={image} killed />;
 }
 
-function renderPieceCountList(pieces, team, getPieceCount) {
+function renderPieceCountList(pieces, team, getPieceCount, dimensional) {
 	return getPieceCount(pieces, team)
 		.filter(([, pieceCount]) => pieceCount !== 0)
 		.map(([pieceType, pieceCount]) => (
-			<PieceTypeCount key={`piece-count-${team}-${pieceType}`} id={`piece-count-${team}-${pieceType}`} team={team}>
+			<PieceTypeCount
+				key={`piece-count-${team}-${pieceType}`}
+				id={`piece-count-${team}-${pieceType}`}
+				team={team}
+				dimensional={dimensional}
+			>
 				<PieceType type={pieceType} team={team} /> x {pieceCount}
 			</PieceTypeCount>
 		));
@@ -55,10 +71,10 @@ function useGetKilledPiecesCount(team) {
 	return [pieces, getKilledPiecesCount];
 }
 
-function Cementery({ team }) {
+function Cementery({ team, dimensional }) {
 	const [pieces, getPiecesKilledCount] = useGetKilledPiecesCount(team);
 
-	return <PieceCount>{renderPieceCountList(pieces, team, getPiecesKilledCount)}</PieceCount>;
+	return <PieceCount>{renderPieceCountList(pieces, team, getPiecesKilledCount, dimensional)}</PieceCount>;
 }
 
 /**

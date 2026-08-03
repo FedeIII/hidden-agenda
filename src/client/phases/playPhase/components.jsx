@@ -1,6 +1,7 @@
 import styled, { css } from 'styled-components';
 import { Button } from 'Client/components/button';
 import { narrow, short, narrowOrShort } from 'Client/components/breakpoints';
+import { BOARD_ASPECT } from 'Client/three/layout';
 import { TEAM_COLORS } from 'Domain/teams';
 
 export const PlayPhaseContainer = styled.div`
@@ -94,6 +95,25 @@ export const AlignmentWarningMessage = styled.span`
 	margin-bottom: 8px;
 `;
 
+// The board's own height, now that its rows have none. A spacer rather than a height, because
+// wherever Board has a height of its own the board is a stretched flex item and this must not
+// fight it — the landscape phone layout has exactly zero slack before the action bar falls off
+// the bottom. It only bites in the stacked layout, which is the one where Board is auto and the
+// board would otherwise collapse to nothing. The ratio is the tilted board's, so no band of empty
+// space is reserved above and below it.
+const withBoardHeight = ({ dimensional }) => {
+	if (dimensional) {
+		return css`
+			&:before {
+				content: '';
+				display: block;
+				flex: none;
+				padding-top: ${100 / BOARD_ASPECT}%;
+			}
+		`;
+	}
+};
+
 export const TableBoardStyled = styled.div`
 	position: relative;
 	width: 45%;
@@ -101,6 +121,8 @@ export const TableBoardStyled = styled.div`
 	flex-direction: column;
 	justify-content: center;
 	padding: 0 20px;
+
+	${withBoardHeight}
 
 	/* Stacked, the board gets the full width — which is what makes it usable with a thumb. */
 	${narrow} {
@@ -111,13 +133,44 @@ export const TableBoardStyled = styled.div`
 	}
 `;
 
+// Rendered in 3D the hexagons leave the flow, laid on the projection of their own tiles, and take
+// the board's height with them — the nine rows were what gave it any. So the row stops being a
+// row: it contributes nothing, and stops being a positioned ancestor too, so a hexagon inside it
+// is placed against the board rather than against its row.
+const asBoardSpacer = ({ dimensional }) => {
+	if (dimensional) {
+		return css`
+			position: static;
+			height: 0;
+			margin: 0;
+		`;
+	}
+};
+
 export const BoardRow = styled.div`
 	position: relative;
 	display: flex;
 	flex-direction: row;
 	margin-top: 4.7%;
 	justify-content: center;
+
+	${asBoardSpacer}
 `;
+
+// The hexgrid is drawn in the tray now, as sockets that have depth to them. The store's box is
+// left exactly as it was: it decides how big a socket projects, and therefore how big a target a
+// thumb has. Letting it flex to fill the card looked better on a desktop and shrank it to 34px on
+// a phone held sideways, where a piece then came out eleven pixels across.
+const asRack = ({ dimensional }) => {
+	if (dimensional) {
+		return css`
+			background-image: none;
+			/* A hairline where the rack ends, so the cementery below it reads as the shelf under
+			   the rack rather than as the panel running out of content. */
+			box-shadow: 0 1px 0 rgba(255, 255, 255, 0.16);
+		`;
+	}
+};
 
 export const HqStore = styled.div`
 	position: relative;
@@ -128,6 +181,8 @@ export const HqStore = styled.div`
 	background-repeat: no-repeat;
 	margin-top: 53px;
 	margin-bottom: 8px;
+
+	${asRack}
 
 	/* The pieces are sized from the store's width but positioned down its height, so the store
 	   has to keep roughly its desktop proportions or they hang out of the bottom. */

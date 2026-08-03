@@ -18,26 +18,52 @@ Node >= 22.12 to build and test (`.nvmrc`). The deployed server itself only need
 ```bash
 npm install
 npx playwright install chromium   # one-time, for the test suite
-npm run go                        # dev server on :8081, opens a browser
+./dev.sh                          # the whole dev env, opens a browser
 ```
 
-To play the online mode locally you need the game server too, since the dev server proxies `/ws` to
-it exactly as nginx does in production:
+`dev.sh` runs the client on :3017 and the game server on :3018, and keeps the server bundle
+rebuilding as you edit it. The dev server proxies `/ws` to the game server exactly as nginx does in
+production, so online play works locally with no configuration — host a game in one tab and open the
+`#/r/CODE` link it gives you in another. Ctrl-C stops everything.
+
+| | |
+| --- | --- |
+| `./dev.sh --preview` | build `docs/` and serve that instead — what the e2e suite runs |
+| `./dev.sh --inspect` | game server under the node inspector on :9559 |
+| `./dev.sh --no-server` | client only, if you are running the server yourself |
+| `./dev.sh --clean` | drop persisted rooms first |
+| `./dev.sh --no-open` | don't open a browser |
+
+Rooms are persisted to `.dev-rooms/` so a server rebuild doesn't drop the game in progress, and the
+per-IP join limit is lifted, since every tab here shares one address.
+
+Those port numbers live in `ports.mjs`, which vite, the Playwright config and `dev.sh` all read, so
+they cannot drift apart — and they are allocated, not arbitrary. 3007, which the game server used to
+take locally, belongs to another project on this machine, and 9229 is node's default inspector port
+and so contested three ways. **Production is unaffected: the VPS still serves on 3007**, set
+explicitly in `deploy/pm2/ecosystem.config.cjs`.
+
+In Cursor or VS Code the same thing is **Run and Debug → Dev: play** (or ⇧⌘B), which starts it and
+attaches a debugger to the browser. **Dev: client + server debugger** adds one to the server, for
+breakpoints on both sides of the socket. See `.vscode/launch.json`.
+
+The pieces on their own, if you want them:
 
 ```bash
-npm run build:server
-PORT=3007 npm run server
+npm run go                        # client only, no game server
+npm run build:server && PORT=3018 npm run server
 ```
 
 ## Commands
 
 | | |
 | --- | --- |
-| `npm run go` | dev server on :8081 with hot reload (`npm run dev` is the same) |
+| `./dev.sh` | client + game server + a rebuild watcher, all at once |
+| `npm run go` | dev server on :3017 with hot reload (`npm run dev` is the same) |
 | `npm run build` | production build into `docs/` (`npm run do` is the same) |
 | `npm run build:server` | server bundle into `dist-server/main.mjs` |
 | `npm run build:all` | both |
-| `npm run serve` | serve the built `docs/` on :8081 |
+| `npm run serve` | serve the built `docs/` on :3017 |
 | `npm run server` | run the built game server |
 | `npm test` | the whole suite, ~2 min |
 | `npm run test:domain` | game rules only, no browser, ~2s |
@@ -127,6 +153,32 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.1.0
+The board is in 3D.
+
+* **A three.js renderer for the play phase** — the board, the four HQ trays and every piece are
+  drawn in WebGL: extruded hex tiles inlaid in a hexagonal tray, machined chamfers that catch a key
+  light, and team tokens carrying the same art they always did on their top face
+  * One canvas, five views. The board and each store are scissored viewports of a single renderer
+    anchored to their own DOM elements, so layout stays CSS's problem through every breakpoint
+  * The game is still played on the DOM. Every hexagon and every piece is where it always was —
+    transparent now, and laid exactly over the tile it stands for — so clicking, dragging, hovering
+    and pointing all work the way they did, and so does the whole test suite
+  * **Facing is finally visible.** Only the agent's art is an arrow: a CEO is a person, a spy is a
+    person in a hat, a sniper is a symmetric crosshair, and turning a hexagon by a multiple of 30°
+    leaves the same silhouette. Every piece now carries a nose
+  * **The CEO buff is finally visible** too — a warm halo under a piece standing next to its own CEO
+  * Legal cells stand up out of the tray and take a red rim; a selected piece lifts and lights its
+    rim; a lit sniper pulses; and where a piece may be *pointed* is shown in blue, because "where I
+    may go" and "where I may point" must never share a colour
+  * No WebGL, or a lost context, and the original flat board comes straight back. `?flat` forces it
+* **Fixed** — the board's quiet chequer was being flattened by a colour-space mistake, and a piece
+  whose art had not decoded yet had a box with no height, which made it impossible to drag
+* **A sniped CEO now takes its HQ with it**, like a CEO killed any other way. The cascade was written
+  into the move path only, so a snipe left the marker that triggers it sitting on the corpse: the team
+  went on fielding pieces until somebody's next move happened to pick the marker up and wipe the HQ
+  then. Both kills go through one cascade now
+
 ### v3.0.0
 Play it over the internet. Also a complete change of toolchain underneath, and the first written rules.
 
@@ -363,7 +415,7 @@ Found while writing [RULES.md](RULES.md) and reproduced against the domain code 
 * The spy's kill-from-behind check looks at *any* piece with the spy in its rear arc rather than the
   target, so an unrelated piece can unlock a head-on kill
 * A buffed agent one step from the board edge takes the whole-board redeploy instead of its one-cell step
-* Sniping a CEO defers wiping its HQ until somebody's next move
+* ~~Sniping a CEO defers wiping its HQ until somebody's next move~~
 * Firing one sniper kills every marked piece on the board, so a team can be credited with killing its own
 * A spy boxed in after its first step can neither finish its move nor be put down, and the turn cannot be passed
 * If every player ends on a negative score, no winner is announced

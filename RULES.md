@@ -286,7 +286,8 @@ CEO is never offered an occupied destination at all.
 Dead pieces leave the board and go to the **cemetery of the killing piece's team**, which is what
 scores the kill (§14). A kill by sniper is credited to the sniper's team.
 
-**Killing a CEO also kills every piece of its team still in the HQ.** Deployed pieces of that team
+**Killing a CEO also kills every piece of its team still in the HQ**, whether it died to a move onto
+its cell or to a sniper, and the HQ is credited to whoever killed it. Deployed pieces of that team
 carry on as normal, and can still be moved by anybody.
 
 ---
@@ -543,11 +544,6 @@ its back to the spy, and the spy may walk into the first one's face and kill it.
 A buffed agent's one-cell move is only offered when the two-cell cell exists. Facing a spot where the
 second cell is off the board, it takes the whole-board redeploy instead — losing the short step the
 buff was supposed to give it (`pz.js#getBuffedAgentPositions`).
-
-**Sniping a CEO delays the HQ wipe until somebody's next move.**
-A CEO killed by a move takes its HQ with it immediately. A CEO killed by a snipe does not: the marker
-that triggers the cascade is left set and is picked up by the next `MOVE_PIECE` anybody makes, which
-then wipes the HQ — still credited to the sniper (`pz.js#killPieces` vs `killSnipedPiece`).
 
 **Firing one sniper fires all of them, and one team can be credited with killing its own piece.**
 Clicking a lit sniper kills *every* marked piece on the board, including pieces marked by a different

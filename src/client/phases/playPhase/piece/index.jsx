@@ -14,7 +14,7 @@ function previewSrc(team, type, [v, h] = []) {
 	return `img/${team}-${type}-${v}${h}.png`;
 }
 
-function Piece({ id, selectedDirection, selected, highlight }) {
+function Piece({ id, selectedDirection, selected, highlight, box }) {
 	const team = pz.getTeam(id);
 	const type = pz.getType(id);
 	const image = `img/${team}-${type}.png`;
@@ -65,6 +65,8 @@ function Piece({ id, selectedDirection, selected, highlight }) {
 			selected={selected}
 			highlight={highlight}
 			selectedDirection={selectedDirection}
+			projected={!!box}
+			style={box}
 			onClick={onClick}
 			onPointerDown={onPointerDown}
 		/>

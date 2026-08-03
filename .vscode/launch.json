@@ -1,0 +1,121 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			// F5. Starts the whole env via the "dev" task, then opens a debuggable browser on it —
+			// breakpoints in src/client work, and console errors land in the Debug Console.
+			"name": "Dev: play",
+			"type": "chrome",
+			"request": "launch",
+			"url": "http://localhost:3017/",
+			"webRoot": "${workspaceFolder}",
+			"preLaunchTask": "dev",
+			// The dev server serves from source, so a mapped path is the file on disk. Without this
+			// a breakpoint binds to a vite URL and silently never hits.
+			"sourceMapPathOverrides": {
+				"/@fs/*": "/*",
+				"/src/*": "${workspaceFolder}/src/*"
+			},
+			"presentation": { "group": "1-dev", "order": 1 }
+		},
+		{
+			// The CSS board, no WebGL. Fastest way to tell whether a bug is in the game or in the
+			// renderer.
+			"name": "Dev: flat renderer (no 3D)",
+			"type": "chrome",
+			"request": "launch",
+			"url": "http://localhost:3017/?flat",
+			"webRoot": "${workspaceFolder}",
+			"preLaunchTask": "dev",
+			"sourceMapPathOverrides": { "/@fs/*": "/*", "/src/*": "${workspaceFolder}/src/*" },
+			"presentation": { "group": "1-dev", "order": 2 }
+		},
+		{
+			// Skips the start phase and drops straight onto the board. Both mocks start with all 32
+			// pieces still in their HQs.
+			"name": "Dev: mid-game board",
+			"type": "chrome",
+			"request": "launch",
+			"url": "http://localhost:3017/?test=play",
+			"webRoot": "${workspaceFolder}",
+			"preLaunchTask": "dev",
+			"sourceMapPathOverrides": { "/@fs/*": "/*", "/src/*": "${workspaceFolder}/src/*" },
+			"presentation": { "group": "1-dev", "order": 3 }
+		},
+
+		{
+			// Attaches to the server dev.sh --inspect started. Used by the compound below; on its
+			// own it needs an env already running with --inspect.
+			//
+			// dist-server/main.mjs is a bundle, but it is built with sourcemap: true and minify:
+			// false, so breakpoints set in server/*.js bind to it.
+			"name": "Attach: game server",
+			"type": "node",
+			"request": "attach",
+			"port": 9559,
+			"restart": true,
+			"continueOnAttach": true,
+			"skipFiles": ["<node_internals>/**"],
+			"outFiles": ["${workspaceFolder}/dist-server/**/*.mjs"],
+			"presentation": { "group": "2-server", "order": 1 }
+		},
+		{
+			// Runs the server itself, instead of dev.sh doing it — so it starts under the debugger
+			// rather than being attached to. Pair with the "dev (client only)" task; if the normal
+			// "dev" task is running, this will lose the race for :3018.
+			"name": "Debug: game server",
+			"type": "node",
+			"request": "launch",
+			"program": "${workspaceFolder}/dist-server/main.mjs",
+			"preLaunchTask": "build:server",
+			"env": {
+				"PORT": "3018",
+				"HOST": "127.0.0.1",
+				"HA_STATE_DIR": ".dev-rooms",
+				// Every tab joins from one address here; the production limit of 10/min is not
+				// enough for six seats and a few reloads, and tripping it looks nothing like a
+				// rate limit.
+				"HA_JOINS_PER_MINUTE": "1000"
+			},
+			"skipFiles": ["<node_internals>/**"],
+			"outFiles": ["${workspaceFolder}/dist-server/**/*.mjs"],
+			"console": "integratedTerminal",
+			"presentation": { "group": "2-server", "order": 2 }
+		},
+
+		{
+			// Debugs the specs themselves — the runner, not the page. Playwright starts its own
+			// servers (see the webServer block in playwright.config.mjs), so do not have dev.sh
+			// running at the same time: both want :3017 and :3018.
+			"name": "Test: domain specs",
+			"type": "node",
+			"request": "launch",
+			"program": "${workspaceFolder}/node_modules/.bin/playwright",
+			"args": ["test", "--project=domain"],
+			"skipFiles": ["<node_internals>/**"],
+			"console": "integratedTerminal",
+			"presentation": { "group": "3-test", "order": 1 }
+		},
+		{
+			"name": "Test: current spec file",
+			"type": "node",
+			"request": "launch",
+			"program": "${workspaceFolder}/node_modules/.bin/playwright",
+			"args": ["test", "${relativeFile}", "--headed"],
+			"skipFiles": ["<node_internals>/**"],
+			"console": "integratedTerminal",
+			"presentation": { "group": "3-test", "order": 2 }
+		}
+	],
+	"compounds": [
+		{
+			// Browser and server in one session: breakpoints on both sides of the socket, which is
+			// what you want for anything involving redaction or turn validation.
+			"name": "Dev: client + server debugger",
+			"configurations": ["Attach: game server", "Dev: play"],
+			"preLaunchTask": "dev (inspect)",
+			"stopAll": true,
+			"presentation": { "group": "0-compound", "order": 1 }
+		}
+	]
+}

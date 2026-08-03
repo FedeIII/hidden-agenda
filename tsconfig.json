@@ -1,20 +1,36 @@
 {
-	"//": "There is no TypeScript here. This file exists so playwright's module resolver knows the same import aliases vite.config.mjs defines — the domain modules import each other as Domain/*, so specs cannot load them without it. Keep the two lists in step.",
+	// There is no TypeScript here. This file exists so playwright's module resolver knows the same
+	// import aliases vite.config.mjs defines — the domain modules import each other as Domain/*, so
+	// specs cannot load them without it. Keep the two lists in step.
+	//
+	// Real // comments, not "//key" entries: tsc parses this file as JSONC, and it validates every
+	// key inside compilerOptions, so a "//noEmit" note there is reported as `Unknown compiler option`.
 	"compilerOptions": {
 		"allowJs": true,
 		"checkJs": false,
-		"baseUrl": ".",
+
+		// Nothing here is ever compiled, but without this tsc treats every .js file under `include`
+		// as an input to translate, works out that the output path is the input path, and reports
+		// "Cannot write file X because it would overwrite input file" — 86 times, once per file.
+		// That is what the editor shows the moment anything runs a tsc build task, and it reads as a
+		// project that does not compile.
+		"noEmit": true,
+
+		// Deliberately no `baseUrl`. It is deprecated in TypeScript 6 — which is what Cursor bundles,
+		// so it reports the deprecation as an error — and it stops working in 7. Since 4.4 `paths`
+		// resolves relative to this file's own directory without it, which is why every target below
+		// is written as ./ ; non-relative targets are an error in that mode.
 		"paths": {
-			"Src/*": ["src/*"],
-			"Client/*": ["src/client/*"],
-			"Components/*": ["src/client/components/*"],
-			"Phases/*": ["src/client/phases/*"],
-			"State": ["src/client/state"],
-			"State/*": ["src/client/state/*"],
-			"Hooks/*": ["src/client/hooks/*"],
-			"Domain/*": ["src/domain/*"],
-			"Game/*": ["src/game/*"],
-			"Server/*": ["server/*"]
+			"Src/*": ["./src/*"],
+			"Client/*": ["./src/client/*"],
+			"Components/*": ["./src/client/components/*"],
+			"Phases/*": ["./src/client/phases/*"],
+			"State": ["./src/client/state"],
+			"State/*": ["./src/client/state/*"],
+			"Hooks/*": ["./src/client/hooks/*"],
+			"Domain/*": ["./src/domain/*"],
+			"Game/*": ["./src/game/*"],
+			"Server/*": ["./server/*"]
 		}
 	},
 	"include": ["src", "server", "playwright.config.mjs", "vite.config.mjs"]

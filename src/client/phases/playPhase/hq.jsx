@@ -1,10 +1,13 @@
-import { useContext, useCallback } from 'react';
+import { useCallback, useContext, useMemo, useRef } from 'react';
 import { StateContext } from 'State';
 import { pz } from 'Domain/pieces';
 import py from 'Domain/py';
 import { claimControl, cancelControl } from 'Game/actions';
 import HqStyled from 'Client/components/hqStyled';
 import { Cementery } from 'Client/components/pieceCount';
+import createHqScene from 'Client/three/hqScene';
+import { slotKeyForPiece } from 'Client/three/layout';
+import useThreeView from 'Client/three/useThreeView';
 import { HqStore, HqButton, HqMessage } from './components';
 import Piece from './piece/index';
 
@@ -14,6 +17,7 @@ function getNotStartedTeamPieces(pieces, team) {
 
 function HQ({ team }) {
 	const [{ pieces, players, teamControl }, dispatch] = useContext(StateContext);
+	const storeRef = useRef(null);
 
 	const playerName = teamControl[team].player;
 	const prevPlayerName = teamControl[team].prevPlayer;
@@ -32,18 +36,24 @@ function HQ({ team }) {
 		}
 	}, [isClaimingControl, claimEnabled, dispatch, team, playerTurn]);
 
+	const stored = useMemo(() => getNotStartedTeamPieces(pieces, team), [pieces, team]);
+
+	const createScene = useCallback(() => createHqScene(team), [team]);
+	const scene = useMemo(() => ({ pieces: stored }), [stored]);
+	const layout = useThreeView(storeRef, createScene, scene);
+
 	return (
-		<HqStyled key={`team${team}`} team={team}>
+		<HqStyled key={`team${team}`} team={team} dimensional={!!layout}>
 			<HqButton id={`claim-${team}`} active={claimEnabled} small onClick={onClaimClick}>
 				{isClaimingControl ? 'Cancel' : 'Claim Control'}
 			</HqButton>
 			{hasControl && <HqMessage id={`controlled-${team}`}>Controlled by: {prevPlayerName || playerName}</HqMessage>}
-			<HqStore id={`store-${team}`}>
-				{getNotStartedTeamPieces(pieces, team).map(piece => (
-					<Piece key={piece.id} {...piece} />
+			<HqStore id={`store-${team}`} ref={storeRef} dimensional={!!layout}>
+				{stored.map(piece => (
+					<Piece key={piece.id} {...piece} box={layout && layout[slotKeyForPiece(piece.id)]} />
 				))}
 			</HqStore>
-			<Cementery team={team} />
+			<Cementery team={team} dimensional={!!layout} />
 		</HqStyled>
 	);
 }

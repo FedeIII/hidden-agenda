@@ -1,6 +1,10 @@
 import { defineConfig } from '@playwright/test';
+import { CLIENT_PORT, SERVER_PORT } from './ports.mjs';
 
-const PORT = 8081;
+// Both ports come from ports.mjs, the same module vite reads — the suite drives vite's preview
+// server through its /ws proxy, so a number that differs anywhere is a suite that tests a client
+// wired to nothing.
+const PORT = CLIENT_PORT;
 
 export default defineConfig({
 	fullyParallel: true,
@@ -15,8 +19,8 @@ export default defineConfig({
 			command: 'npm run build:server && node dist-server/main.mjs',
 			// The join limit is per address and every online spec joins from this one, so it caps
 			// how many of them there can be. Raised here rather than lowered in the server.
-			env: { PORT: '3007', HA_STATE_DIR: '.playwright-rooms', HA_JOINS_PER_MINUTE: '60' },
-			url: 'http://127.0.0.1:3007/healthz',
+			env: { PORT: String(SERVER_PORT), HA_STATE_DIR: '.playwright-rooms', HA_JOINS_PER_MINUTE: '60' },
+			url: `http://127.0.0.1:${SERVER_PORT}/healthz`,
 			reuseExistingServer: !process.env.CI,
 			timeout: 30_000,
 		},

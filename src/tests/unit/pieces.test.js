@@ -67,6 +67,61 @@ test.describe('togglePieceState', () => {
 	});
 });
 
+test.describe('killing a CEO', () => {
+	// Regression: a sniped CEO used to die alone. killSnipedPiece marked it via killedPiece but
+	// never cascaded, so the rule that a dead CEO takes its undeployed team with it — which every
+	// other kill obeys — silently did not apply to the one kill the whole table can trigger.
+	test('a snipe takes the rest of that team out of the HQ', () => {
+		let pieces = pz.init();
+		pieces = onBoard(pieces, '0-N', [3, 0]);
+		pieces = onBoard(pieces, '1-C', [3, 3]);
+		pieces = onBoard(pieces, '1-S', [1, 1]);
+
+		const prevState = [...pieces];
+
+		pieces = withPiece(pieces, '1-C', { throughSniperLineOf: ['0-N'] });
+		pieces = withPiece(pieces, '0-N', { highlight: true });
+
+		const after = pz.killSnipedPiece(pieces, prevState, '0-N');
+
+		expect(pz.getPieceById('1-C', after).killed).toBe(true);
+		expect(pz.getPieceById('1-A1', after).killed).toBe(true);
+		expect(pz.getPieceById('1-A1', after).killedById).toEqual('0-N');
+
+		// Deployed pieces of the same team are not touched, and neither is anyone else.
+		expect(pz.getPieceById('1-S', after).killed).toBe(false);
+		expect(pz.getPieceById('2-A1', after).killed).toBe(false);
+	});
+
+	test('a snipe clears the transient marker off the dead CEO', () => {
+		let pieces = pz.init();
+		pieces = onBoard(pieces, '0-N', [3, 0]);
+		pieces = onBoard(pieces, '1-C', [3, 3]);
+
+		const prevState = [...pieces];
+
+		pieces = withPiece(pieces, '1-C', { throughSniperLineOf: ['0-N'] });
+
+		const after = pz.killSnipedPiece(pieces, prevState, '0-N');
+
+		expect(pz.getPieceById('1-C', after).teamKilledBy).toBeUndefined();
+	});
+
+	test('a move onto the CEO still takes the rest of that team out of the HQ', () => {
+		let pieces = pz.init();
+		pieces = onBoard(pieces, '0-A1', [3, 1]);
+		pieces = onBoard(pieces, '1-C', [3, 3]);
+		pieces = withPiece(pieces, '0-A1', { selected: true });
+
+		const after = pz.move(pieces, '0-A1', [3, 3], SELECTION);
+
+		expect(pz.getPieceById('1-C', after).killed).toBe(true);
+		expect(pz.getPieceById('1-C', after).teamKilledBy).toBeUndefined();
+		expect(pz.getPieceById('1-A1', after).killed).toBe(true);
+		expect(pz.getPieceById('0-A1', after).killed).toBe(false);
+	});
+});
+
 test.describe('reducer purity', () => {
 	function deepFreeze(pieces) {
 		pieces.forEach(piece => Object.freeze(piece));
