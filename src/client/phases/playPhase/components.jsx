@@ -86,10 +86,6 @@ export const Action = styled.div`
 	}
 `;
 
-export const ActionCancelButton = styled(Button)`
-	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
-`;
-
 // One cell of the turn strip. A divider on the left rather than a box around each, so the strip
 // reads as one object subdivided — which is what a title block, a routing slip and a machined rail
 // all are — and so the first cell has no stray rule to its left.
@@ -171,12 +167,12 @@ export const InitialBox = styled.i`
 	background: ${({ $on }) => ($on ? 'var(--ha-ink)' : 'transparent')};
 `;
 
-/* ── The friend-and-foe screen ─────────────────────────────────────────────────────────────────
+/* ── The full-screen shell ─────────────────────────────────────────────────────────────────
  * The one thing in the game allowed to cover the table, and it earns it by being opaque and modal:
  * a player reading their own two cards has nothing on the board to click. It takes the skin's own
  * ground and wash, so it reads as the same sheet the cards were dealt on rather than as a dialog.
  * ------------------------------------------------------------------------------------------- */
-export const AlignmentScreenStyled = styled.div`
+export const ScreenStyled = styled.div`
 	position: fixed;
 	inset: 0;
 	z-index: 900;
@@ -192,7 +188,7 @@ export const AlignmentScreenStyled = styled.div`
 	background-image: var(--ha-ground-wash);
 `;
 
-export const AlignmentScreenBody = styled.div`
+export const ScreenBody = styled.div`
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -218,7 +214,7 @@ export const AlignmentScreenBody = styled.div`
 	}
 `;
 
-export const AlignmentScreenEyes = styled.div`
+export const ScreenNote = styled.div`
 	text-align: center;
 	font-family: var(--ha-face-data);
 	font-size: 12px;
@@ -294,15 +290,119 @@ export const Redacted = styled.span`
 	opacity: 0.82;
 `;
 
-export const AlignmentWarningStyled = styled.div`
-	color: var(--ha-ink);
+export const ScreenTitle = styled.h2`
+	margin: 0;
 	text-align: center;
+	font-family: var(--ha-face);
+	font-size: 20px;
+	font-weight: bold;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	color: var(--ha-ink);
+
+	${narrowOrShort} {
+		font-size: 15px;
+	}
 `;
 
-export const AlignmentWarningMessage = styled.span`
-	display: block;
-	margin-bottom: 8px;
+export const ScreenChoices = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	justify-content: center;
+	width: 100%;
+`;
+
+// One thing you can accuse: a player, with everything already known about them printed on it, so the
+// choice is made looking at the evidence rather than from memory.
+export const Choice = styled.button.attrs(({ active }) => ({ disabled: !active }))`
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+	min-width: 150px;
+	padding: 9px 12px;
+	font-family: var(--ha-face);
+	font-size: 14px;
 	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
+	color: ${({ active }) => (active ? 'var(--ha-control-ink)' : 'var(--ha-control-ink-off)')};
+	background: ${({ active }) => (active ? 'var(--ha-control-bg)' : 'var(--ha-control-bg-off)')};
+	border: ${({ active }) => (active ? 'var(--ha-control-edge)' : 'var(--ha-control-edge-off)')};
+	border-radius: var(--ha-control-radius);
+	clip-path: var(--ha-control-clip);
+
+	&:focus-visible {
+		outline: 2px solid var(--ha-accent);
+		outline-offset: 2px;
+	}
+`;
+
+// Why a choice is closed to you, said on the choice itself rather than left as a dead button.
+export const ChoiceWhy = styled.span`
+	font-family: var(--ha-face-data);
+	font-size: 9px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	opacity: 0.75;
+	max-width: 22ch;
+	white-space: normal;
+	text-align: left;
+`;
+
+/* The result of an accusation, which used to be nothing at all: the menu simply closed and a player
+   had to work out from the rest of the table whether they had just been right, and whether they had
+   spent their one chance at that alignment. */
+export const Verdict = styled.div`
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 14px 18px;
+	text-align: center;
+	max-width: 460px;
+	border: 2px solid ${({ $correct }) => ($correct ? 'var(--ha-friend)' : 'var(--ha-foe)')};
+	background: ${({ $correct }) =>
+		$correct
+			? 'color-mix(in srgb, var(--ha-friend) 14%, transparent)'
+			: 'color-mix(in srgb, var(--ha-foe) 14%, transparent)'};
+`;
+
+export const VerdictHead = styled.strong`
+	font-family: var(--ha-face);
+	font-size: 22px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	color: ${({ $correct }) => ($correct ? 'var(--ha-friend)' : 'var(--ha-foe)')};
+
+	${narrowOrShort} {
+		font-size: 17px;
+	}
+`;
+
+export const VerdictLine = styled.span`
+	font-size: 14px;
+	letter-spacing: var(--ha-track-label);
+	color: var(--ha-ink);
+`;
+
+export const VerdictCost = styled.span`
+	font-family: var(--ha-face-data);
+	font-size: 11px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	color: var(--ha-accent);
+`;
+
+// How an alignment became public, printed next to it: paid for, or taken.
+export const LedgerHow = styled.i`
+	font-style: normal;
+	font-family: var(--ha-face-data);
+	font-size: 8.5px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	color: var(--ha-ink-faint);
 `;
 
 // The board's own height, now that its rows have none. A spacer rather than a height, because
@@ -597,66 +697,7 @@ export const HqMessage = styled.span`
 	}
 `;
 
-export const RevealContainer = styled.div`
-	display: flex;
-	flex-direction: column;
-	justify-content: space-evenly;
-	align-items: center;
-	margin: 0;
-`;
-
-export const RevealMessage = styled.span`
-	color: var(--ha-ink);
-	margin-bottom: 8px;
-	letter-spacing: var(--ha-track-label);
-`;
-
-// A card you press, so it takes the control tokens rather than a fill of its own.
-export const RevealCard = styled.div`
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-family: var(--ha-face);
-	letter-spacing: var(--ha-track);
-	text-transform: uppercase;
-	color: var(--ha-control-ink);
-	background: var(--ha-control-bg);
-	border: var(--ha-control-edge);
-	border-radius: var(--ha-control-radius);
-	clip-path: var(--ha-control-clip);
-	text-shadow: var(--ha-control-ink-shadow);
-	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
-	padding: 8px 12px;
-	min-width: 30%;
-`;
-
-export const RevealActions = styled.div`
-	display: flex;
-	flex-direction: row;
-	gap: 8px;
-	align-items: center;
-
-	/* Same shape as an Action: two cards and CANCEL side by side, which is more than a phone is
-	   wide once a card carries a revealed team name instead of "Friend". */
-	${narrowOrShort} {
-		flex-wrap: wrap;
-		align-items: center;
-		justify-content: center;
-		gap: 5px;
-		max-width: 100%;
-	}
-`;
-
-const onHide = ({ hide }) => {
-	if (hide) {
-		return css`
-			display: none;
-		`;
-	}
-};
-
 export const ActionButton = styled(Button)`
-	${onHide}
 	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
 `;
 

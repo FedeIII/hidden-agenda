@@ -40,18 +40,27 @@ function PlayerOptions({ n, onChange }) {
 	return (
 		<Player key={`player${n}`}>
 			<Title>PLAYER {n}</Title>
-			<PlayerNameInput type="text" id={`player-name${n}`} name={`player${n}`} onBlur={onInputChange} />
+			{/* On change, not on blur. A name that has been typed is a name: waiting for focus to leave
+			    meant the last player's name never counted, so GET ALIGNMENTS stayed dead while looking
+			    ready — and clicking it started the game anyway, because the handler never checked. */}
+			<PlayerNameInput type="text" id={`player-name${n}`} name={`player${n}`} onChange={onInputChange} />
 		</Player>
 	);
 }
 
-function useStartGame(players, onReady) {
+function useStartGame(players, onReady, ready) {
 	const [_state, dispatch] = useContext(StateContext);
 
 	return useCallback(() => {
+		// Guarded, so the button being disabled is the rule rather than a suggestion. Without this a
+		// game could start with a player called `undefined`.
+		if (!ready) {
+			return;
+		}
+
 		dispatch(startGame(Object.values(players)));
 		onReady();
-	}, [players, dispatch, onReady]);
+	}, [players, dispatch, onReady, ready]);
 }
 
 // Named as a hook because it is one — it calls useMemo.
@@ -104,8 +113,8 @@ function StartPhase({ onReady }) {
 	const { players, numberOfPlayers } = playerOptions;
 	const { onNumberPlayersChange, onSelectPlayerOptions } = playerOptionsHandlers;
 
-	const onStart = useStartGame(players, onReady);
 	const playersReady = useArePlayersReady(numberOfPlayers, players);
+	const onStart = useStartGame(players, onReady, playersReady);
 	const session = useSession();
 
 	return (

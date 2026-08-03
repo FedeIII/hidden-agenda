@@ -5,15 +5,16 @@ import useSession from 'Hooks/useSession';
 import { Button, Buttons } from 'Client/components/button';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
 import {
-	AlignmentScreenStyled,
-	AlignmentScreenEyes,
-	AlignmentScreenBody,
+	ScreenStyled,
+	ScreenNote,
+	ScreenBody,
 	Ledger,
 	LedgerRow,
 	LedgerName,
 	LedgerPair,
 	LedgerCell,
 	LedgerKey,
+	LedgerHow,
 	Redacted,
 } from './components';
 
@@ -59,6 +60,14 @@ function useOwnPlayer() {
 // black bar rather than an absence, because "there is something here you are not allowed to see" is
 // a better thing to show a player than nothing at all — redaction as a state, which is the premise
 // of the game written down as an interface.
+// Two very different facts, and the state used to record only that one of them had happened: an
+// alignment is public because its owner paid to reveal it, or because somebody guessed it correctly.
+function how(player, alignment) {
+	const by = player.exposed && player.exposed[alignment];
+
+	return by ? `accused by ${by}` : 'revealed';
+}
+
 function TableLedger({ players, own }) {
 	return (
 		<Ledger id="friend-foe-ledger">
@@ -76,10 +85,12 @@ function TableLedger({ players, own }) {
 							<LedgerCell $alignment="friend">
 								<LedgerKey>friend</LedgerKey>
 								{isOwn || player.revealed.friend ? TEAM_NAMES[friend] : <Redacted aria-label="withheld" />}
+								{player.revealed.friend && <LedgerHow>{how(player, 'friend')}</LedgerHow>}
 							</LedgerCell>
 							<LedgerCell $alignment="foe">
 								<LedgerKey>foe</LedgerKey>
 								{isOwn || player.revealed.foe ? TEAM_NAMES[foe] : <Redacted aria-label="withheld" />}
+								{player.revealed.foe && <LedgerHow>{how(player, 'foe')}</LedgerHow>}
 							</LedgerCell>
 						</LedgerPair>
 					</LedgerRow>
@@ -102,11 +113,9 @@ function AlignmentScreen({ onClose }) {
 	const name = own ? own.name : '';
 
 	return (
-		<AlignmentScreenStyled id="friend-foe-screen" role="dialog" aria-modal="true" aria-label="Your friend and foe">
-			<AlignmentScreenBody>
-				<AlignmentScreenEyes id="friend-foe-eyes">
-					{online ? 'nobody else can see these' : `only for ${name}'s eyes`}
-				</AlignmentScreenEyes>
+		<ScreenStyled id="friend-foe-screen" role="dialog" aria-modal="true" aria-label="Your friend and foe">
+			<ScreenBody>
+				<ScreenNote id="friend-foe-eyes">{online ? 'nobody else can see these' : `only for ${name}'s eyes`}</ScreenNote>
 
 				{!uncovered && (
 					<Buttons>
@@ -136,8 +145,8 @@ function AlignmentScreen({ onClose }) {
 						PUT IT AWAY
 					</Button>
 				</Buttons>
-			</AlignmentScreenBody>
-		</AlignmentScreenStyled>
+			</ScreenBody>
+		</ScreenStyled>
 	);
 }
 

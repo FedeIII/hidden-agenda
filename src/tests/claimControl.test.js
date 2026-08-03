@@ -1,7 +1,5 @@
 import { test, expect } from './fixtures';
 
-import { TEAM_NAMES } from '../domain/teams.js';
-
 test.describe('CLAIM CONTROL', () => {
 	let alignments;
 
@@ -159,7 +157,9 @@ test.describe('CLAIM CONTROL', () => {
 
 			await page.click('#next-turn');
 
-			await page.click('#claim-0');
+			// Team 0's CEO is on the board, so its HQ cannot be claimed — and the button says so by being
+			// disabled rather than by accepting a click and quietly doing nothing.
+			await expect(page.locator('#claim-0')).toBeDisabled();
 
 			expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
 			expect(await get.cell(4, 3).isHighlighted).toBeFalsy();
@@ -228,6 +228,8 @@ test.describe('CLAIM CONTROL', () => {
 		test('replaces reveal control with ceo', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await page.click('#reveal');
 			await page.click('#reveal-friend');
+			// A screen covers the board, so it has to be put away before anything is clicked on it.
+			await page.click('#reveal-close');
 
 			await clickOn.team(player(0).friend).agent(1);
 			await clickOn.cell(3, 3);
@@ -251,6 +253,8 @@ test.describe('CLAIM CONTROL', () => {
 		}) => {
 			await page.click('#reveal');
 			await page.click('#reveal-friend');
+			// A screen covers the board, so it has to be put away before anything is clicked on it.
+			await page.click('#reveal-close');
 
 			await clickOn.team(0).agent(5);
 			await clickOn.cell(3, 3);
@@ -265,14 +269,6 @@ test.describe('CLAIM CONTROL', () => {
 		});
 	});
 
-	const player = playerNumber => {
-		return {
-			get friend() {
-				return Object.keys(TEAM_NAMES).find(key => TEAM_NAMES[key] == alignments[playerNumber].friend);
-			},
-			get foe() {
-				return Object.keys(TEAM_NAMES).find(key => TEAM_NAMES[key] == alignments[playerNumber].foe);
-			},
-		};
-	};
+	// goToPlay now hands back team indices, which is what every use of this wanted in the first place.
+	const player = playerNumber => alignments[playerNumber];
 });

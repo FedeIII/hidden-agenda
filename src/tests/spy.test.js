@@ -538,8 +538,9 @@ test.describe('SPY', () => {
 			await clickOn.team(0).spy();
 			await clickOn.cell(3, 3);
 
-			await page.click('#next-turn');
-
+			// No NEXT TURN here. A buffed spy has three moves and has taken one, so the turn has not
+			// ended — this used to be a click on a button whose handler refused it, which read as a step
+			// and did nothing. It surfaced the moment an inactive control became genuinely disabled.
 			await clickOn.cell(4, 3);
 
 			await clickOn.team(0).spy();

@@ -5,23 +5,10 @@ import { test, expect } from './fixtures';
 const PORTRAIT = { width: 390, height: 844 };
 const LANDSCAPE = { width: 844, height: 390 };
 
-// The cards a player has revealed sit inline between ACCUSE and REVEAL, so that action group grows
-// to four items. It was wider than a phone and, being centred, hung off *both* edges at once — and
-// since .game clips horizontally, the two buttons were not merely ugly but unreachable.
-async function revealBothAlignments(page) {
-	await page.click('#reveal');
-	await page.click('#reveal-friend');
-	await page.click('#reveal-foe');
-	await page.click('text=CANCEL');
-
-	// Which teams were dealt is random and the widest name is half again the narrowest, so the
-	// worst case is forced rather than left to the deal. Nothing re-renders in between.
-	await page.evaluate(() => {
-		for (const id of ['revealed-friend', 'revealed-foe']) {
-			document.getElementById(id).querySelector('span').textContent = 'YELLOW';
-		}
-	});
-}
+// Revealing used to grow the middle action group to four items — the two buttons plus a chip per
+// revealed alignment — which was wider than a phone and, being centred, hung off *both* edges at
+// once. Reveal is a screen of its own now, so the bar never grows; what has to survive a phone is the
+// screen, and the bar afterwards.
 
 async function whatStandsOutSideways(page, selector) {
 	return page.evaluate(sel => {
@@ -71,8 +58,8 @@ test.describe('PHONE LAYOUT', () => {
 			}
 
 			// Clicking proves it is genuinely usable rather than merely present: playwright has to
-			// scroll it into view first, which only works because the container scrolls now.
-			// Only snipe — accuse swaps the bar for its own menu.
+			// scroll it into view first, which only works because the container scrolls now. Only snipe,
+			// because accuse and reveal put a screen over everything.
 			await page.click('#snipe');
 			await expect(page.locator('#snipe')).toBeInViewport();
 		});
@@ -89,19 +76,26 @@ test.describe('PHONE LAYOUT', () => {
 			}
 		});
 
-		test('a revealed friend and foe stay on screen', async ({ page, goToPlay }) => {
+		test('the reveal screen fits, and so does the bar afterwards', async ({ page, goToPlay }) => {
 			await goToPlay(2);
-			await revealBothAlignments(page);
 
-			expect(await whatStandsOutSideways(page, '#accuse, #reveal, #revealed-friend, #revealed-foe')).toEqual([]);
+			await page.click('#reveal');
+			expect(await whatStandsOutSideways(page, '#reveal-friend, #reveal-foe, #reveal-close')).toEqual([]);
+			await expect(page.locator('#reveal-friend')).toBeInViewport();
 
+			await page.click('#reveal-friend');
+			await page.click('#reveal-foe');
+			await page.click('#reveal-close');
+
+			expect(await whatStandsOutSideways(page, '#accuse, #reveal, #friend-foe, #snipe')).toEqual([]);
 			await expect(page.locator('#accuse')).toBeInViewport();
 			await expect(page.locator('#reveal')).toBeInViewport();
 		});
 
-		// The accuse menu takes over the same group and is the widest thing that ever goes in it:
-		// at six players it ran a hundred pixels off each edge, and the seats at the far left were
-		// not merely clipped but impossible to tap.
+		// Accusing used to take over the same middle group and was the widest thing that ever went in
+		// it: at six players it ran a hundred pixels off each edge, and the seats at the far left were
+		// not merely clipped but impossible to tap. It is a screen now, and the seats wrap — but the
+		// thing that must hold is the same one, so the assertion is unchanged.
 		test('every seat can be accused at six players', async ({ page, goToPlay }) => {
 			await page.click('#players6');
 			await goToPlay(6);
@@ -142,12 +136,17 @@ test.describe('PHONE LAYOUT', () => {
 			await expect(page.locator('#next-turn')).toBeInViewport();
 		});
 
-		test('a revealed friend and foe stay on screen', async ({ page, goToPlay }) => {
+		test('the reveal screen fits, and so does the bar afterwards', async ({ page, goToPlay }) => {
 			await goToPlay(2);
-			await revealBothAlignments(page);
 
-			expect(await whatStandsOutSideways(page, '#accuse, #reveal, #revealed-friend, #revealed-foe')).toEqual([]);
+			await page.click('#reveal');
+			expect(await whatStandsOutSideways(page, '#reveal-friend, #reveal-foe, #reveal-close')).toEqual([]);
 
+			await page.click('#reveal-friend');
+			await page.click('#reveal-foe');
+			await page.click('#reveal-close');
+
+			expect(await whatStandsOutSideways(page, '#accuse, #reveal, #friend-foe, #snipe')).toEqual([]);
 			await expect(page.locator('#accuse')).toBeInViewport();
 			await expect(page.locator('#reveal')).toBeInViewport();
 		});

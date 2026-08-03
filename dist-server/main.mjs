@@ -1065,6 +1065,11 @@ function init(playerNames) {
 			friend: false,
 			foe: false
 		},
+		exposed: {
+			friend: null,
+			foe: null
+		},
+		lastAccusation: null,
 		allowedToAccuse: {
 			friend: true,
 			foe: true
@@ -1144,16 +1149,32 @@ function accuse({ accuser, accusee, alignment, team }, players) {
 			...player,
 			allowedToAccuse: {
 				...player.allowedToAccuse,
-				[alignment]: accuseePlayer.alignment[alignment] == team
-			}
-		};
-		if (player.name == accusee) return {
-			...player,
-			revealed: {
-				...player.revealed,
 				[alignment]: isAccuserCorrect
+			},
+			lastAccusation: {
+				accusee,
+				alignment,
+				team,
+				correct: isAccuserCorrect
 			}
 		};
+		if (player.name == accusee) {
+			const exposed = player.exposed || {
+				friend: null,
+				foe: null
+			};
+			return {
+				...player,
+				revealed: {
+					...player.revealed,
+					[alignment]: isAccuserCorrect
+				},
+				exposed: {
+					...exposed,
+					[alignment]: isAccuserCorrect ? accuser : exposed[alignment]
+				}
+			};
+		}
 		return player;
 	});
 }

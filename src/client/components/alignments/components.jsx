@@ -152,8 +152,10 @@ export const AlignmentCardStyled = styled.div`
 	position: relative;
 	${size}
 	display: flex;
+	flex-direction: column;
 	align-items: center;
 	justify-content: center;
+	gap: 10px;
 	background-color: ${cardColor};
 	/* The skin's own material, laid over the alignment colour rather than replacing it: carbon
 	   flimsy, a cyanotype sheet, a dark plate. */
@@ -165,6 +167,22 @@ export const AlignmentCardStyled = styled.div`
 
   &:hover {
 		${brightness}
+	}
+`;
+
+// The word, over the team. An <i> rather than a <span> so a spec reaching for the team block by tag
+// still finds the team block.
+export const AlignmentLabel = styled.i`
+	font-style: normal;
+	font-family: var(--ha-face-data);
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.92);
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+	font-size: ${({ small }) => (small ? '8px' : '13px')};
+
+	${narrowOrShort} {
+		font-size: ${({ small }) => (small ? '7px' : '11px')};
 	}
 `;
 

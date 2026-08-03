@@ -16,8 +16,12 @@ export function createNavigation(page) {
 			await page.click('#alingnment-card-friend');
 			await page.click('#alingnment-card-foe');
 
-			const friend = await page.locator('#alingnment-card-friend').innerText();
-			const foe = await page.locator('#alingnment-card-foe').innerText();
+			// The team INDEX, read off the card, rather than its printed name translated back through
+			// TEAM_NAMES. The card carries a word of its own now ("Friend" over "RED"), so its innerText
+			// is no longer a team name — and a helper that quietly returned undefined would have surfaced
+			// as a selector like `#controlled-undefined`.
+			const friend = await page.locator('#alingnment-card-friend [data-team]').getAttribute('data-team');
+			const foe = await page.locator('#alingnment-card-foe [data-team]').getAttribute('data-team');
 
 			alignments.push({ friend, foe });
 

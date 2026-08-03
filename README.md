@@ -191,6 +191,13 @@ The interface has three faces.
   tray and brass switches in Vault
 * **The turn strip says how many CEOs are down.** The game ends at three and nothing on screen had
   ever mentioned it
+* **The cards say "Friend" and "Foe" in words**, at the deal and in the game. Green and red had been
+  carrying that alone, which is a lot to ask of two hues being read across a table
+* **Accusing and revealing are screens that explain themselves.** A wrong accusation costs the right
+  to accuse that alignment for the rest of the game — the entire risk of the move, and previously
+  invisible: the menu just closed. Now each step says what is already public about the player you are
+  about to accuse, and the result says whether you were right, what it cost, and who it cost
+* **The table's ledger says how each alignment became public** — paid for, or taken, and by whom
 * **FRIEND & FOE is a full screen now**, showing your two cards at the size they were dealt at, and a
   ledger of what the rest of the table has revealed — with a black bar where an alignment is withheld.
   Online it always shows *your* pair; it used to go looking for the turn holder's, which only looked

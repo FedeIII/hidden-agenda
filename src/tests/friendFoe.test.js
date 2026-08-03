@@ -137,15 +137,11 @@ test.describe('ONLINE', () => {
 
 		// Each seat is dealt its own pair and only ever receives its own, so this is the truth to
 		// compare the in-game screen against.
+		// Team indices off the cards, which is exact and survives the cards carrying words of their own.
+		const team = (page, which) => page.locator(`#alingnment-card-${which} [data-team]`).getAttribute('data-team');
 		const dealt = {
-			ana: {
-				friend: await host.locator('#alingnment-card-friend').innerText(),
-				foe: await host.locator('#alingnment-card-foe').innerText(),
-			},
-			bea: {
-				friend: await guest.locator('#alingnment-card-friend').innerText(),
-				foe: await guest.locator('#alingnment-card-foe').innerText(),
-			},
+			ana: { friend: await team(host, 'friend'), foe: await team(host, 'foe') },
+			bea: { friend: await team(guest, 'friend'), foe: await team(guest, 'foe') },
 		};
 
 		await host.click('#alignments-btn');
@@ -164,14 +160,14 @@ test.describe('ONLINE', () => {
 			await expect(host.locator('#turn-player')).toHaveText('ANA');
 
 			await guest.click('#friend-foe');
-			await expect(guest.locator(CARDS.friend)).toHaveText(dealt.bea.friend);
-			await expect(guest.locator(CARDS.foe)).toHaveText(dealt.bea.foe);
+			await expect(guest.locator(`${CARDS.friend} [data-team]`)).toHaveAttribute('data-team', dealt.bea.friend);
+			await expect(guest.locator(`${CARDS.foe} [data-team]`)).toHaveAttribute('data-team', dealt.bea.foe);
 
 			// And the host's screen is about the host, which happens to also be the turn holder — so
 			// this half would have passed even with the bug. It is here to pin both halves.
 			await host.click('#friend-foe');
-			await expect(host.locator(CARDS.friend)).toHaveText(dealt.ana.friend);
-			await expect(host.locator(CARDS.foe)).toHaveText(dealt.ana.foe);
+			await expect(host.locator(`${CARDS.friend} [data-team]`)).toHaveAttribute('data-team', dealt.ana.friend);
+			await expect(host.locator(`${CARDS.foe} [data-team]`)).toHaveAttribute('data-team', dealt.ana.foe);
 		} finally {
 			await hostContext.close();
 			await guestContext.close();

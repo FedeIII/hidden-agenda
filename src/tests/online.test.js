@@ -81,8 +81,9 @@ test.describe('ONLINE', () => {
 			]) {
 				await expect(page.locator('.game')).toContainText(`${name}, these are yours`);
 
-				const friend = (await page.locator('#alingnment-card-friend').innerText()).trim();
-				const foe = (await page.locator('#alingnment-card-foe').innerText()).trim();
+				// The team block, not the whole card: a card reads "Friend" over "WHITE" now.
+				const friend = (await page.locator('#alingnment-card-friend [data-team]').innerText()).trim();
+				const foe = (await page.locator('#alingnment-card-foe [data-team]').innerText()).trim();
 
 				expect(teams).toContain(friend);
 				expect(teams).toContain(foe);

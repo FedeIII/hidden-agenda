@@ -55,9 +55,8 @@ Four things about it worth keeping, each of which leaked a port when it was miss
 
 `npm run lint` is eslint flat config (`eslint.config.mjs`) with `js/recommended` plus the react-hooks plugin's full recommended set, which includes the React Compiler rules. **It is clean — keep it that way.** There are no stylistic rules; Prettier owns formatting.
 
-Two deliberate suppressions, both commented at the site:
+One deliberate suppression, commented at the site:
 
-- `react-hooks/set-state-in-effect` on the turn-change reset in `accuseMenu.jsx`. The idiomatic fix is a `key` so the menu remounts, but the accuse flow has no spec, so that refactor waits for one.
 - `react-hooks/rules-of-hooks` for `src/tests/**`, because Playwright names a fixture's callback `use` and the rule reads it as React's `use()` hook.
 
 Also: `no-unused-vars` uses `args: 'none'` under `src/tests/**`, because a spec's destructured parameters are how it declares which fixtures to set up — a dependency list, not a usage.
@@ -79,6 +78,8 @@ Things worth knowing before touching the suite:
 - Helpers are factories over a `page`, wired up as fixtures in `src/tests/fixtures.js`. Most specs take `{ page, clickOn, get, drag, goToPlay }`.
 - An **uncaught page error fails the test that provoked it** (`failOnPageError` fixture). The suite was once fully green while clicking an empty cell threw a TypeError, because nothing watched for it.
 - Playwright bundles a pinned chromium on purpose: browser auto-updates are what caused the fixture rot above.
+- **An inactive `Button` is genuinely `disabled` now, which surfaced two specs that were clicking dead buttons.** `spy.test.js` had a `#next-turn` click that could not have worked — a buffed spy had two moves left — and it read as a step while doing nothing. A `claimControl` spec clicked `#claim-0` to assert nothing happened, which is now expressed by asserting the button is disabled. If a spec starts timing out on `element is not enabled`, that is the button telling the truth: check whether the click was ever doing anything.
+- **`#start-btn` used to start a game it was refusing to offer.** The name committed on `blur`, so the last player's name never counted and the button stayed dead — and `onStart` dispatched anyway, so clicking the dead button worked. Names commit on `change` now and the handler checks. That is why `page.fill` is enough to enable it.
 - **The online specs were flaky until `socketStore` stopped opening two sockets.** `sendIntent()` returned nothing, so `sendIntent() || connect()` always fell through to `connect()`: a client that already had a socket opened a second, the first was orphaned, and the orphan's close handler scheduled a reconnect — a socket every half second, each cycle broadcasting the room to every seat. Nothing failed, but a page that lost the race spent its time reconnecting instead of rendering, so a reload after a move took five seconds instead of half of one. `connect()` now refuses to open a second socket and the intent is sent from the `open` handler. Idle frames to a client went from a steady stream to zero.
 - **Changing the skin online is a round trip, so assert it with `expect.poll`.** `skin.test.js` has an `expectSkin` helper for exactly this. Reading `document.documentElement.dataset.skin` straight after clicking an option passes on a quiet machine and fails the moment the suite runs `fullyParallel`, which is how the first version of those specs behaved — and the failure names a skin, not a race.
 - **A stray `./dev.sh` server on :3018 is reused by the suite and silently ignores `HA_SKIN`.** That is the general hazard already noted above, but it bites the skin specs in a specific way: a room drawn at random instead of pinned. The online specs therefore set the skin through the host's own picker rather than trusting the env, so they hold either way.
@@ -196,6 +197,11 @@ There are guards in `src/tests/unit/pieces.test.js` that deep-freeze the input a
 
 A piece id encodes team, type and number as a string: `0-A1`, `1-C`, `3-N`. `pz.getTeam(id)` is `charAt(0)`, `getType(id)` is `charAt(2)`, `getNumber(id)` is `charAt(3)`. Team is therefore a **string** `'0'`–`'3'` everywhere, and much of the code compares with `==` deliberately because team indices arrive as both string and number. Types: `A` agent, `C` CEO, `S` spy, `N` sniper.
 
+An alignment card carries its own word now — "Friend" over "RED" — so **its `innerText` is not a team
+name.** Read the team off `[data-team]` inside it, which is the index and exact. `goToPlay` returns
+those indices; a helper that quietly returned `undefined` surfaced as a selector like
+`#controlled-undefined`.
+
 DOM ids the tests depend on: `pz-{pieceId}`, `hex-{row}-{cell}`, `store-{team}`, `claim-{team}`, `controlled-{team}`, `piece-count-{team}-{TYPE}`, plus `next-turn`, `snipe`, `accuse`, `reveal`, `reveal-friend`, `reveal-foe`, `start-btn`, `alignments-btn`, `player-name{n}`.
 
 ### Board geometry and directions
@@ -219,6 +225,28 @@ The board renders two extra cells per row and an extra row above and below, so a
 So `pieceStateReducer` can gate on `state.hasTurnEnded`, and slice order never matters — everyone sees the pre-action snapshot. That last part used to be a lie: `pieces` runs before `pieceState`, and while `piecesReducer` mutated in place, `pieceStateReducer` was reading the already-toggled `selected` flag out of what is nominally the old state. It now derives intent from the pre-action value explicitly (`togglePieceState`). If you find a reducer that seems to need another slice's *new* value, that is the trap — recompute it from the old state instead.
 
 Adding a slice means registering it in both the `reducers` map and `initialState`.
+
+### Accusing and revealing
+
+Both are full screens (`accuseScreen.jsx`, `revealScreen.jsx`) rather than rows of buttons growing out
+of the action bar, because both are decisions with a price that the bar had no room to name.
+
+**A wrong accusation costs the right to accuse that alignment again for the whole game.** That is the
+entire risk of accusing and it used to be completely invisible: the menu simply closed. Two fields on
+`players` exist to make it sayable, both public and both untouched by redaction:
+
+- `exposed: { friend, foe }` — who forced an alignment into the open, if anybody. An alignment goes
+  public two ways, its owner paying `REVEAL_COST` or somebody guessing right, and the state used to
+  record only that it happened. At a table those are completely different facts, so the ledger now
+  reads *revealed* or *accused by SARA*.
+- `lastAccusation` on the accuser — what they guessed and whether it landed. Durable rather than local
+  to the tab, because online it is the only way the accuser finds out at all: a wrong guess changes
+  nothing visible about the accusee. The screen scopes it with local `answered` state, or opening the
+  screen again would re-announce the previous verdict.
+
+`accuse` in `py.js` defaults `exposed` before reading it. A room persisted before the field existed
+comes back without it, and so does a hand-built test fixture; neither should throw on the first
+accusation after a deploy.
 
 ### The friend-and-foe screen
 

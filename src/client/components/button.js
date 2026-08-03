@@ -76,7 +76,10 @@ const onActive = ({ active, $primary }) => {
 	`;
 };
 
-export const Button = styled.button`
+// `disabled` as well as dimmed, which it was not before. Every handler in the app already guards on
+// the same flag, so nothing about what a click does changes — what changes is that a control nobody
+// can use is skipped by the keyboard and announced as unavailable rather than merely looking quiet.
+export const Button = styled.button.attrs(({ active }) => ({ disabled: !active }))`
 	font-family: var(--ha-face);
 	font-weight: var(--ha-weight);
 	font-size: 17px;

@@ -8,6 +8,11 @@ const NO_PLAYER = { name: null, score: 0 };
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
 
+// What it costs to have an alignment become public, however it happens: paid by its owner when they
+// reveal it, and paid by them again when somebody accuses correctly. Named because the interface has
+// to be able to tell a player what a button is about to cost them.
+export const REVEAL_COST = 50;
+
 function init(playerNames) {
 	return playerNames.map((name, i) => ({
 		name,
@@ -20,6 +25,18 @@ function init(playerNames) {
 			friend: false,
 			foe: false,
 		},
+		// Who forced it into the open, if anybody. An alignment becomes public two ways — its owner
+		// pays fifty points to reveal it, or somebody accuses correctly — and until now the state
+		// recorded only that it happened, not which. They are very different facts at a table: one is
+		// a move you made and the other is a move made against you.
+		exposed: {
+			friend: null,
+			foe: null,
+		},
+		// The accusation this player last made, and how it went. Public, because at a table an
+		// accusation is something everybody hears — and it is the only way the accuser finds out what
+		// happened, since a wrong guess changes nothing visible about the accusee.
+		lastAccusation: null,
 		allowedToAccuse: {
 			friend: true,
 			foe: true,
@@ -133,19 +150,31 @@ function accuse({ accuser, accusee, alignment, team }, players) {
 		if (player.name == accuser) {
 			return {
 				...player,
+				// A wrong guess costs the right to guess that alignment again, ever. That is the whole
+				// risk of accusing and it used to be invisible: the menu simply closed.
 				allowedToAccuse: {
 					...player.allowedToAccuse,
-					[alignment]: accuseePlayer.alignment[alignment] == team,
+					[alignment]: isAccuserCorrect,
 				},
+				lastAccusation: { accusee, alignment, team, correct: isAccuserCorrect },
 			};
 		}
 
 		if (player.name == accusee) {
+			// Defaulted rather than assumed. A room persisted to disk before `exposed` existed comes back
+			// without it, and so does any hand-built fixture — neither should throw on the first
+			// accusation after a deploy.
+			const exposed = player.exposed || { friend: null, foe: null };
+
 			return {
 				...player,
 				revealed: {
 					...player.revealed,
 					[alignment]: isAccuserCorrect,
+				},
+				exposed: {
+					...exposed,
+					[alignment]: isAccuserCorrect ? accuser : exposed[alignment],
 				},
 			};
 		}
@@ -162,7 +191,7 @@ function getPoints(player, pieces) {
 	const friendPoints = teams.getPointsForTeam(friend, pieces);
 	const foePoints = teams.getPointsForTeam(foe, pieces);
 
-	return 100 - 50 * isFriendRevealed - 50 * isFoeRevealed + friendPoints - foePoints;
+	return 100 - REVEAL_COST * isFriendRevealed - REVEAL_COST * isFoeRevealed + friendPoints - foePoints;
 }
 
 function getWinner(players, pieces) {

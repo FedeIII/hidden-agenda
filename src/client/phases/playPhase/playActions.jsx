@@ -1,24 +1,14 @@
-import { useMemo, useContext, useCallback, useEffect } from 'react';
+import { useContext, useCallback } from 'react';
 import { StateContext } from 'State';
 import { pz } from 'Domain/pieces';
-import { TEAM_NAMES } from 'Domain/teams';
 import py from 'Domain/py';
 import useBooleanState from 'Hooks/useBooleanState';
 import { useCanAct, useCanSnipe } from 'Hooks/useSession';
-import { snipe, revealFriend, revealFoe } from 'Game/actions';
-import { AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
+import { snipe } from 'Game/actions';
 import { Button } from 'Client/components/button';
-import {
-	Actions,
-	Action,
-	ActionCancelButton,
-	ActionButton,
-	RevealContainer,
-	RevealMessage,
-	RevealActions,
-	RevealCard,
-} from './components';
-import AccuseMenu from './accuseMenu';
+import { Actions, Action, ActionButton } from './components';
+import AccuseScreen from './accuseScreen';
+import RevealScreen from './revealScreen';
 import AlignmentScreen from './alignmentScreen';
 
 // Not gated on canAct like every other action here: sniping is the rest of the table's answer to
@@ -38,120 +28,35 @@ function useSnipe() {
 	return [canSnipe, onSnipe, armed];
 }
 
-function useAccuseMenu() {
-	const [isAccusedShown, showAccuseMenu, hideAccuseMenu] = useBooleanState(false);
-	const [{ players }] = useContext(StateContext);
-	const playerName = py.getTurn(players);
-
-	useEffect(() => hideAccuseMenu(), [playerName, hideAccuseMenu]);
-
-	return [isAccusedShown, showAccuseMenu, hideAccuseMenu];
-}
-
-function useRevealMenu() {
-	const [isRevealShown, showRevealMenu, hideRevealMenu] = useBooleanState(false);
-	const [{ players }] = useContext(StateContext);
-	const playerName = py.getTurn(players);
-
-	useEffect(() => hideRevealMenu(), [playerName, hideRevealMenu]);
-
-	const isRevealActive = useMemo(() => py.isRevealActive(players), [players]);
-
-	const onReveal = useCallback(() => {
-		if (isRevealActive) {
-			showRevealMenu();
-		}
-	}, [isRevealActive, showRevealMenu]);
-
-	return [isRevealShown, isRevealActive, onReveal, hideRevealMenu];
-}
-
-// No auto-close on a turn change, and that is a decision rather than an omission.
+// Accusing and revealing are screens now rather than rows of buttons that grew out of the bar. Both
+// are decisions with a price — a wrong accusation is spent forever, a reveal costs fifty points — and
+// neither was saying so from inside a strip of chips three items wide.
 //
-// The leak worth worrying about is a pair of cards still up when the next player takes the mouse, and
-// the screen already makes that impossible: it covers the viewport, so NEXT TURN is behind it and
-// nobody can hand the turn over without putting the cards away first. An effect that closed on a
-// turn change would be unreachable code in hot-seat — and actively wrong online, where somebody
-// else's move can land at any moment and your own two cards have not changed.
-function useAlignmentScreen() {
-	return useBooleanState(false);
-}
+// No auto-close on a turn change for any of them: a screen covers NEXT TURN, so the turn cannot move
+// while one is open. See the note in alignmentScreen.jsx.
+function useScreens() {
+	const [isAccuseShown, showAccuse, hideAccuse] = useBooleanState(false);
+	const [isRevealShown, showReveal, hideReveal] = useBooleanState(false);
+	const [isAlignmentShown, showAlignment, hideAlignment] = useBooleanState(false);
 
-function RevealedAlignments() {
-	const [{ players }] = useContext(StateContext);
-	const player = useMemo(() => players.find(player => player.turn), [players]);
-
-	const showFriend = player.revealed.friend;
-	const showFoe = player.revealed.foe;
-
-	return (
-		<>
-			{showFriend && (
-				<AlignmentFriend id="revealed-friend" small disabled player={player.name} team={player.alignment.friend}>
-					{TEAM_NAMES[player.alignment.friend]}
-				</AlignmentFriend>
-			)}
-			{showFoe && (
-				<AlignmentFoe id="revealed-foe" small disabled player={player.name} team={player.alignment.foe}>
-					{TEAM_NAMES[player.alignment.foe]}
-				</AlignmentFoe>
-			)}
-		</>
-	);
-}
-
-function RevealAlignmentMenu(props) {
-	const { onClose } = props;
-	const [{ players }, dispatch] = useContext(StateContext);
-
-	const player = useMemo(() => players.find(player => player.turn), [players]);
-
-	const isFriendRevealed = py.isOwnFriendRevealed(players);
-	const isFoeRevealed = py.isOwnFoeRevealed(players);
-
-	const onRevealFriend = useCallback(() => dispatch(revealFriend()), [dispatch]);
-	const onRevealFoe = useCallback(() => dispatch(revealFoe()), [dispatch]);
-
-	return (
-		<RevealContainer>
-			<RevealMessage>Reveal Alignment: </RevealMessage>
-			<RevealActions>
-				{isFriendRevealed ? (
-					<AlignmentFriend small disabled player={player.name} team={player.alignment.friend}>
-						{TEAM_NAMES[player.alignment.friend]}
-					</AlignmentFriend>
-				) : (
-					<RevealCard id="reveal-friend" onClick={onRevealFriend}>
-						Friend
-					</RevealCard>
-				)}
-
-				{isFoeRevealed ? (
-					<AlignmentFoe small disabled player={player.name} team={player.alignment.foe}>
-						{TEAM_NAMES[player.alignment.foe]}
-					</AlignmentFoe>
-				) : (
-					<RevealCard id="reveal-foe" onClick={onRevealFoe}>
-						Foe
-					</RevealCard>
-				)}
-
-				<ActionCancelButton small active onClick={onClose}>
-					CANCEL
-				</ActionCancelButton>
-			</RevealActions>
-		</RevealContainer>
-	);
+	return {
+		accuse: { shown: isAccuseShown, show: showAccuse, hide: hideAccuse },
+		reveal: { shown: isRevealShown, show: showReveal, hide: hideReveal },
+		alignment: { shown: isAlignmentShown, show: showAlignment, hide: hideAlignment },
+	};
 }
 
 function PlayActions() {
+	const [{ players }] = useContext(StateContext);
 	const canAct = useCanAct();
 	const [canSnipe, onSnipe, isSnipeArmed] = useSnipe();
-	const [isAccusedShown, showAccuseMenu, hideAccuseMenu] = useAccuseMenu();
-	const [isRevealShown, isRevealActive, onReveal, hideReveal] = useRevealMenu();
-	const [isAlignmentShown, showAlignment, hideAlignment] = useAlignmentScreen();
+	const screens = useScreens();
 
-	const isMainActions = !isAccusedShown && !isRevealShown;
+	const player = players.find(entry => entry.turn);
+	// Both alignments already public means there is nothing left to reveal, and both accusations spent
+	// means there is nothing left to accuse. A dead button that says why beats one that just sits there.
+	const canReveal = py.isRevealActive(players) && canAct;
+	const canAccuse = (player.allowedToAccuse.friend || player.allowedToAccuse.foe) && canAct;
 
 	return (
 		<Actions>
@@ -163,28 +68,26 @@ function PlayActions() {
 					{isSnipeArmed ? 'STAND DOWN' : 'SNIPE!'}
 				</Button>
 			</Action>
+
 			<Action>
-				{isMainActions && (
-					<>
-						<ActionButton active={canAct} id="accuse" onClick={showAccuseMenu}>
-							ACCUSE
-						</ActionButton>{' '}
-						<RevealedAlignments />{' '}
-						<ActionButton id="reveal" active={isRevealActive && canAct} onClick={onReveal}>
-							REVEAL
-						</ActionButton>
-					</>
-				)}
-				{isRevealShown && <RevealAlignmentMenu onClose={hideReveal} />}
-				{isAccusedShown && <AccuseMenu onClose={hideAccuseMenu} />}
+				<ActionButton id="accuse" active={canAccuse} onClick={() => canAccuse && screens.accuse.show()}>
+					ACCUSE
+				</ActionButton>
+				<ActionButton id="reveal" active={canReveal} onClick={() => canReveal && screens.reveal.show()}>
+					REVEAL
+				</ActionButton>
 			</Action>
+
 			<Action>
-				<Button id="friend-foe" small active onClick={showAlignment}>
+				<Button id="friend-foe" small active onClick={screens.alignment.show}>
 					FRIEND &amp; FOE
 				</Button>
 			</Action>
-			{/* Outside the bar on purpose: it is a screen, not a menu that grows out of a button. */}
-			{isAlignmentShown && <AlignmentScreen onClose={hideAlignment} />}
+
+			{/* Outside the bar on purpose: these are screens, not menus that grow out of a button. */}
+			{screens.accuse.shown && <AccuseScreen onClose={screens.accuse.hide} />}
+			{screens.reveal.shown && <RevealScreen onClose={screens.reveal.hide} />}
+			{screens.alignment.shown && <AlignmentScreen onClose={screens.alignment.hide} />}
 		</Actions>
 	);
 }
