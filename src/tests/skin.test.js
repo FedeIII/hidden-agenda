@@ -90,6 +90,70 @@ test.describe('a hot-seat game', () => {
 	});
 });
 
+test.describe('a skin actually paints the page', () => {
+	// This exists because of a silent, total failure that looked like nothing at all.
+	//
+	// styled-components v4 preprocesses with stylis, which strips `//` as a line comment. A `http://`
+	// inside a background-image data URI therefore swallowed the rest of its declaration *and* the
+	// closing brace of its block — so the next skin's block and the whole `html` rule were nested
+	// inside it and never applied. Every custom property still resolved, every control still looked
+	// right, and the page had no ground. Nothing threw, and no existing spec noticed.
+	//
+	// Asserting the ground is painted is the cheapest possible guard against a CSS parse that ended
+	// somewhere other than where it was written.
+	for (const skin of SKIN_NAMES) {
+		test(`${skin} has a ground and a body ink`, async ({ page }) => {
+			await page.goto(`/?skin=${skin}`);
+			await expect(page.locator('#start-btn')).toBeVisible();
+
+			const painted = await page.evaluate(() => {
+				const root = getComputedStyle(document.documentElement);
+
+				return {
+					ground: root.backgroundColor,
+					wash: root.backgroundImage,
+					ink: getComputedStyle(document.body).color,
+				};
+			});
+
+			expect(painted.ground).not.toBe('rgba(0, 0, 0, 0)');
+			expect(painted.wash).not.toBe('none');
+			expect(painted.ink).not.toBe('');
+		});
+	}
+
+	test('every skin block is a block of its own', async ({ page }) => {
+		// The failure above showed up in the cascade as one selector swallowing another. Reading the
+		// injected rules back is the only way to see that from the outside.
+		await page.goto('/');
+		await expect(page.locator('#start-btn')).toBeVisible();
+
+		const selectors = await page.evaluate(() => {
+			const found = [];
+
+			for (const sheet of document.styleSheets) {
+				try {
+					for (const rule of sheet.cssRules) {
+						found.push(rule.selectorText || '');
+					}
+				} catch {
+					// A stylesheet from another origin. None of ours are.
+				}
+			}
+
+			return found;
+		});
+
+		// No selector should mention two skins, and `html` should never be nested under one.
+		const tangled = selectors.filter(
+			selector => (selector.match(/data-skin/g) || []).length > 1 || /data-skin.*\bhtml\b/.test(selector),
+		);
+
+		expect(tangled).toEqual([]);
+		expect(selectors).toContain('html');
+	});
+});
+
 test.describe('a skin changes the chrome and nothing else', () => {
 	// The reason this matters is not tidiness: every hexagon and every piece is a transparent DOM
 	// element laid on the projection of its own tile, and both the drag controller and the whole

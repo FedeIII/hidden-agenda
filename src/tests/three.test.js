@@ -264,6 +264,6 @@ test.describe('WITHOUT WEBGL', () => {
 		expect(await get.nextTurn.isActive).toBe(true);
 
 		await page.click('#next-turn');
-		await expect(page.locator('.game')).toContainText("Player's turn: SARA");
+		await expect(page.locator('#turn-player')).toHaveText('SARA');
 	});
 });

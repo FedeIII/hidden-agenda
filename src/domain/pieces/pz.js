@@ -945,8 +945,12 @@ function isSniper(id) {
 	return getType(id) === SNIPER;
 }
 
+function getKilledCeoCount(pieces) {
+	return pieces.filter(piece => isCeo(piece.id) && piece.killed).length;
+}
+
 function hasGameFinished(pieces) {
-	return pieces.filter(piece => isCeo(piece.id) && piece.killed).length >= NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END;
+	return getKilledCeoCount(pieces) >= NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END;
 }
 
 function isTogglePieceOnCellClick(followMouse, coords, pieces, pieceState) {
@@ -1064,6 +1068,7 @@ export const pz = {
 	isSniper,
 	isSniperOnBoard,
 	hasBoardChanged,
+	getKilledCeoCount,
 	hasGameFinished,
 	isTogglePieceOnCellClick,
 	isMovePieceOnCellClick,

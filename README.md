@@ -185,6 +185,12 @@ The interface has three faces.
   nowhere else. Changing it re-dresses every screen in the room at once; once the board is up the
   furniture stops moving, because a player mid-turn is holding a model of four teams and somebody
   else's face. Hot-seat has no host, so the control is simply there while the table looks at its cards
+* The detail each direction was proposed with, now actually there: a routing slip with initials
+  boxes, file tabs and rubber stamps in Dossier; a ruled title block, board coordinates, a dimension
+  line and a do-not-reproduce watermark in Blueprint; embossed tape, tamper tape across a claimed
+  tray and brass switches in Vault
+* **The turn strip says how many CEOs are down.** The game ends at three and nothing on screen had
+  ever mentioned it
 * `?skin=dossier|blueprint|vault` pins the look in a local game, the way `?flat` pins the renderer
 
 Under it, and deliberately: a skin is custom properties on `<html>`, not a theme threaded through

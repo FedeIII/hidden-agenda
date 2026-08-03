@@ -207,7 +207,7 @@ function PlayActions() {
 				{/* A toggle, and it says so: with a shot lined up the table can either take it or
 				    stand down, and standing down is what gives the turn back to the player who
 				    moved. */}
-				<Button id="snipe" small active={canSnipe} onClick={onSnipe}>
+				<Button id="snipe" small $primary active={canSnipe} onClick={onSnipe}>
 					{isSnipeArmed ? 'STAND DOWN' : 'SNIPE!'}
 				</Button>
 			</Action>

@@ -19,7 +19,16 @@ const size = ({ small }) => {
 	}
 };
 
-const onActive = ({ active }) => {
+// The one loud control at the table. Filled rather than outlined, and in Dossier round, because a
+// snipe is an authorisation the rest of the table gives — the shape a stamp has.
+const asPrimary = css`
+	color: var(--ha-control-ink-active);
+	background: var(--ha-control-bg-active);
+	border-color: transparent;
+	border-radius: var(--ha-control-radius-primary);
+`;
+
+const onActive = ({ active, $primary }) => {
 	if (active) {
 		return css`
 			color: var(--ha-control-ink);
@@ -55,6 +64,8 @@ const onActive = ({ active }) => {
 					transition: none;
 				}
 			}
+
+			${$primary && asPrimary}
 		`;
 	}
 

@@ -61,8 +61,14 @@ const asGlass = ({ dimensional, team }) => {
 	}
 };
 
+const teamVars = ({ team }) => css`
+	--ha-hq-team: var(--ha-team-${team});
+	--ha-hq-team-ink: var(--ha-team-${team}-ink);
+`;
+
 const HqStyled = styled.div`
 	position: relative;
+	${teamVars}
 	height: 50%;
 	max-height: 223px;
 	display: flex;

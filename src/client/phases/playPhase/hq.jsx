@@ -8,7 +8,8 @@ import { Cementery } from 'Client/components/pieceCount';
 import createHqScene from 'Client/three/hqScene';
 import { slotKeyForPiece } from 'Client/three/layout';
 import useThreeView from 'Client/three/useThreeView';
-import { HqStore, HqButton, HqMessage } from './components';
+import { TEAM_NAMES } from 'Domain/teams';
+import { HqStore, HqButton, HqMessage, HqLabel, HqFile } from './components';
 import Piece from './piece/index';
 
 function getNotStartedTeamPieces(pieces, team) {
@@ -44,6 +45,14 @@ function HQ({ team }) {
 
 	return (
 		<HqStyled key={`team${team}`} team={team} dimensional={!!layout}>
+			{/* Which team's HQ this is, said in words rather than left to be inferred from a frame
+			    colour. Each direction reads the same element as something it already has: a file tab
+			    cut into the top edge, a drawing's sheet label, a strip of embossed tape. */}
+			<HqLabel id={`hq-label-${team}`}>
+				{TEAM_NAMES[team]}
+				<HqFile>{String(Number(team) + 1).padStart(2, '0')}</HqFile>
+			</HqLabel>
+
 			<HqButton id={`claim-${team}`} active={claimEnabled} small onClick={onClaimClick}>
 				{isClaimingControl ? 'Cancel' : 'Claim Control'}
 			</HqButton>

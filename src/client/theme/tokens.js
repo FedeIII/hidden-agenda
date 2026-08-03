@@ -127,6 +127,38 @@ const DOSSIER = {
 	'--ha-band-bg': '#2c2620',
 	'--ha-band-ink': '#e0cfa4',
 
+	// The turn strip is a routing slip: typed keys, a dotted rule between them, and initials boxes.
+	'--ha-cell-divider': '1px dotted rgba(90, 70, 36, 0.55)',
+	'--ha-cell-bg': 'transparent',
+
+	// The HQ card's file tab, in the team's own colour, cut like a tab and stuck to the top edge.
+	//
+	// The two colour tokens are deliberately ABSENT here rather than set to var(--ha-hq-team): a
+	// var() inside a custom property is resolved where that property is declared, so one written on
+	// :root would look for the per-card team variable on :root and find nothing — the declaration
+	// then drops out entirely and the tab renders with no fill at all. The component's own fallback
+	// picks the team colour up instead, on the element that actually inherits it.
+	'--ha-hq-label-edge': '1px solid rgba(44, 38, 32, 0.5)',
+	'--ha-hq-label-radius': '0',
+	'--ha-hq-label-clip': 'polygon(0 0, 100% 0, calc(100% - 7px) 100%, 0 100%)',
+	'--ha-hq-label-shadow': '1px 1px 0 rgba(90, 70, 36, 0.35)',
+
+	// Claiming a team is a stamp on the file.
+	'--ha-claim-bg': 'rgba(255, 250, 235, 0.72)',
+	'--ha-claim-ink': '#a3282b',
+	'--ha-claim-edge': '1px solid #a3282b',
+	'--ha-claim-rotate': '-2deg',
+
+	// A drawing's coordinates and dimension callouts. Not a Dossier idea: a file has no scale.
+	'--ha-mark-display': 'none',
+	'--ha-mark-ink': 'transparent',
+	'--ha-mark-rule': 'transparent',
+
+	// The one loud control at the table. A round rubber stamp, because it is an authorisation.
+	'--ha-control-radius-primary': '50% / 44%',
+
+	'--ha-mark-initials': 'inline-flex',
+
 	'--ha-field-bg': 'rgba(255, 250, 235, 0.55)',
 	'--ha-field-ink': '#2c2620',
 	'--ha-field-edge': '1px solid rgba(90, 70, 36, 0.5)',
@@ -140,7 +172,18 @@ const DOSSIER = {
  */
 const BLUEPRINT = {
 	'--ha-ground': '#143452',
-	'--ha-ground-wash': `radial-gradient(120% 100% at 50% -10%, rgba(255, 255, 255, 0.07), transparent 60%),
+	// Every slash and every parenthesis in this data URI is percent-encoded, and none of that is
+	// decoration. styled-components v4 preprocesses with stylis, which strips `//` as a line comment
+	// and cannot cope with a bare `(` inside a quoted url() — either one swallows the rest of this
+	// declaration AND the closing brace of the block, which silently nests the next skin and the whole
+	// `html` rule inside this one and leaves the page with no ground at all. Nothing throws; every
+	// custom property still resolves; the page is simply unpainted. skin.test.js guards it now.
+	//
+	// A data URI is percent-decoded before the SVG is parsed, so %2F, %28 and %29 arrive as the
+	// slashes and brackets the markup needs. The fill is a hex colour with a separate fill-opacity
+	// rather than rgba(), for the same reason: no brackets.
+	'--ha-ground-wash': `url("data:image/svg+xml,%3Csvg xmlns='http:%2F%2Fwww.w3.org%2F2000%2Fsvg' width='760' height='420'%3E%3Ctext x='380' y='230' text-anchor='middle' transform='rotate%28-24 380 230%29' font-family='monospace' font-size='27' letter-spacing='9' fill='%23ffffff' fill-opacity='0.06'%3EPROPERTY OF %E2%96%88%E2%96%88%E2%96%88%E2%96%88%E2%96%88%E2%96%88 INDUSTRIES%3C/text%3E%3C/svg%3E"),
+		radial-gradient(120% 100% at 50% -10%, rgba(255, 255, 255, 0.07), transparent 60%),
 		repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 22px),
 		repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 22px)`,
 	'--ha-well': '#0a1b2b',
@@ -203,6 +246,35 @@ const BLUEPRINT = {
 
 	'--ha-band-bg': 'rgba(220, 232, 242, 0.92)',
 	'--ha-band-ink': '#123049',
+
+	// Every fact in the cells a drawing keeps them in, with a real rule between each.
+	'--ha-cell-divider': '1px solid rgba(220, 232, 242, 0.6)',
+	'--ha-cell-bg': 'rgba(8, 26, 42, 0.35)',
+
+	// The sheet's own label bar: chalk on the panel edge, reversed out.
+	'--ha-hq-label-bg': 'rgba(220, 232, 242, 0.92)',
+	'--ha-hq-label-ink': '#123049',
+	'--ha-hq-label-edge': '1px solid rgba(220, 232, 242, 0.92)',
+	'--ha-hq-label-radius': '0',
+	'--ha-hq-label-clip': 'none',
+	'--ha-hq-label-shadow': 'none',
+
+	// Signed off by, in ferro red, under a dashed rule.
+	'--ha-claim-bg': 'transparent',
+	'--ha-claim-ink': '#ff6b4a',
+	'--ha-claim-edge': 'none',
+	'--ha-claim-rotate': '0deg',
+
+	// The direction that actually wants coordinates: on a drawing they are native, and they let the
+	// table say R3C4 out loud. They land on the phantom ring — the cells that are already clickable
+	// but never drawn, which is exactly where a label belongs.
+	'--ha-mark-display': 'block',
+	'--ha-mark-ink': '#9dc2dc',
+	'--ha-mark-rule': 'rgba(157, 194, 220, 0.75)',
+
+	'--ha-control-radius-primary': '0',
+
+	'--ha-mark-initials': 'none',
 
 	'--ha-field-bg': 'rgba(8, 26, 42, 0.55)',
 	'--ha-field-ink': '#eaf2f8',
@@ -287,6 +359,32 @@ const VAULT = {
 
 	'--ha-band-bg': 'linear-gradient(#3b4148, #2c3137)',
 	'--ha-band-ink': '#e9ecef',
+
+	// Segments of the rail across the top of the case.
+	'--ha-cell-divider': '1px solid #171b1f',
+	'--ha-cell-bg': 'linear-gradient(#333940, #282d33)',
+
+	// Embossed label tape: dark stock, raised caps, rounded ends.
+	'--ha-hq-label-bg': '#1a1d21',
+	'--ha-hq-label-ink': '#e9ecef',
+	'--ha-hq-label-edge': '1px solid #101315',
+	'--ha-hq-label-radius': '3px',
+	'--ha-hq-label-clip': 'none',
+	'--ha-hq-label-shadow': 'inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(0, 0, 0, 0.5)',
+
+	// Tamper tape, which reads as claimed from across the room at any size and without a word.
+	'--ha-claim-bg': 'repeating-linear-gradient(45deg, #c49a45 0 6px, #9d7a33 6px 12px)',
+	'--ha-claim-ink': '#22150f',
+	'--ha-claim-edge': 'none',
+	'--ha-claim-rotate': '-3deg',
+
+	'--ha-mark-display': 'none',
+	'--ha-mark-ink': 'transparent',
+	'--ha-mark-rule': 'transparent',
+
+	'--ha-control-radius-primary': '2px',
+
+	'--ha-mark-initials': 'none',
 
 	'--ha-field-bg': 'linear-gradient(#1f2327, #191c1f)',
 	'--ha-field-ink': '#e5e7ea',

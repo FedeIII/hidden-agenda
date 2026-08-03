@@ -1,50 +1,14 @@
-import { useContext, useCallback } from 'react';
-import { StateContext } from 'State';
-
-import { Title } from 'Client/components/title';
 import HQs from 'Client/components/hqs';
-import { Button } from 'Client/components/button';
-import py from 'Domain/py';
-import { useCanAct } from 'Hooks/useSession';
-import { nextTurn } from 'Game/actions';
 import { PlayPhaseContainer, Board } from './components';
 import HQ from './hq';
 import TableBoard from './tableBoard';
 import PlayActions from './playActions';
-
-function useRenderTurn() {
-	const [{ players }] = useContext(StateContext);
-
-	return useCallback(() => `Player's turn: ${py.getTurn(players)}`, [players]);
-}
-
-function useNextTurn() {
-	const [{ hasTurnEnded }, dispatch] = useContext(StateContext);
-
-	const onNextTurn = useCallback(() => {
-		if (hasTurnEnded) {
-			dispatch(nextTurn());
-		}
-	}, [hasTurnEnded, dispatch]);
-
-	return [hasTurnEnded, onNextTurn];
-}
+import TurnStrip from './turnStrip';
 
 function PlayPhase() {
-	const renderTurn = useRenderTurn();
-	const [hasTurnEnded, onNextTurn] = useNextTurn();
-	// Offering a button that the server will refuse is worse than not offering it.
-	const canAct = useCanAct();
-
 	return (
 		<PlayPhaseContainer>
-			<Title>
-				{renderTurn()}
-				{'  '}
-				<Button small id="next-turn" active={hasTurnEnded && canAct} onClick={onNextTurn}>
-					NEXT TURN
-				</Button>
-			</Title>
+			<TurnStrip />
 
 			<Board>
 				<HQs>

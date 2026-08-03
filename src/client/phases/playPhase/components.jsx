@@ -89,6 +89,73 @@ export const ActionCancelButton = styled(Button)`
 	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
 `;
 
+// One cell of the turn strip. A divider on the left rather than a box around each, so the strip
+// reads as one object subdivided — which is what a title block, a routing slip and a machined rail
+// all are — and so the first cell has no stray rule to its left.
+export const Cell = styled.div`
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	flex-wrap: wrap;
+	justify-content: center;
+	padding: 2px 14px;
+	background: var(--ha-cell-bg);
+	border-left: var(--ha-cell-divider);
+
+	&:first-child {
+		border-left: none;
+	}
+
+	${narrowOrShort} {
+		padding: 2px 7px;
+		gap: 5px;
+	}
+`;
+
+export const CellKey = styled.span`
+	font-family: var(--ha-face-data);
+	font-size: 9px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	color: var(--ha-ink-faint);
+	font-weight: 400;
+
+	${narrowOrShort} {
+		font-size: 8px;
+	}
+`;
+
+export const CellValue = styled.span`
+	font-size: 15px;
+	letter-spacing: var(--ha-track-label);
+	color: var(--ha-ink);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+
+	${narrowOrShort} {
+		font-size: 12px;
+	}
+`;
+
+// The initials boxes on the routing slip: one per seat, filled for the ones that have already had
+// the turn this round. Dossier's own idea, so the other two hide them rather than reinterpret them.
+export const Initials = styled.span`
+	display: var(--ha-mark-initials, inline-flex);
+	gap: 3px;
+`;
+
+export const InitialBox = styled.i`
+	font-style: normal;
+	font-family: var(--ha-face-data);
+	font-size: 10px;
+	line-height: 14px;
+	width: 13px;
+	text-align: center;
+	border: 1px solid var(--ha-rule);
+	color: ${({ $on }) => ($on ? 'var(--ha-ink-on-accent)' : 'var(--ha-ink-faint)')};
+	background: ${({ $on }) => ($on ? 'var(--ha-ink)' : 'transparent')};
+`;
+
 export const AlignmentWarningStyled = styled.div`
 	color: var(--ha-ink);
 	text-align: center;
@@ -180,6 +247,66 @@ const asRack = ({ dimensional }) => {
 	}
 };
 
+// The coordinates and dimension callouts a drawing has, laid over the board.
+//
+// Two things keep this safe. It never intercepts a pointer — the ring cells it sits on ARE clickable,
+// because that is how a piece on the border is pointed off the board, and an absolutely positioned
+// label over one would quietly eat that. And every projected pixel arrives through the `style` prop,
+// never through this template: styled-components mints a rule per distinct interpolated value and
+// reclaims none, so a px offset in here would leak a class per tick per layout, forever.
+export const BoardMarks = styled.div`
+	display: var(--ha-mark-display);
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	font-family: var(--ha-face-data);
+	font-size: 9px;
+	letter-spacing: 0.1em;
+	color: var(--ha-mark-ink);
+	z-index: 2;
+`;
+
+export const Tick = styled.span`
+	position: absolute;
+	transform: translate(-50%, -50%);
+	white-space: nowrap;
+`;
+
+// A dimension line with real end ticks, the way a drawing brackets a measurement.
+export const Dimension = styled.span`
+	position: absolute;
+	left: 4%;
+	right: 4%;
+	top: 2px;
+	border-top: 1px solid var(--ha-mark-rule);
+	text-align: center;
+
+	&::before,
+	&::after {
+		content: '';
+		position: absolute;
+		top: -4px;
+		width: 1px;
+		height: 9px;
+		background: var(--ha-mark-rule);
+	}
+
+	&::before {
+		left: 0;
+	}
+
+	&::after {
+		right: 0;
+	}
+
+	span {
+		position: relative;
+		top: -11px;
+		padding: 0 6px;
+		background: var(--ha-ground);
+	}
+`;
+
 export const HqStore = styled.div`
 	position: relative;
 	width: 100%;
@@ -214,15 +341,80 @@ export const HqButton = styled(Button)`
 	}
 `;
 
-export const HqMessage = styled.span`
+// The team's name, on the thing each direction would put a name on: a file tab cut into the top edge
+// of the card, a drawing's reversed-out sheet label, a strip of embossed tape. It protrudes above the
+// card so it reads as attached to it rather than printed on it — and it carries the team colour in
+// Dossier, where the frame alone is doing that job in the other two.
+export const HqLabel = styled.span`
 	position: absolute;
-	font-size: 16px;
-	top: 40px;
-	letter-spacing: -0.5px;
+	top: -11px;
+	left: 6px;
+	z-index: 3;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 10px 1px;
+	font-family: var(--ha-face-data);
+	font-size: 9px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	/* Dossier leaves these unset so the tab takes the team's own colour; the other two set them,
+	   because there the frame is already carrying team identity. The fallback has to live here rather
+	   than in the token: see the note in theme/tokens.js. */
+	background: var(--ha-hq-label-bg, var(--ha-hq-team));
+	color: var(--ha-hq-label-ink, var(--ha-hq-team-ink));
+	border: var(--ha-hq-label-edge);
+	border-radius: var(--ha-hq-label-radius);
+	clip-path: var(--ha-hq-label-clip);
+	box-shadow: var(--ha-hq-label-shadow);
+	/* A label, never a target. The card below it is full of sockets a thumb has to reach. */
+	pointer-events: none;
+	white-space: nowrap;
 
 	${narrowOrShort} {
-		font-size: 10px;
-		top: 26px;
+		font-size: 8px;
+		padding: 1px 6px;
+		top: -9px;
+	}
+`;
+
+export const HqFile = styled.b`
+	font-weight: 400;
+	opacity: 0.72;
+	font-variant-numeric: tabular-nums;
+`;
+
+// Who holds this team. A stamp on the file, a signed-off note, or tamper tape across the tray —
+// the words are the same in all three, which they have to be: claimControl.test.js asserts them
+// verbatim.
+//
+// pointer-events: none is not cosmetic. This sits over the top of the rack, and the rack is where
+// eight pieces are clicked and dragged from.
+export const HqMessage = styled.span`
+	position: absolute;
+	left: -4px;
+	right: -4px;
+	top: 38px;
+	z-index: 2;
+	pointer-events: none;
+	text-align: center;
+	font-family: var(--ha-face-data);
+	font-size: 11px;
+	letter-spacing: var(--ha-track-label);
+	/* Small caps rather than text-transform, which is not a stylistic preference: innerText applies
+	   text-transform and claimControl.test.js asserts this string verbatim through it. A glyph-level
+	   feature gives the same look and leaves the text alone. */
+	font-variant-caps: all-small-caps;
+	padding: 2px 0 1px;
+	background: var(--ha-claim-bg);
+	color: var(--ha-claim-ink);
+	border: var(--ha-claim-edge);
+	transform: rotate(var(--ha-claim-rotate));
+
+	${narrowOrShort} {
+		font-size: 8px;
+		top: 24px;
+		letter-spacing: 0;
 	}
 `;
 

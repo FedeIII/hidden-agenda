@@ -6,12 +6,17 @@ import { StateContext } from 'State';
 import createBoardScene from 'Client/three/boardScene';
 import useSkin from 'Hooks/useSkin';
 import useThreeView from 'Client/three/useThreeView';
-import { TableBoardStyled, BoardRow } from './components';
+import { TableBoardStyled, BoardRow, BoardMarks, Tick, Dimension } from './components';
 import Hexagon from './hexagon';
 
 // One cell either side of every row, plus a row above and below the board, so a piece on the
 // border can still be pointed outwards.
 const EDGE_ROW_CELLS = 3;
+
+// Derived rather than imported: the column coordinates hang off the widest row, and asking the grid
+// which that is beats a second copy of the number.
+const WIDEST_ROW = CELLS_BY_ROW.indexOf(Math.max(...CELLS_BY_ROW));
+const PLAYABLE_CELLS = CELLS_BY_ROW.reduce((total, cells) => total + cells, 0);
 
 function renderRow(row, numberOfCells, board) {
 	const hexagons = [];
@@ -38,6 +43,69 @@ function renderRow(row, numberOfCells, board) {
 		<BoardRow key={`row-${row}`} dimensional={!!board.layout}>
 			{hexagons}
 		</BoardRow>
+	);
+}
+
+// Row and column coordinates, so the table can say R3C4 out loud instead of pointing.
+//
+// Positioned from the layout the renderer already handed back, which is the same projection the
+// invisible click boxes come from — so a tick cannot drift from the tile it names. Rows sit on the
+// ring cell to the left of each row; columns take their x from the widest row and their y from the
+// phantom row below the board, because row 7's own width is three cells and would bunch them up.
+//
+// Every offset goes through the `style` prop. In a styled-components template each distinct px value
+// mints a class that is never reclaimed.
+function centreOf(box) {
+	if (!box) {
+		return null;
+	}
+
+	return {
+		x: parseFloat(box.left) + parseFloat(box.width) / 2,
+		y: parseFloat(box.top) + parseFloat(box.height) / 2,
+	};
+}
+
+function BoardCoordinates({ layout }) {
+	if (!layout) {
+		return null;
+	}
+
+	const below = centreOf(layout[`${ROW_NUMBERS.length}-1`]);
+
+	return (
+		<BoardMarks aria-hidden="true">
+			<Dimension>
+				<span>
+					{CELLS_BY_ROW.length} ROWS &middot; {PLAYABLE_CELLS} PLAYABLE
+				</span>
+			</Dimension>
+
+			{ROW_NUMBERS.map(row => {
+				const at = centreOf(layout[`${row}--1`]);
+
+				return (
+					at && (
+						<Tick key={`row-${row}`} style={{ left: `${at.x}px`, top: `${at.y}px` }}>
+							{row}
+						</Tick>
+					)
+				);
+			})}
+
+			{below &&
+				CELLS_BY_ROW.map((_cells, cell) => {
+					const at = centreOf(layout[`${WIDEST_ROW}-${cell}`]);
+
+					return (
+						at && (
+							<Tick key={`cell-${cell}`} style={{ left: `${at.x}px`, top: `${below.y}px` }}>
+								{cell}
+							</Tick>
+						)
+					);
+				})}
+		</BoardMarks>
 	);
 }
 
@@ -95,6 +163,8 @@ function TableBoard() {
 
 	return (
 		<TableBoardStyled ref={boardRef} dimensional={!!layout} onMouseLeave={onLeave}>
+			<BoardCoordinates layout={layout} />
+
 			{renderRow(-1, EDGE_ROW_CELLS, board)}
 
 			{ROW_NUMBERS.map(row => renderRow(row, CELLS_BY_ROW[row], board))}

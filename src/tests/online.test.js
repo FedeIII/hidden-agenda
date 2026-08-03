@@ -121,13 +121,13 @@ test.describe('ONLINE', () => {
 			// Back on the board rather than at the lobby, with the piece still where it was.
 			await expect(host.locator('#next-turn')).toBeVisible();
 			await expect(host.locator('#hex-1-1 > *')).toHaveId('pz-0-A1');
-			await expect(host.locator('.game')).toContainText("Player's turn: ANA");
+			await expect(host.locator('#turn-player')).toHaveText('ANA');
 
 			// The same seat rather than a new one: passing the turn is something only the seat on
 			// turn can do, and the effect has to reach the other player.
 			await host.click('#next-turn');
-			await expect(host.locator('.game')).toContainText("Player's turn: BEA");
-			await expect(guest.locator('.game')).toContainText("Player's turn: BEA");
+			await expect(host.locator('#turn-player')).toHaveText('BEA');
+			await expect(guest.locator('#turn-player')).toHaveText('BEA');
 		} finally {
 			await hostContext.close();
 			await guestContext.close();
@@ -159,7 +159,7 @@ test.describe('ONLINE', () => {
 			await host.click('#hex-1-1');
 			await host.click('#hex-2-2');
 			await host.click('#next-turn');
-			await expect(guest.locator('.game')).toContainText("Player's turn: BEA");
+			await expect(guest.locator('#turn-player')).toHaveText('BEA');
 
 			expect(await cursorOn(host)).toEqual('pointer');
 			expect(await cursorOn(guest)).toEqual('not-allowed');

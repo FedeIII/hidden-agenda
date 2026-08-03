@@ -111,6 +111,10 @@ Who chooses, and when:
 - `SkinPicker` renders **nothing at all** when the viewer may not change the skin. `useCanChangeSkin` is the single place that decides, and the server refuses the message independently, so the UI is only declining to offer something that would be turned down.
 - The skin lives on **the session** in both modes, so `useSkin()` has no branch in it. `useSkinAttribute` writes it to `data-skin` on `<html>` — on the document rather than a wrapper, because the canvas is a sibling of `.game` and sits *under* it, so a background inside the app is a filter over everything the renderer drew.
 
+**Two hazards in the token file, both of which fail silently and completely.** styled-components v4 preprocesses with **stylis**, which strips `//` as a line comment and cannot cope with a bare `(` inside a quoted `url()`. Either one swallows the rest of that declaration *and* the closing brace of its block — so the next skin's block and the whole `html` rule get nested inside it, every custom property still resolves, every control still looks right, and the page has no ground at all. Nothing throws. That is why every slash and bracket in Blueprint's watermark data URI is percent-encoded (`%2F`, `%28`, `%29`) and its fill is a hex colour with a separate `fill-opacity` rather than `rgba()`. `skin.test.js` now asserts each skin paints a ground and that no selector mentions two skins.
+
+The second: **a `var()` inside a custom property is resolved where that property is *declared*.** A token on `:root` cannot reach a per-card variable — it looks for it on `:root`, finds nothing, and the declaration drops out entirely. Dossier's HQ tab wants the team's colour, so the token is deliberately absent and the *component* carries the fallback (`var(--ha-hq-label-bg, var(--ha-hq-team))`), which resolves on the element that actually inherits it.
+
 **It is custom properties, not a `ThemeProvider`, and that is not a preference.** styled-components injects a rule per distinct interpolated value and reclaims none, so a theme threaded through templates mints a second and third class for every component in the app — the same leak the projected-pixel rule in the 3D section exists to prevent. `theme/skinStyle.js` builds one static `:root[data-skin=…]` block per skin at module load; switching skin is one attribute write and nothing is re-injected. The consequence to respect: **everything a skin changes has to be expressible as a value**, which is why there are tokens for a `clip-path`, a rotation and a `background-image`, and why a direction that wants no ornament sets the token to `none` rather than omitting it.
 
 Three things a skin may not touch, each of which would break the game rather than merely restyle it:
@@ -118,6 +122,22 @@ Three things a skin may not touch, each of which would break the game rather tha
 - **Any length that decides where a hexagon lands.** Every hexagon and every piece is a transparent DOM element laid on the projection of its own tile, and the drag controller and the whole suite hit-test against those boxes.
 - **A border's width.** Its colour, freely. The turn strip sits above the board, so a 2px rule in one direction and none in another moves every tile down two pixels — which is why the title tokens are `2px solid transparent` where a direction wants no rule. `skin.test.js` asserts a cell's size and its offset *within the board* are identical across all three. Absolute position is deliberately not asserted: the strip is set in each direction's own face and carries its own button border, so the whole board legitimately sits a pixel or two higher in one than another, and the boxes move with it.
 - **The feedback colours.** A legal cell's red and a selected piece's `brightness(2)` are the one piece of vocabulary a returning player owns, and `helpers/get.js` reads them as literal computed strings. They are absent from the token table on purpose.
+- **`text-transform` on any text a spec reads through `innerText`.** `innerText` applies it; `textContent` does not, and Playwright's `toHaveText` uses `textContent` — so `#claim-0` survived being uppercased and `#controlled-0`, which `claimControl.test.js` reads with `.innerText()`, did not. The claim message uses `font-variant-caps: all-small-caps` instead: same look, glyph-level, leaves the text alone.
+
+What each direction adds beyond colour and type, all of it token-driven:
+
+| | Dossier | Blueprint | Vault |
+| --- | --- | --- | --- |
+| Turn strip | routing slip, typed keys, initials boxes per seat | ruled title-block cells | machined rail segments |
+| HQ card | team-coloured file tab, cut, with a file number | reversed-out sheet label | embossed tape |
+| Claim control | a stamp on the file | signed-off, in ferro red | tamper tape across the tray |
+| Board | blotter-green plinth | plinth, coordinate ticks, a dimension line, a do-not-reproduce watermark behind the canvas | deep milled recess |
+| `SNIPE` | round rubber stamp | ferro-red drafted control | red fire switch |
+| Ground | manila with paper grain | cyanotype with the drawing grid | brushed gunmetal |
+
+The turn strip is also where the game finally says **how many CEOs are down**. It ends at three and nothing on screen had ever mentioned it. `pz.getKilledCeoCount` was pulled out of `hasGameFinished` rather than counted again beside it, so the two cannot disagree.
+
+`BoardMarks` (the coordinates) sits over the board and must keep **`pointer-events: none`**: the ring cells it labels are clickable, because that is how a piece on the border is pointed off the board, and an absolutely positioned label over one would quietly eat that. Its offsets come from the layout the renderer already returned, through the `style` prop — never a styled-components template, for the rule-leak reason above.
 
 The one thing about the *board* a skin does change is the plinth the tiles are seated in — `palette.js#boardColors(skin)`, fed to `boardScene`. Its materials are cached per skin, because `sharedAsset` is a module-level cache and a key that ignored the skin would hand the second room the first room's colours. Tiles, tokens and trays are settled and identical in all three.
 

@@ -481,7 +481,7 @@ test.describe('SNIPER', () => {
 			expect(await get.pieceIn(0, 1).id).toEqual('pz-1-A1');
 
 			await page.click('#next-turn');
-			await expect(page.locator('.game')).toContainText("Player's turn: SARA");
+			await expect(page.locator('#turn-player')).toHaveText('SARA');
 		});
 
 		test('puts the sniper out again', async ({ page, clickOn, get }) => {
