@@ -79,6 +79,7 @@ Things worth knowing before touching the suite:
 - Helpers are factories over a `page`, wired up as fixtures in `src/tests/fixtures.js`. Most specs take `{ page, clickOn, get, drag, goToPlay }`.
 - An **uncaught page error fails the test that provoked it** (`failOnPageError` fixture). The suite was once fully green while clicking an empty cell threw a TypeError, because nothing watched for it.
 - Playwright bundles a pinned chromium on purpose: browser auto-updates are what caused the fixture rot above.
+- **The online specs were flaky until `socketStore` stopped opening two sockets.** `sendIntent()` returned nothing, so `sendIntent() || connect()` always fell through to `connect()`: a client that already had a socket opened a second, the first was orphaned, and the orphan's close handler scheduled a reconnect — a socket every half second, each cycle broadcasting the room to every seat. Nothing failed, but a page that lost the race spent its time reconnecting instead of rendering, so a reload after a move took five seconds instead of half of one. `connect()` now refuses to open a second socket and the intent is sent from the `open` handler. Idle frames to a client went from a steady stream to zero.
 - **Changing the skin online is a round trip, so assert it with `expect.poll`.** `skin.test.js` has an `expectSkin` helper for exactly this. Reading `document.documentElement.dataset.skin` straight after clicking an option passes on a quiet machine and fails the moment the suite runs `fullyParallel`, which is how the first version of those specs behaved — and the failure names a skin, not a race.
 - **A stray `./dev.sh` server on :3018 is reused by the suite and silently ignores `HA_SKIN`.** That is the general hazard already noted above, but it bites the skin specs in a specific way: a room drawn at random instead of pinned. The online specs therefore set the skin through the host's own picker rather than trusting the env, so they hold either way.
 - **The shared `page` fixture navigates to `?skin=dossier`, and a spec that navigates for itself has to carry the param too.** A hot-seat game draws one of three skins on the way into the alignment phase, so without the pin every spec would be asserting against a different look each run — which fails as a click landing a pixel off rather than as anything that mentions a skin. Online specs need nothing: the test server's `HA_SKIN` covers them.
@@ -133,6 +134,9 @@ What each direction adds beyond colour and type, all of it token-driven:
 | Claim control | a stamp on the file | signed-off, in ferro red | tamper tape across the tray |
 | Board | blotter-green plinth | plinth, coordinate ticks, a dimension line, a do-not-reproduce watermark behind the canvas | deep milled recess |
 | `SNIPE` | round rubber stamp | ferro-red drafted control | red fire switch |
+| Cemetery | typed tally on flimsy | hatched write-off | milled recess with brass |
+| Board marks | — | coordinate ticks, a dimension line, leader-line callout on the selected piece | — |
+| Strip mark | the ceos-down stamp | `SECTION A–A` flag | engraved plate |
 | Ground | manila with paper grain | cyanotype with the drawing grid | brushed gunmetal |
 
 The turn strip is also where the game finally says **how many CEOs are down**. It ends at three and nothing on screen had ever mentioned it. `pz.getKilledCeoCount` was pulled out of `hasGameFinished` rather than counted again beside it, so the two cannot disagree.
@@ -215,6 +219,31 @@ The board renders two extra cells per row and an extra row above and below, so a
 So `pieceStateReducer` can gate on `state.hasTurnEnded`, and slice order never matters — everyone sees the pre-action snapshot. That last part used to be a lie: `pieces` runs before `pieceState`, and while `piecesReducer` mutated in place, `pieceStateReducer` was reading the already-toggled `selected` flag out of what is nominally the old state. It now derives intent from the pre-action value explicitly (`togglePieceState`). If you find a reducer that seems to need another slice's *new* value, that is the trap — recompute it from the old state instead.
 
 Adding a slice means registering it in both the `reducers` map and `initialState`.
+
+### The friend-and-foe screen
+
+`playPhase/alignmentScreen.jsx`. Your own two cards at the size they were dealt at, plus a ledger of
+what the rest of the table has revealed — with a **black bar** where an alignment is withheld, because
+"there is something here you may not see" is a better thing to show than nothing.
+
+**Online it is always the seat's own pair, never the turn holder's.** The inline reminder this
+replaced read `players.find(player => player.turn)`, which on somebody else's turn went looking for
+*their* cards. It only looked harmless because the server redacts what it sends, so the fields
+arrived `null` and the cards came up blank instead of lying. Hot-seat keeps the turn holder — there is
+one screen and the player on turn is sitting at it — and keeps a confirm gate for the same reason.
+
+**It is the one thing in the app allowed to cover the board.** Everywhere else an overlay is
+forbidden, because every hexagon is a transparent DOM element and a layer over it eats the clicks.
+This earns the exception by being opaque, modal and dismissed by the player. `NEXT TURN` being behind
+it is what makes it impossible to hand the turn over with a pair of cards still up — which is why
+there is deliberately **no auto-close on a turn change**: that would be unreachable code in hot-seat
+and actively wrong online, where somebody else's move can land at any moment and your own cards have
+not changed. `friendFoe.test.js` asserts the blocking with `elementFromPoint`.
+
+It also uses `align-items: flex-start` with `margin: auto 0` on its body rather than
+`align-items: center`. Centring a flex item taller than its scroll container puts the item's top
+above the scrollable area where it cannot be reached, and two full-size cards are taller than the
+800×600 the specs are pinned to.
 
 ### Turn flow
 

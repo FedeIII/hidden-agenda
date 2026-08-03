@@ -4,6 +4,9 @@ import { StateContext } from 'State';
 import { pz } from 'Domain/pieces';
 import PieceStyled from './pieceStyled';
 
+// The cemetery. A typed tally on a file, a hatched write-off on a drawing, a milled recess with
+// brass in it — the numbers themselves are untouched, because `x 1` is read back verbatim by
+// helpers/get.js and a skin has no business changing what a spec counts.
 const PieceCount = styled.div`
 	letter-spacing: -3px;
 	display: flex;
@@ -11,6 +14,9 @@ const PieceCount = styled.div`
 	align-items: end;
 	justify-content: flex-start;
 	width: 100%;
+	background: var(--ha-tally-bg);
+	border-top: var(--ha-tally-edge);
+	border-radius: var(--ha-panel-radius);
 `;
 
 // The count sits on the HQ card, so its colour is chosen against that card's team fill. Over the

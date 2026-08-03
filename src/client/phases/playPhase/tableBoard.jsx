@@ -6,7 +6,7 @@ import { StateContext } from 'State';
 import createBoardScene from 'Client/three/boardScene';
 import useSkin from 'Hooks/useSkin';
 import useThreeView from 'Client/three/useThreeView';
-import { TableBoardStyled, BoardRow, BoardMarks, Tick, Dimension } from './components';
+import { TableBoardStyled, BoardRow, BoardMarks, Tick, Dimension, Callout } from './components';
 import Hexagon from './hexagon';
 
 // One cell either side of every row, plus a row above and below the board, so a piece on the
@@ -17,6 +17,9 @@ const EDGE_ROW_CELLS = 3;
 // which that is beats a second copy of the number.
 const WIDEST_ROW = CELLS_BY_ROW.indexOf(Math.max(...CELLS_BY_ROW));
 const PLAYABLE_CELLS = CELLS_BY_ROW.reduce((total, cells) => total + cells, 0);
+
+// Spelled out for the callout, because "A" is a fine id and a poor label.
+const TYPE_NAMES = { A: 'AGENT', C: 'CEO', S: 'SPY', N: 'SNIPER' };
 
 function renderRow(row, numberOfCells, board) {
 	const hexagons = [];
@@ -66,7 +69,30 @@ function centreOf(box) {
 	};
 }
 
-function BoardCoordinates({ layout }) {
+// A drawing names the part it is pointing at. The selected piece gets a leader line and its own id,
+// which is the honest item number here — `0-A1` already encodes team, type and number.
+function SelectedCallout({ layout, piece }) {
+	if (!piece || !piece.position) {
+		return null;
+	}
+
+	const at = centreOf(layout[`${piece.position[0]}-${piece.position[1]}`]);
+
+	if (!at) {
+		return null;
+	}
+
+	return (
+		<Callout style={{ left: `${at.x}px`, top: `${at.y}px` }}>
+			<i>{pz.getNumber(piece.id) || pz.getType(piece.id)}</i>
+			<b>
+				{piece.id} · {TYPE_NAMES[pz.getType(piece.id)]}, TEAM {pz.getTeam(piece.id)}
+			</b>
+		</Callout>
+	);
+}
+
+function BoardCoordinates({ layout, selected }) {
 	if (!layout) {
 		return null;
 	}
@@ -105,6 +131,8 @@ function BoardCoordinates({ layout }) {
 						)
 					);
 				})}
+
+			<SelectedCallout layout={layout} piece={selected} />
 		</BoardMarks>
 	);
 }
@@ -163,7 +191,7 @@ function TableBoard() {
 
 	return (
 		<TableBoardStyled ref={boardRef} dimensional={!!layout} onMouseLeave={onLeave}>
-			<BoardCoordinates layout={layout} />
+			<BoardCoordinates layout={layout} selected={selectedPiece} />
 
 			{renderRow(-1, EDGE_ROW_CELLS, board)}
 

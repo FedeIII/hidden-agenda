@@ -191,6 +191,10 @@ The interface has three faces.
   tray and brass switches in Vault
 * **The turn strip says how many CEOs are down.** The game ends at three and nothing on screen had
   ever mentioned it
+* **FRIEND & FOE is a full screen now**, showing your two cards at the size they were dealt at, and a
+  ledger of what the rest of the table has revealed — with a black bar where an alignment is withheld.
+  Online it always shows *your* pair; it used to go looking for the turn holder's, which only looked
+  harmless because the server had already redacted it away
 * `?skin=dossier|blueprint|vault` pins the look in a local game, the way `?flat` pins the renderer
 
 Under it, and deliberately: a skin is custom properties on `<html>`, not a theme threaded through

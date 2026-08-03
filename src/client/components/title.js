@@ -9,6 +9,20 @@ import { narrowOrShort } from './breakpoints';
 // a frame token, a rule token and a ground token — because moving it would move #next-turn, and
 // that button is clicked by most of the suite.
 export const Title = styled.div`
+	/* A drawing labels the section it is a view of. Held as a token rather than in the markup so the
+	   two directions that have no sections contribute nothing at all rather than an empty box. */
+	&::before {
+		content: var(--ha-strip-mark);
+		display: var(--ha-strip-mark-display);
+		align-items: center;
+		padding: 2px 8px 1px;
+		font-family: var(--ha-face-data);
+		font-size: 9px;
+		letter-spacing: var(--ha-track-label);
+		color: var(--ha-stamp-ink);
+		border: var(--ha-stamp-edge);
+	}
+
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;

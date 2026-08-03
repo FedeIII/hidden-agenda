@@ -159,18 +159,30 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		}
 	}
 
+	// Returns whether it got out, which is what `sendIntent() || connect()` reads. It used to return
+	// nothing at all, so that expression always fell through to connect() — a client that already had
+	// a socket opened a second one, the first was orphaned, and the orphan's close handler scheduled a
+	// reconnect. The result was a socket every half second and a room broadcast to every seat on each
+	// cycle. Nothing failed; it just meant a page that had lost the race spent its time reconnecting
+	// instead of rendering, which is how a reload after a move became a five-second wait.
 	function sendIntent() {
 		if (!intent) {
-			return;
+			return false;
 		}
 
 		if (intent.kind === 'create') {
-			send({ type: 'create', name: intent.name });
-		} else if (intent.kind === 'join') {
-			send({ type: 'join', code: intent.code, name: intent.name });
-		} else if (intent.kind === 'rejoin') {
-			send({ type: 'rejoin', code: intent.code, token: intent.token });
+			return send({ type: 'create', name: intent.name });
 		}
+
+		if (intent.kind === 'join') {
+			return send({ type: 'join', code: intent.code, name: intent.name });
+		}
+
+		if (intent.kind === 'rejoin') {
+			return send({ type: 'rejoin', code: intent.code, token: intent.token });
+		}
+
+		return false;
 	}
 
 	// A snapshot is the truth as of the actions the server had seen. Anything this client has done
@@ -269,6 +281,13 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 	}
 
 	function connect() {
+		// One socket at a time. A socket that is still CONNECTING cannot be sent on, so `send` returns
+		// false and the caller would otherwise open another beside it; the intent is sent from the
+		// 'open' handler instead, which is where it was always going to be sent from anyway.
+		if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
+			return;
+		}
+
 		socket = new WebSocket(url);
 
 		socket.addEventListener('open', () => {

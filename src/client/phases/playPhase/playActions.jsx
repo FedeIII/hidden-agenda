@@ -6,21 +6,20 @@ import py from 'Domain/py';
 import useBooleanState from 'Hooks/useBooleanState';
 import { useCanAct, useCanSnipe } from 'Hooks/useSession';
 import { snipe, revealFriend, revealFoe } from 'Game/actions';
-import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
+import { AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
 import { Button } from 'Client/components/button';
 import {
 	Actions,
 	Action,
 	ActionCancelButton,
 	ActionButton,
-	AlignmentWarningStyled,
-	AlignmentWarningMessage,
 	RevealContainer,
 	RevealMessage,
 	RevealActions,
 	RevealCard,
 } from './components';
 import AccuseMenu from './accuseMenu';
+import AlignmentScreen from './alignmentScreen';
 
 // Not gated on canAct like every other action here: sniping is the rest of the table's answer to
 // the move the player on turn has just made, so it is theirs and not the mover's.
@@ -67,24 +66,15 @@ function useRevealMenu() {
 	return [isRevealShown, isRevealActive, onReveal, hideRevealMenu];
 }
 
-function useAlignmentMessages() {
-	const [isAlignmentWarningShown, showWarning, hideWarning] = useBooleanState(false);
-	const [isAlignmentShown, showAlignment, hideAlignment] = useBooleanState(false);
-
-	const [{ players }] = useContext(StateContext);
-	const playerName = py.getTurn(players);
-
-	useEffect(() => {
-		hideWarning();
-		hideAlignment();
-	}, [playerName, hideWarning, hideAlignment]);
-
-	const onWarningConfirm = useCallback(() => {
-		hideWarning();
-		showAlignment();
-	}, [hideWarning, showAlignment]);
-
-	return [isAlignmentWarningShown, isAlignmentShown, showWarning, onWarningConfirm, hideAlignment];
+// No auto-close on a turn change, and that is a decision rather than an omission.
+//
+// The leak worth worrying about is a pair of cards still up when the next player takes the mouse, and
+// the screen already makes that impossible: it covers the viewport, so NEXT TURN is behind it and
+// nobody can hand the turn over without putting the cards away first. An effect that closed on a
+// turn change would be unreachable code in hot-seat — and actively wrong online, where somebody
+// else's move can land at any moment and your own two cards have not changed.
+function useAlignmentScreen() {
+	return useBooleanState(false);
 }
 
 function RevealedAlignments() {
@@ -154,50 +144,12 @@ function RevealAlignmentMenu(props) {
 	);
 }
 
-function AlignmentWarning(props) {
-	const { onClose } = props;
-	const [{ players }] = useContext(StateContext);
-
-	const playerName = useMemo(() => players.find(player => player.turn).name, [players]);
-
-	return (
-		<AlignmentWarningStyled>
-			<AlignmentWarningMessage>This information is only for {playerName}'s eyes</AlignmentWarningMessage>
-			<Button small active onClick={onClose}>
-				Confirm
-			</Button>
-		</AlignmentWarningStyled>
-	);
-}
-
-function AlignmentReminder(props) {
-	const { onClose } = props;
-	const [{ players }] = useContext(StateContext);
-
-	const player = useMemo(() => players.find(player => player.turn), [players]);
-
-	return (
-		<Alignments small>
-			<AlignmentFriend small disabled player={player.name} team={player.alignment.friend}>
-				{TEAM_NAMES[player.alignment.friend]}
-			</AlignmentFriend>
-			<AlignmentFoe small disabled player={player.name} team={player.alignment.foe}>
-				{TEAM_NAMES[player.alignment.foe]}
-			</AlignmentFoe>
-			<Button small active onClick={onClose}>
-				HIDE
-			</Button>
-		</Alignments>
-	);
-}
-
 function PlayActions() {
 	const canAct = useCanAct();
 	const [canSnipe, onSnipe, isSnipeArmed] = useSnipe();
 	const [isAccusedShown, showAccuseMenu, hideAccuseMenu] = useAccuseMenu();
 	const [isRevealShown, isRevealActive, onReveal, hideReveal] = useRevealMenu();
-	const [isAlignmentWarningShown, isAlignmentShown, showWarning, onWarningConfirm, hideAlignment] =
-		useAlignmentMessages();
+	const [isAlignmentShown, showAlignment, hideAlignment] = useAlignmentScreen();
 
 	const isMainActions = !isAccusedShown && !isRevealShown;
 
@@ -227,14 +179,12 @@ function PlayActions() {
 				{isAccusedShown && <AccuseMenu onClose={hideAccuseMenu} />}
 			</Action>
 			<Action>
-				{!isAlignmentWarningShown && !isAlignmentShown && (
-					<Button small active onClick={showWarning}>
-						FRIEND & FOE
-					</Button>
-				)}
-				{isAlignmentWarningShown && <AlignmentWarning onClose={onWarningConfirm} />}
-				{isAlignmentShown && <AlignmentReminder onClose={hideAlignment} />}
+				<Button id="friend-foe" small active onClick={showAlignment}>
+					FRIEND &amp; FOE
+				</Button>
 			</Action>
+			{/* Outside the bar on purpose: it is a screen, not a menu that grows out of a button. */}
+			{isAlignmentShown && <AlignmentScreen onClose={hideAlignment} />}
 		</Actions>
 	);
 }

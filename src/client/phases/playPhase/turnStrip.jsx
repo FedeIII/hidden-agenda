@@ -6,7 +6,7 @@ import { Button } from 'Client/components/button';
 import { useCanAct } from 'Hooks/useSession';
 import { nextTurn } from 'Game/actions';
 import { Title } from 'Client/components/title';
-import { Cell, CellKey, CellValue, Initials, InitialBox } from './components';
+import { Cell, CellKey, CellValue, CellMark, Initials, InitialBox } from './components';
 
 // The strip above the board, as the cells it always wanted to be.
 //
@@ -44,10 +44,12 @@ function TurnStrip() {
 			</Cell>
 
 			<Cell>
-				<CellKey>ceos down</CellKey>
-				<CellValue id="ceos-down">
-					{ceosDown} / {NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END}
-				</CellValue>
+				<CellMark>
+					<CellKey>ceos down</CellKey>
+					<CellValue id="ceos-down">
+						{ceosDown} / {NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END}
+					</CellValue>
+				</CellMark>
 			</Cell>
 
 			<Cell>

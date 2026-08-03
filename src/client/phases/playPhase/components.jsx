@@ -2,6 +2,7 @@ import styled, { css } from 'styled-components';
 import { Button } from 'Client/components/button';
 import { narrow, short, narrowOrShort } from 'Client/components/breakpoints';
 import { BOARD_ASPECT } from 'Client/three/layout';
+import { AlignmentCardStyled } from 'Client/components/alignments/components';
 
 export const PlayPhaseContainer = styled.div`
 	position: relative;
@@ -125,6 +126,20 @@ export const CellKey = styled.span`
 	}
 `;
 
+// The one cell that carries an accent. In Dossier it is a rubber stamp, in Blueprint a ferro-red
+// section flag, in Vault a brass-edged plate — and what it stamps is a real fact: how close the
+// game is to over.
+export const CellMark = styled.span`
+	display: inline-flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 2px 9px 1px;
+	color: var(--ha-stamp-ink);
+	border: var(--ha-stamp-edge);
+	transform: rotate(var(--ha-stamp-rotate));
+	text-shadow: var(--ha-control-ink-shadow);
+`;
+
 export const CellValue = styled.span`
 	font-size: 15px;
 	letter-spacing: var(--ha-track-label);
@@ -154,6 +169,129 @@ export const InitialBox = styled.i`
 	border: 1px solid var(--ha-rule);
 	color: ${({ $on }) => ($on ? 'var(--ha-ink-on-accent)' : 'var(--ha-ink-faint)')};
 	background: ${({ $on }) => ($on ? 'var(--ha-ink)' : 'transparent')};
+`;
+
+/* ── The friend-and-foe screen ─────────────────────────────────────────────────────────────────
+ * The one thing in the game allowed to cover the table, and it earns it by being opaque and modal:
+ * a player reading their own two cards has nothing on the board to click. It takes the skin's own
+ * ground and wash, so it reads as the same sheet the cards were dealt on rather than as a dialog.
+ * ------------------------------------------------------------------------------------------- */
+export const AlignmentScreenStyled = styled.div`
+	position: fixed;
+	inset: 0;
+	z-index: 900;
+	display: flex;
+	/* flex-start plus auto margins on the body, not align-items: center. Centring a flex item that is
+	   taller than its scroll container puts its top above the scrollable area, where it cannot be
+	   reached — and two full-size cards are taller than the 800x600 the specs are pinned to. */
+	align-items: flex-start;
+	justify-content: center;
+	padding: 20px;
+	overflow-y: auto;
+	background-color: var(--ha-ground);
+	background-image: var(--ha-ground-wash);
+`;
+
+export const AlignmentScreenBody = styled.div`
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 16px;
+	margin: auto 0;
+	width: 100%;
+	max-width: 720px;
+	background-image: var(--ha-panel-ornament);
+	background-repeat: no-repeat;
+	padding-top: 18px;
+
+	${narrowOrShort} {
+		gap: 9px;
+		padding-top: 12px;
+
+		/* The cards are the ones the game deals, at the size it deals them. On a short screen that is
+		   more height than there is, so they come down rather than the screen scrolling for something
+		   that ought to be taken in at a glance. */
+		${AlignmentCardStyled} {
+			width: 132px;
+			height: 208px;
+		}
+	}
+`;
+
+export const AlignmentScreenEyes = styled.div`
+	text-align: center;
+	font-family: var(--ha-face-data);
+	font-size: 12px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	color: var(--ha-accent);
+
+	${narrowOrShort} {
+		font-size: 10px;
+	}
+`;
+
+/* Who has admitted to what. An unrevealed alignment is a black bar rather than a blank, because
+   "there is something here you may not see" is a better thing to show than nothing — and because
+   redaction is the premise of this game, not decoration on it. */
+export const Ledger = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	width: 100%;
+	max-width: 460px;
+`;
+
+export const LedgerRow = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	flex-wrap: wrap;
+	padding: 5px 9px;
+	background: ${({ $own }) => ($own ? 'var(--ha-accent-wash)' : 'transparent')};
+	border: 1px solid ${({ $own }) => ($own ? 'var(--ha-accent)' : 'var(--ha-rule)')};
+	border-radius: var(--ha-panel-radius);
+`;
+
+export const LedgerName = styled.span`
+	font-size: 13px;
+	letter-spacing: var(--ha-track-label);
+	color: var(--ha-ink);
+	white-space: nowrap;
+`;
+
+export const LedgerPair = styled.span`
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+`;
+
+export const LedgerCell = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 1px 7px;
+	font-family: var(--ha-face-data);
+	font-size: 10px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	color: var(--ha-ink);
+	border-left: 3px solid ${({ $alignment }) => ($alignment === 'friend' ? 'var(--ha-friend)' : 'var(--ha-foe)')};
+`;
+
+export const LedgerKey = styled.i`
+	font-style: normal;
+	color: var(--ha-ink-faint);
+`;
+
+// A bar, not a blank. Sized in ems so it tracks the type rather than a magic width.
+export const Redacted = styled.span`
+	display: inline-block;
+	width: 4.2em;
+	height: 0.95em;
+	background: var(--ha-ink);
+	opacity: 0.82;
 `;
 
 export const AlignmentWarningStyled = styled.div`
@@ -270,6 +408,47 @@ export const Tick = styled.span`
 	position: absolute;
 	transform: translate(-50%, -50%);
 	white-space: nowrap;
+`;
+
+// A part called out on a leader line, the way a drawing names the thing it is pointing at. Only ever
+// one at a time — whatever is selected — so it costs a single element and never crowds the board.
+export const Callout = styled.span`
+	position: absolute;
+	transform: translateY(-50%);
+	white-space: nowrap;
+	padding-left: 34px;
+	color: var(--ha-mark-ink);
+
+	&::before {
+		content: '';
+		position: absolute;
+		left: 4px;
+		top: 50%;
+		width: 26px;
+		border-top: 1px solid var(--ha-mark-rule);
+	}
+
+	/* Both the bubble and the label sit on a break in the ground, which is what a drawing does with a
+	   leader label: the line is interrupted rather than drawn through the text. Without it the label
+	   is chalk over slate tiles and unreadable exactly where a piece is. */
+	i {
+		font-style: normal;
+		display: inline-block;
+		min-width: 15px;
+		height: 15px;
+		line-height: 14px;
+		text-align: center;
+		border: 1px solid var(--ha-mark-rule);
+		border-radius: 50%;
+		margin-right: 6px;
+		background: var(--ha-ground);
+	}
+
+	b {
+		font-weight: 400;
+		padding: 1px 5px;
+		background: var(--ha-ground);
+	}
 `;
 
 // A dimension line with real end ticks, the way a drawing brackets a measurement.

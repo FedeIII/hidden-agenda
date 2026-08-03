@@ -159,6 +159,16 @@ const DOSSIER = {
 
 	'--ha-mark-initials': 'inline-flex',
 
+	// The stamp on the routing slip, and the tally under a file's piece count.
+	'--ha-stamp-edge': '2px double #a3282b',
+	'--ha-stamp-ink': '#a3282b',
+	'--ha-stamp-rotate': '-2.5deg',
+	'--ha-tally-bg': 'rgba(255, 250, 235, 0.4)',
+	'--ha-tally-edge': '1px dotted rgba(90, 70, 36, 0.55)',
+	// The drawing's own section flag. A file has no sections, so nothing here.
+	'--ha-strip-mark': "''",
+	'--ha-strip-mark-display': 'none',
+
 	'--ha-field-bg': 'rgba(255, 250, 235, 0.55)',
 	'--ha-field-ink': '#2c2620',
 	'--ha-field-edge': '1px solid rgba(90, 70, 36, 0.5)',
@@ -276,6 +286,15 @@ const BLUEPRINT = {
 
 	'--ha-mark-initials': 'none',
 
+	'--ha-stamp-edge': '1px solid #ff6b4a',
+	'--ha-stamp-ink': '#ff6b4a',
+	'--ha-stamp-rotate': '0deg',
+	// Written off, and hatched the way a section is.
+	'--ha-tally-bg': 'repeating-linear-gradient(45deg, transparent 0 3px, rgba(255, 107, 74, 0.22) 3px 4px)',
+	'--ha-tally-edge': '1px solid rgba(220, 232, 242, 0.4)',
+	'--ha-strip-mark': "'SECTION A–A'",
+	'--ha-strip-mark-display': 'inline-flex',
+
 	'--ha-field-bg': 'rgba(8, 26, 42, 0.55)',
 	'--ha-field-ink': '#eaf2f8',
 	'--ha-field-edge': '1px solid rgba(220, 232, 242, 0.5)',
@@ -385,6 +404,15 @@ const VAULT = {
 	'--ha-control-radius-primary': '2px',
 
 	'--ha-mark-initials': 'none',
+
+	'--ha-stamp-edge': '1px solid #7d5e20',
+	'--ha-stamp-ink': '#c49a45',
+	'--ha-stamp-rotate': '0deg',
+	// A milled recess with brass in it.
+	'--ha-tally-bg': 'linear-gradient(#1f2327, #191c1f)',
+	'--ha-tally-edge': '1px solid #101315',
+	'--ha-strip-mark': "''",
+	'--ha-strip-mark-display': 'none',
 
 	'--ha-field-bg': 'linear-gradient(#1f2327, #191c1f)',
 	'--ha-field-ink': '#e5e7ea',
