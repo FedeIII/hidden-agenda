@@ -282,6 +282,18 @@ function createStage() {
 			onScreen.push({
 				viewport,
 				scissor: { left, top, right, bottom },
+				// A view that seats its scene in something — the board in its recess — says what that
+				// surface is, and gets its own element's visible box filled with it first. The
+				// element's box and NOT the scissor: the scissor is clipped down to what the scene
+				// paints into, and while a piece is in the air it opens up to the whole of the
+				// scrolling container. The recess is the section, so it is neither.
+				well: view.well ? view.well() : null,
+				inside: {
+					left: Math.max(rect.left, clip.left, 0),
+					top: Math.max(rect.top, clip.top, 0),
+					right: Math.min(rect.right, clip.right, width),
+					bottom: Math.min(rect.bottom, clip.bottom, height),
+				},
 				scene: view.scene,
 				camera: view.camera,
 				order: view.order,
@@ -304,7 +316,24 @@ function createStage() {
 		renderer.clear();
 		renderer.setScissorTest(true);
 
-		for (const { viewport, scissor, scene, camera } of onScreen) {
+		for (const { viewport, scissor, well, inside, scene, camera } of onScreen) {
+			// The recess, before the scene that sits in it. A clear rather than a quad: it is a memset
+			// of the section's own rectangle, and it composites over the page exactly as a CSS
+			// background would — including at an alpha, which is how the drawing grid ghosts through
+			// Blueprint's board. The clear colour is put back afterwards, because the full-canvas clear
+			// at the top of the next frame reads it and would otherwise paint the whole viewport.
+			if (well && inside.right - inside.left >= 1 && inside.bottom - inside.top >= 1) {
+				renderer.setScissor(
+					inside.left,
+					height - inside.bottom,
+					inside.right - inside.left,
+					inside.bottom - inside.top,
+				);
+				renderer.setClearColor(well.color, well.alpha);
+				renderer.clear(true, false, false);
+				renderer.setClearColor(BACKDROP, 0);
+			}
+
 			// The viewport is the whole anchor element, because that is what the camera was fitted
 			// to and what the DOM overlay was projected against — or the overlay rectangle, for a
 			// view that asked for one and has re-framed itself to match. The scissor is the part of

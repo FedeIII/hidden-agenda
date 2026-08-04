@@ -193,11 +193,31 @@ The interface has three faces.
   ever mentioned it
 * **The cards say "Friend" and "Foe" in words**, at the deal and in the game. Green and red had been
   carrying that alone, which is a lot to ask of two hues being read across a table
+  * And each direction says it in its own material: typed in the corner of the flimsy and ruled
+    underneath in Dossier, reversed out of a filled tab and numbered `FIG. 1` / `FIG. 2` in Blueprint,
+    on a small bevelled tag in Vault
+* **A card says what the alignment is worth** — *their points are yours*, *their points come off
+  yours*. That is the whole of what friend and foe mean and the one thing about them no colour can say
+* **And it names the team twice, in two channels**: over a block of the team's own colour, and as the
+  colour itself called out the way each direction calls out a material — a colour of record glued to
+  the file, a half-hatched finish reference on the drawing, an anodised jewel in the case
 * **Accusing and revealing are screens that explain themselves.** A wrong accusation costs the right
   to accuse that alignment for the rest of the game — the entire risk of the move, and previously
   invisible: the menu just closed. Now each step says what is already public about the player you are
   about to accuse, and the result says whether you were right, what it cost, and who it cost
 * **The table's ledger says how each alignment became public** — paid for, or taken, and by whom
+* **Fixed: a team you controlled could be taken out from under you.** Claiming a team is deploying its
+  CEO, so a team whose CEO is already on the board cannot be claimed — but only half of the action knew
+  that. The claim was refused while that CEO was selected anyway, so on the next player's turn they
+  could pick up your CEO and move it. Both halves ask the same rule now, and the control says so by
+  being disabled rather than by accepting a click and quietly doing something else
+* **Claiming a team is a control on that same line** — a rubber stamp on the file, a drafted rectangle
+  on the drawing, a brass switch in the case — offered only where there is something to claim. The
+  full-width button that used to sit across the top of every rack is gone, and **the tray is about twice
+  as tall for it**: on a phone held sideways a socket went from thirteen pixels across to something a
+  thumb can mean
+* **The board sits in a recess of its own**, framed with a hairline and darker than the ground, so the
+  table is a section of the page rather than a shape floating on it
 * **FRIEND & FOE is a full screen now**, showing your two cards at the size they were dealt at, and a
   ledger of what the rest of the table has revealed — with a black bar where an alignment is withheld.
   Online it always shows *your* pair; it used to go looking for the turn holder's, which only looked
@@ -457,12 +477,13 @@ Play it over the internet. Also a complete change of toolchain underneath, and t
   * ~~revealing~~
 * ~~Drag&Drop~~
 * ~~Hosting~~
-* UI revamp
+* ~~UI revamp~~
 * 3D
 * ~~Remote multiplayer~~
 * Port to electron
 
 ## Known Bugs
+* ~~A team you controlled could be claimed out from under you, which handed its CEO to whoever clicked~~
 * ~~The interface said nothing about the game it was wrapped around~~
 * ~~A piece dragged out of an HQ was invisible over that HQ, and cut in half at the board's edge~~
 * ~~Pieces and HQ racks rendered at about half the colour they were painted in~~

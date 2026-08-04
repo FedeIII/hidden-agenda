@@ -1,5 +1,4 @@
 import { pz, POINTS_PER_PIECE_TYPE } from 'Domain/pieces';
-import cells from 'Domain/cells';
 
 export const TEAM_COLORS = {
 	0: 'black',
@@ -24,14 +23,12 @@ function initControl() {
 	];
 }
 
+// A team is claimable only while its CEO is still in its HQ, because claiming it is deploying that
+// CEO. `pz.canClaimControl` is that rule, and the pieces half of the same action asks it too — they
+// used to disagree, and the disagreement was a bug: the claim was refused here while the CEO was
+// selected anyway, which handed somebody else's team to whoever clicked.
 function claimControl(playerName, team, { pieces, teamControl, hasTurnEnded }) {
-	const ceo = pz.getCeo(pieces, team);
-
-	if (hasTurnEnded) {
-		return teamControl;
-	}
-
-	if (cells.inBoard(ceo.position)) {
+	if (hasTurnEnded || !pz.canClaimControl(team, pieces)) {
 		return teamControl;
 	}
 
@@ -46,18 +43,18 @@ function setControlFor(playerName, team, pieces) {
 			return {
 				player: playerName,
 				prevPlayer: player,
+				// True by definition: claimControl above refused if this team's CEO was on the board.
 				claimEnabled: true,
 				controlling,
 			};
 		}
 
 		if (player == playerName) {
-			const ceo = pz.getCeo(pieces, teamIndex);
-
+			// A player holds one team at a time, so taking this one lets the last one go.
 			return {
 				player: null,
 				prevPlayer: player,
-				claimEnabled: !cells.inBoard(ceo.position),
+				claimEnabled: pz.canClaimControl(teamIndex, pieces),
 				controlling: false,
 			};
 		}
@@ -66,18 +63,18 @@ function setControlFor(playerName, team, pieces) {
 	};
 }
 
-function cancelControl(team, { teamControl }) {
-	return teamControl.map(removeControlFor(team));
+function cancelControl(team, { pieces, teamControl }) {
+	return teamControl.map(removeControlFor(team, pieces));
 }
 
-function removeControlFor(team) {
+function removeControlFor(team, pieces) {
 	return function mapTeamControl(teamControl, teamIndex) {
 		const { prevPlayer, controlling } = teamControl;
 		if (teamIndex == team) {
 			return {
 				player: prevPlayer,
 				prevPlayer: null,
-				claimEnabled: true,
+				claimEnabled: pz.canClaimControl(team, pieces),
 				controlling,
 			};
 		}
@@ -119,13 +116,16 @@ function mapDeployedCeo(ceoId) {
 	const ceoTeam = pz.getTeam(ceoId);
 
 	return function setTeamControl(teamControl, teamIndex) {
-		const { player, claimEnabled } = teamControl;
+		const { player } = teamControl;
 
 		if (teamIndex == ceoTeam) {
 			return {
 				player,
 				prevPlayer: null,
-				claimEnabled,
+				// The CEO is landing on the board as this runs, so nobody can claim this team again —
+				// whether or not the deployment was a claim. It used to carry `claimEnabled` through
+				// unchanged, which left a controlled team offering a claim that the rules refuse.
+				claimEnabled: false,
 				controlling: !!player,
 			};
 		}
@@ -170,26 +170,32 @@ function revealFoe(players, { teamControl, pieces }) {
 	return teamControl.map(controlRevealedTeam(player.name, player.alignment.foe, pieces));
 }
 
+// Revealing an alignment takes that team at once — no CEO to deploy, which is what a reveal buys.
+// Note the team stays claimable if its CEO is still in its HQ: somebody else may take it back off you
+// by deploying that CEO, and that is the trade a reveal makes.
 function controlRevealedTeam(playerName, team, pieces) {
 	return function setControlledTeam(teamControl, teamIndex) {
 		const { player } = teamControl;
-		const ceo = pz.getCeo(pieces, team);
 
 		if (teamIndex == team) {
 			return {
 				player: playerName,
 				prevPlayer: null,
-				claimEnabled: !cells.inBoard(ceo.position),
+				claimEnabled: pz.canClaimControl(team, pieces),
 				controlling: true,
 			};
 		}
 
 		if (player == playerName) {
+			// The team this player was holding before, let go — a player holds one at a time. Two
+			// things were wrong here and both were invisible: it asked whether the REVEALED team's CEO
+			// was in play rather than this one's, and it wrote `controlled` where every other branch
+			// writes `controlling`, so a released team came away with no such field at all.
 			return {
 				player: null,
 				prevPlayer: null,
-				claimEnabled: !cells.inBoard(ceo.position),
-				controlled: false,
+				claimEnabled: pz.canClaimControl(teamIndex, pieces),
+				controlling: false,
 			};
 		}
 

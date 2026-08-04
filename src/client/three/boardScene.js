@@ -133,6 +133,8 @@ function createAimMarker() {
 
 export default function createBoardScene(element, skin) {
 	const scene = new Scene();
+	const { well: color, wellAlpha: alpha } = boardColors(skin);
+	const well = Object.freeze({ color, alpha });
 
 	addLights(scene);
 	scene.add(createPlinth(skin));
@@ -286,6 +288,13 @@ export default function createBoardScene(element, skin) {
 		},
 
 		extent: projector.extent,
+
+		// The recess the whole board section is sunk into, painted by clearing the view's own
+		// rectangle before anything is drawn in it. It has to come from here rather than from a CSS
+		// background on the board element for the reason the note in theme/tokens.js gives: the canvas
+		// is under `.game`, so a background there would be a filter over every tile rather than a
+		// surface beneath them. Frozen and returned as-is, because the stage reads it every frame.
+		well: () => well,
 
 		// While a piece is in the air it has to be drawn outside the board's own rectangle — over
 		// the HQ tray it came out of, over the gap between them. Saying so here is what opens the

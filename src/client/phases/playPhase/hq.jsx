@@ -9,7 +9,7 @@ import createHqScene from 'Client/three/hqScene';
 import { slotKeyForPiece } from 'Client/three/layout';
 import useThreeView from 'Client/three/useThreeView';
 import { TEAM_NAMES } from 'Domain/teams';
-import { HqStore, HqButton, HqMessage, HqLabel, HqFile } from './components';
+import { HqStore, HqFoot, HqStatement, HqClaim, HqHolder, HqLabel, HqFile } from './components';
 import Piece from './piece/index';
 
 function getNotStartedTeamPieces(pieces, team) {
@@ -17,7 +17,7 @@ function getNotStartedTeamPieces(pieces, team) {
 }
 
 function HQ({ team }) {
-	const [{ pieces, players, teamControl }, dispatch] = useContext(StateContext);
+	const [{ pieces, players, teamControl, hasTurnEnded }, dispatch] = useContext(StateContext);
 	const storeRef = useRef(null);
 
 	const playerName = teamControl[team].player;
@@ -28,6 +28,14 @@ function HQ({ team }) {
 
 	const isClaimingControl = (playerName && !controlling) || !!prevPlayerName;
 	const hasControl = (playerName || prevPlayerName) && controlling;
+
+	// Whether the claim is on offer at all, and whether it would do anything if clicked. A team can be
+	// claimed only while its CEO is still in its HQ — claiming it IS deploying that CEO — which is what
+	// `claimEnabled` says, and a player who has already moved cannot claim either. Both reducers refuse
+	// on the same terms, so this only decides what the card shows rather than what a click is allowed
+	// to do.
+	const isClaimOffered = !!claimEnabled || isClaimingControl;
+	const canClaim = !!claimEnabled && !hasTurnEnded;
 
 	const onClaimClick = useCallback(() => {
 		if (isClaimingControl) {
@@ -53,16 +61,28 @@ function HQ({ team }) {
 				<HqFile>{String(Number(team) + 1).padStart(2, '0')}</HqFile>
 			</HqLabel>
 
-			<HqButton id={`claim-${team}`} active={claimEnabled} small onClick={onClaimClick}>
-				{isClaimingControl ? 'Cancel' : 'Claim Control'}
-			</HqButton>
-			{hasControl && <HqMessage id={`controlled-${team}`}>Controlled by: {prevPlayerName || playerName}</HqMessage>}
 			<HqStore id={`store-${team}`} ref={storeRef} dimensional={!!layout}>
 				{stored.map(piece => (
 					<Piece key={piece.id} {...piece} box={layout && layout[slotKeyForPiece(piece.id)]} />
 				))}
 			</HqStore>
 			<Cementery team={team} dimensional={!!layout} />
+
+			{/* Who holds the team, and what you can do about it. The words say the state — including
+			    that nobody holds it, which used to be nothing on screen at all — and the control next
+			    to them is the claim. A held team still offers it while its CEO is in its HQ, which is
+			    the trade a reveal makes: taken at once, and takeable back off you. */}
+			<HqFoot>
+				<HqStatement id={`hq-control-${team}`} $held={!!hasControl} $flat={!layout}>
+					{hasControl && <HqHolder id={`controlled-${team}`}>{prevPlayerName || playerName}</HqHolder>}
+				</HqStatement>
+
+				{isClaimOffered && (
+					<HqClaim id={`claim-${team}`} active={canClaim} onClick={onClaimClick}>
+						{isClaimingControl ? 'CANCEL' : 'CLAIM'}
+					</HqClaim>
+				)}
+			</HqFoot>
 		</HqStyled>
 	);
 }

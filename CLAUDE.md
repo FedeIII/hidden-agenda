@@ -117,6 +117,12 @@ Who chooses, and when:
 
 The second: **a `var()` inside a custom property is resolved where that property is *declared*.** A token on `:root` cannot reach a per-card variable — it looks for it on `:root`, finds nothing, and the declaration drops out entirely. Dossier's HQ tab wants the team's colour, so the token is deliberately absent and the *component* carries the fallback (`var(--ha-hq-label-bg, var(--ha-hq-team))`), which resolves on the element that actually inherits it.
 
+**The alignment card is the same constraint answered the other way round**, and it is the shape to copy when a direction wants to restyle something whose colour is the *game's*, not the skin's. Both marks on it — the `FRIEND`/`FOE` chip and the team's block — are filled with a colour the skin does not own, so what varies per direction is a **percentage, not a colour**: the component interpolates the colour into `color-mix(in srgb, <colour> var(--ha-card-…-fill), transparent)`, and a direction that does not want a fill sets the percentage to `0%`. Dossier types the word rather than reversing it out, so its label fill is `0%` and the same colour goes into its ink through `--ha-card-label-tint`; Blueprint never fills the team's block at all, because a drawing cannot print a colour — it names the team in chalk and calls the colour out below as a hatched finish. `--ha-card-label-fill: var(--ha-friend)` would have been the obvious way to write either and would have dropped the declaration in silence.
+
+Two smaller things in the same file worth keeping: the chip's `box-shadow` is assembled from both sides — the team hairline needs the team, so the component writes it, while the bevel and the glow are tokens — and **every entry in that list has to be a real shadow** (`0 0 0 0 transparent`, not `none`), because `none` inside a comma-separated list is a parse error that would take the hairline down with it. And the swatch's caption is `content` on a `::before`, the same mechanism as the strip's section flag, with the two lines it can carry (`team 3`, `YELLOW`) gated by a `display` token each — so a direction says the team its own way and the component never learns which direction it is in.
+
+`skin.test.js` reads all of that back as relationships (a fill's alpha, three distinct inks, one border width, which caption) rather than as literal colours: `color-mix()` computes to `color(srgb …)` where a plain `var()` computes to `rgb(…)`, so pinning either spelling would be asserting Chrome's serialiser rather than the design.
+
 **It is custom properties, not a `ThemeProvider`, and that is not a preference.** styled-components injects a rule per distinct interpolated value and reclaims none, so a theme threaded through templates mints a second and third class for every component in the app — the same leak the projected-pixel rule in the 3D section exists to prevent. `theme/skinStyle.js` builds one static `:root[data-skin=…]` block per skin at module load; switching skin is one attribute write and nothing is re-injected. The consequence to respect: **everything a skin changes has to be expressible as a value**, which is why there are tokens for a `clip-path`, a rotation and a `background-image`, and why a direction that wants no ornament sets the token to `none` rather than omitting it.
 
 Three things a skin may not touch, each of which would break the game rather than merely restyle it:
@@ -132,11 +138,15 @@ What each direction adds beyond colour and type, all of it token-driven:
 | --- | --- | --- | --- |
 | Turn strip | routing slip, typed keys, initials boxes per seat | ruled title-block cells | machined rail segments |
 | HQ card | team-coloured file tab, cut, with a file number | reversed-out sheet label | embossed tape |
-| Claim control | a stamp on the file | signed-off, in ferro red | tamper tape across the tray |
-| Board | blotter-green plinth | plinth, coordinate ticks, a dimension line, a do-not-reproduce watermark behind the canvas | deep milled recess |
+| `FRIEND` / `FOE` | typed in the card's corner in ink mixed out of the stock, ruled under | reversed out of a filled corner tab, numbered `FIG. 1` / `FIG. 2` | small enamelled tag, bevelled |
+| The team, on a card | over-printed on a block of its own colour that runs the width of the sheet, ruled above and below, with a *colour of record* chip glued on crooked | named in chalk between two rules and never filled, with a half-hatched *colour ref* callout under it | anodised plate bezelled in brass, over the trays' own indicator jewel |
+| Card stock | pale sage and pale rose — the alignment is the colour of the paper, not a mark on it | dark cyanotype sheet | dark plate |
+| Who holds a team | `CONTROL: FEDE` stamped, the name underlined in red pencil — `CONTROL: UNCLAIMED` when nobody does | `SIGNED OFF FEDE` in ferro red under a dashed rule — `UNASSIGNED` under the same rule | tamper tape across the foot of the tray — `UNCLAIMED` when there is none |
+| Claim control | a `CLAIM` rubber stamp beside it | a drafted `CLAIM` with its corner cut | a brass `CLAIM` switch |
+| Board | blotter-green recess, hairline framed | recess, chalk frame, coordinate ticks, a dimension line, a do-not-reproduce watermark behind the canvas | deep milled recess |
 | `SNIPE` | round rubber stamp | ferro-red drafted control | red fire switch |
 | Cemetery | typed tally on flimsy | hatched write-off | milled recess with brass |
-| Board marks | — | coordinate ticks, a dimension line, leader-line callout on the selected piece | — |
+| Board marks | — | coordinate ticks, a dimension line reading `7 CELLS · 37 PLAYABLE`, leader-line callout on the selected piece | — |
 | Strip mark | the ceos-down stamp | `SECTION A–A` flag | engraved plate |
 | Ground | manila with paper grain | cyanotype with the drawing grid | brushed gunmetal |
 
@@ -144,7 +154,9 @@ The turn strip is also where the game finally says **how many CEOs are down**. I
 
 `BoardMarks` (the coordinates) sits over the board and must keep **`pointer-events: none`**: the ring cells it labels are clickable, because that is how a piece on the border is pointed off the board, and an absolutely positioned label over one would quietly eat that. Its offsets come from the layout the renderer already returned, through the `style` prop — never a styled-components template, for the rule-leak reason above.
 
-The one thing about the *board* a skin does change is the plinth the tiles are seated in — `palette.js#boardColors(skin)`, fed to `boardScene`. Its materials are cached per skin, because `sharedAsset` is a module-level cache and a key that ignored the skin would hand the second room the first room's colours. Tiles, tokens and trays are settled and identical in all three.
+What a skin changes about the *board* is the plinth the tiles are seated in and the recess the whole section is sunk into — `palette.js#boardColors(skin)`, fed to `boardScene`. The plinth's materials are cached per skin, because `sharedAsset` is a module-level cache and a key that ignored the skin would hand the second room the first room's colours. The recess is a little lighter than the plinth in every direction, which is the right way round: it is the table showing through, and the tray sits on it. Tiles, tokens and trays are settled and identical in all three.
+
+The recess **cannot be a CSS background** — see the note in the 3D section — so the renderer paints it, and the board element carries only a 1px frame. Its width is 1px in every direction on purpose: this element is what every hexagon's box is projected from.
 
 ## Architecture
 
@@ -197,12 +209,21 @@ There are guards in `src/tests/unit/pieces.test.js` that deep-freeze the input a
 
 A piece id encodes team, type and number as a string: `0-A1`, `1-C`, `3-N`. `pz.getTeam(id)` is `charAt(0)`, `getType(id)` is `charAt(2)`, `getNumber(id)` is `charAt(3)`. Team is therefore a **string** `'0'`–`'3'` everywhere, and much of the code compares with `==` deliberately because team indices arrive as both string and number. Types: `A` agent, `C` CEO, `S` spy, `N` sniper.
 
-An alignment card carries its own word now — "Friend" over "RED" — so **its `innerText` is not a team
-name.** Read the team off `[data-team]` inside it, which is the index and exact. `goToPlay` returns
-those indices; a helper that quietly returned `undefined` surfaced as a selector like
-`#controlled-undefined`.
+An alignment card carries a good deal of its own text now — the word in its corner, the team over a
+colour-of-record chip, and what the alignment does to your score along the bottom — so **its
+`innerText` is not a team name.** Read the team off `[data-team]` inside it, which is the index and
+exact. `goToPlay` returns those indices; a helper that quietly returned `undefined` surfaced as a
+selector like `#controlled-undefined`. **Exactly one element per card carries `[data-team]`** — the
+swatch names the same team but takes it as a prop — so a strict-mode locator stays unambiguous. The
+label is also the card's only `<i>`, which is why the chip is a `span`.
 
-DOM ids the tests depend on: `pz-{pieceId}`, `hex-{row}-{cell}`, `store-{team}`, `claim-{team}`, `controlled-{team}`, `piece-count-{team}-{TYPE}`, plus `next-turn`, `snipe`, `accuse`, `reveal`, `reveal-friend`, `reveal-foe`, `start-btn`, `alignments-btn`, `player-name{n}`.
+DOM ids the tests depend on: `pz-{pieceId}`, `hex-{row}-{cell}`, `board`, `store-{team}`, `claim-{team}`, `controlled-{team}`, `piece-count-{team}-{TYPE}`, plus `next-turn`, `snipe`, `accuse`, `reveal`, `reveal-friend`, `reveal-foe`, `start-btn`, `alignments-btn`, `player-name{n}`.
+
+Three of those belong to one line at the foot of an HQ card and are not interchangeable:
+
+- **`hq-control-{team}`** — the line itself, which says who holds the team. Its words are `content` on a `::before`, because they are the direction's own, so its `textContent` is empty unless somebody holds it. `skin.test.js` asserts what it actually says.
+- **`controlled-{team}`** — the holder's name, inside that line, and present exactly when there is one.
+- **`claim-{team}`** — the claim button beside it, labelled `CLAIM` or `CANCEL`. It is **absent** when there is nothing to claim (a team whose CEO is on the board) and **disabled** when a claim would do nothing (the turn is spent, or the team is one this player just let go). Those are different states and specs assert them differently.
 
 ### Board geometry and directions
 
@@ -284,6 +305,8 @@ above the scrollable area where it cannot be reached, and two full-size cards ar
 - **buffed** — adjacent to its own CEO; recomputed for every piece on `NEXT_TURN` via `pz.setCeoBuffs`. Buffed agents move differently, buffed spies get a third move, buffed snipers see through pieces.
 - **throughSniperLineOf** — ids of enemy snipers whose line of sight a piece crossed while moving. `SNIPE` highlights snipers that have a target; clicking a highlighted sniper kills what it saw.
 - **claim control** — `teamControl[team]` = `{ player, prevPlayer, claimEnabled, controlling }`. Claiming toggles that team's CEO as selected; control becomes real (`controlling`) when the CEO is deployed, or immediately when an alignment is revealed. A player can hold only one team at a time.
+  - **Claiming a team IS deploying its CEO, so a team whose CEO is already on the board cannot be claimed by anybody — its holder included.** That rule is `pz.canClaimControl`, and it exists as one predicate because the two halves of `CLAIM_CONTROL` used to disagree: `teams.claimControl` refused while `pz.claimControl` selected the CEO regardless, so on somebody else's turn the claim line of a team they controlled handed you their CEO to move. `claimEnabled` is that same predicate stored, and every writer now derives it — `mapDeployedCeo` used to carry it through unchanged, which is what left the control offering a claim the rules refuse. Covered in `unit/gameCore.test.js` and, from the outside, in `claimControl.test.js`.
+  - A team taken by a **reveal** stays claimable, and that is the trade a reveal makes: it is yours at once, and anybody can take it back by deploying the CEO you never had to. It is the one state where an HQ names a holder and still offers `CLAIM` beside it.
 - **killing a CEO** kills that team's still-undeployed pieces (`killWholeTeam` in `pz.js`); the game ends when `NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END` (3) CEOs are dead.
 - **scores** — `py.getPoints`: `100 - 50` per revealed alignment `+ friendTeamPoints - foeTeamPoints`, where a team's points are its kills plus its survivors valued by `POINTS_PER_PIECE_TYPE`. Note this needs *every* player's alignment, which is why Phase 1 stops redacting at the end of the game.
 
@@ -348,12 +371,13 @@ Things not to undo:
 - **A colour is never darkened by multiplying a `Color`.** Under three.js colour management a `Color`'s channels are linear, so multiplying by 0.64 does not darken by 36% in the space the value was authored in. The board's five tile shades are written out in `palette.js` as the values `polished`'s `darken()` actually produces.
 - **The lights sum to about π on purpose, and metalness is not a free dial.** A diffuse surface comes out at irradiance / π times its own colour, so the four lights in `lighting.js` have to add up to roughly π for a colour to render as the colour it was written down as. They summed to a little over half of that for a while, and every token was drawn at about 0.4 of its own artwork — which looks like a palette that is too dark and is not one. Metalness compounds it: there is no environment map and there is not going to be one (that is a texture fetch per fragment in a renderer that is fill-bound and rasterises in software in the suite), so metalness scales diffuse by `1 - metalness` and hands what it took to a specular term with nothing but two directional lights to reflect. A little earns its keep on a chamfer; past about 0.4 it is a darker colour written the long way round. To make the whole board brighter or darker, scale the lights together — the ratios between them are the lighting, the sum is the exposure — and leave `palette.js` alone.
 - **The canvas is *under* `.game`, so any DOM background is in front of the 3D.** It is a sibling of the app rather than a layer over it, which is what keeps every hexagon clickable. The consequence is easy to forget: the HQ card's smoked glass tints the rack the renderer drew behind it, and at the 0.28 alpha it started on it was quietly taking a quarter off every tray. A DOM background over anything the renderer paints is a filter on it, not a backdrop.
+- **So the board's recess is painted by the renderer, not by CSS.** A view may declare a `well()` — a colour and an alpha — and `stage.js` clears *that view's own element box* with it before the scene draws, which puts the surface exactly where a CSS background would have gone and behind the tiles instead of in front of them. Three things about it are deliberate: it is the **element's** box and not the scissor (the scissor is clipped to what the scene paints into, and opens up to the whole of `.game` while a piece is in the air — the recess is the section, so it is neither); it is a **clear** rather than a quad, so it costs a memset and composites over the page exactly as a background would, alpha included, which is how Blueprint's drawing grid ghosts through its own board; and the clear colour is **put back to `BACKDROP` afterwards**, because the full-canvas clear at the top of the next frame reads it and would otherwise paint the whole viewport. The colours live in `SKIN_PLINTH` next to the plinth, with `--ha-well` carrying the same value for the flat path, where there is no canvas to be in front of. `skin.test.js` asserts both halves: a 1px frame in every direction, no background at all in 3D, and a real one under `?flat`.
 - **Overlay hex boxes are a column pitch wide and a row pitch tall**, which tiles the plane exactly — no gaps, no overlaps. Their own bounding boxes would overlap adjacent rows by a quarter of their height, and which of two invisible boxes a click landed on would come down to DOM order.
 - The board's height comes from a `::before` spacer on `TableBoardStyled` in 3D mode, because its rows no longer have any. It only bites in the stacked phone layout; everywhere else `Board` has a height and the board is a stretched flex item. Do not turn it into a real height: the landscape phone layout has **zero** slack before the action bar falls off the bottom.
 - Rendering is fill-bound, not draw-call-bound. Two things measured: turning multisampling off when the renderer is software (a quarter off the suite's wall clock), and scissoring each view down to the rectangle its scene actually paints into, `projector.extent()` (another third off a click). Repainting views individually rather than all together was tried, saved nothing, and left trays blank.
 - **The context is created with the attributes it is meant to have, once.** A second `getContext` on a canvas returns the first context and silently discards the attributes — so the software-renderer probe lives on a throwaway canvas in `support.js`. Probing the real one is how this ran 4× multisampling on a CPU rasteriser for a while whilst the code said it did not.
 - Nothing moves at rest: the loop drops to ten polls a second when no view is animating and nothing has asked to be drawn, and stops entirely when the last view goes. `prefers-reduced-motion` removes the travel, the lift and the sniper's pulse, because continuous motion is something this layer introduced and the flat renderer never had.
-- A known limitation, not a bug to chase: on a phone held sideways the HQ store is about 34px tall, so a socket projects to roughly 13×8 pixels. Small, but unambiguous — every piece hit-tests to itself. The flat renderer's answer at that breakpoint was pieces that overlapped almost completely, where which one a tap reached came down to DOM order.
+- The HQ store takes everything its card has left, and that is roughly twice what it had: **who holds a team and the control that claims it are one line at the foot of the card now, rather than a full-width button across the top of the rack**, and what reserved that button's room was 53px of margin on the store (26px on a phone). A socket projects from the store's box, so the box is how big a target a thumb has — which is why the tray gets the space rather than a smaller one being centred in it. On a phone held sideways it went from about 34px tall to roughly 60, and a socket from 13×8 pixels to something a thumb can mean. The line's own height is fixed and identical in all three directions for the same reason.
 
 ### Path aliases
 

@@ -712,8 +712,21 @@ function isInSniperSight(piece) {
 function isAnyPieceThroughSniperLine(pieces) {
 	return pieces.some(isInSniperSight);
 }
+/**
+* Whether a team is there to be claimed at all: its CEO has to be still in its HQ.
+*
+* Claiming *is* deploying that CEO — the toggle below selects it and control becomes real when it
+* lands — so a team whose CEO is already on the board cannot be claimed by anybody, its own holder
+* included. `teams.claimControl` has always refused for exactly this reason and this half did not,
+* which is the whole of a real bug: clicking claim on a team somebody else already controlled left
+* the control alone and selected their CEO anyway, handing it to whoever clicked. One predicate now,
+* called by both halves of the action, so they cannot disagree again.
+*/
+function canClaimControl(team, pieces) {
+	return !cells_default.inBoard(getCeo(pieces, team).position);
+}
 function claimControl$1(team, { pieces, hasTurnEnded }) {
-	if (hasTurnEnded) return pieces;
+	if (hasTurnEnded || !canClaimControl(team, pieces)) return pieces;
 	return pieces.map(claimControlPieceMap(team));
 }
 function claimControlPieceMap(team) {
@@ -723,8 +736,8 @@ function claimControlPieceMap(team) {
 		return toggledPiece(piece);
 	};
 }
-function claimControlPieceState(team, { teamControl, pieceState }) {
-	if (teamControl[team].player) return pieceState;
+function claimControlPieceState(team, { pieces, teamControl, pieceState }) {
+	if (teamControl[team].player || !canClaimControl(team, pieces)) return pieceState;
 	return SELECTION;
 }
 function cancelControl$1(team, { pieces, teamControl }) {
@@ -879,6 +892,7 @@ var pz = {
 	isInSniperSight,
 	isAnyPieceThroughSniperLine,
 	clearSniperSights,
+	canClaimControl,
 	claimControl: claimControl$1,
 	claimControlPieceState,
 	cancelControl: cancelControl$1,
@@ -941,9 +955,7 @@ function initControl() {
 	];
 }
 function claimControl(playerName, team, { pieces, teamControl, hasTurnEnded }) {
-	const ceo = pz.getCeo(pieces, team);
-	if (hasTurnEnded) return teamControl;
-	if (cells_default.inBoard(ceo.position)) return teamControl;
+	if (hasTurnEnded || !pz.canClaimControl(team, pieces)) return teamControl;
 	return teamControl.map(setControlFor(playerName, team, pieces));
 }
 function setControlFor(playerName, team, pieces) {
@@ -955,28 +967,25 @@ function setControlFor(playerName, team, pieces) {
 			claimEnabled: true,
 			controlling
 		};
-		if (player == playerName) {
-			const ceo = pz.getCeo(pieces, teamIndex);
-			return {
-				player: null,
-				prevPlayer: player,
-				claimEnabled: !cells_default.inBoard(ceo.position),
-				controlling: false
-			};
-		}
+		if (player == playerName) return {
+			player: null,
+			prevPlayer: player,
+			claimEnabled: pz.canClaimControl(teamIndex, pieces),
+			controlling: false
+		};
 		return teamControl;
 	};
 }
-function cancelControl(team, { teamControl }) {
-	return teamControl.map(removeControlFor(team));
+function cancelControl(team, { pieces, teamControl }) {
+	return teamControl.map(removeControlFor(team, pieces));
 }
-function removeControlFor(team) {
+function removeControlFor(team, pieces) {
 	return function mapTeamControl(teamControl, teamIndex) {
 		const { prevPlayer, controlling } = teamControl;
 		if (teamIndex == team) return {
 			player: prevPlayer,
 			prevPlayer: null,
-			claimEnabled: true,
+			claimEnabled: pz.canClaimControl(team, pieces),
 			controlling
 		};
 		return teamControl;
@@ -1001,11 +1010,11 @@ function isCeoPlacement(pieceId, pieces) {
 function mapDeployedCeo(ceoId) {
 	const ceoTeam = pz.getTeam(ceoId);
 	return function setTeamControl(teamControl, teamIndex) {
-		const { player, claimEnabled } = teamControl;
+		const { player } = teamControl;
 		if (teamIndex == ceoTeam) return {
 			player,
 			prevPlayer: null,
-			claimEnabled,
+			claimEnabled: false,
 			controlling: !!player
 		};
 		return teamControl;
@@ -1022,18 +1031,17 @@ function revealFoe$1(players, { teamControl, pieces }) {
 function controlRevealedTeam(playerName, team, pieces) {
 	return function setControlledTeam(teamControl, teamIndex) {
 		const { player } = teamControl;
-		const ceo = pz.getCeo(pieces, team);
 		if (teamIndex == team) return {
 			player: playerName,
 			prevPlayer: null,
-			claimEnabled: !cells_default.inBoard(ceo.position),
+			claimEnabled: pz.canClaimControl(team, pieces),
 			controlling: true
 		};
 		if (player == playerName) return {
 			player: null,
 			prevPlayer: null,
-			claimEnabled: !cells_default.inBoard(ceo.position),
-			controlled: false
+			claimEnabled: pz.canClaimControl(teamIndex, pieces),
+			controlling: false
 		};
 		return teamControl;
 	};

@@ -152,7 +152,153 @@ test.describe('a skin actually paints the page', () => {
 		expect(tangled).toEqual([]);
 		expect(selectors).toContain('html');
 	});
+
+	// The word on an alignment card, said the way each direction's own material would say it: typed on
+	// the flimsy and ruled underneath, reversed out of a filled figure tab, or set on an enamelled tag.
+	//
+	// It gets a spec because of *how* the tokens behind it fail. The chip is the alignment's own colour
+	// mixed by a per-skin percentage, and that colour has to arrive from the component rather than from
+	// a token: a var() inside a custom property resolves where the property is DECLARED, so one written
+	// on :root would look for the card's alignment there, find nothing, and drop the whole declaration.
+	// The word would still be a word, in the wrong material, and nothing would throw.
+	//
+	// Read as relationships rather than as literal colours on purpose. color-mix() computes to
+	// `color(srgb …)` where a plain var() computes to `rgb(…)`, so pinning either spelling would be
+	// asserting Chrome's serialiser.
+	test('says friend and foe in each direction’s own material', async ({ page }) => {
+		const alphaOf = value => {
+			const numbers = value.match(/[\d.]+/g) || [];
+
+			return numbers.length === 4 ? Number(numbers[3]) : 1;
+		};
+
+		const labelsFor = async skin => {
+			await page.goto(`/?skin=${skin}`);
+			await page.fill('#player-name1', 'Fede');
+			await page.fill('#player-name2', 'Sara');
+			await page.click('#start-btn');
+			await page.waitForSelector('#alingnment-card-friend');
+
+			// The cards are dealt face down: the team, and with it the block and the swatch, arrives on
+			// the click. The word and the footnote are on the card either way.
+			await page.click('#alingnment-card-friend');
+			await page.click('#alingnment-card-foe');
+			await expect(page.locator('#alingnment-card-foe [data-team]')).toBeVisible();
+
+			return page.evaluate(() =>
+				['friend', 'foe'].map(alignment => {
+					const card = document.querySelector(`#alingnment-card-${alignment}`);
+					const label = card.querySelector('i');
+					const style = getComputedStyle(label);
+					const block = card.querySelector('[data-team]');
+					const team = getComputedStyle(block);
+					// The swatch under the block: its chip, then its caption.
+					const swatch = block.nextElementSibling;
+
+					return {
+						word: label.textContent,
+						fill: style.backgroundColor,
+						ink: style.color,
+						rule: style.borderBottomColor,
+						ruleWidth: style.borderBottomWidth,
+						radius: style.borderBottomLeftRadius,
+						figure: getComputedStyle(label, '::before').content,
+						// The rest of the composition the study set out: the team over the width of the
+						// card, the colour called out as a material under it, and what the alignment does
+						// to your score along the bottom.
+						teamFill: team.backgroundColor,
+						teamSide: team.borderLeftColor,
+						chipRadius: getComputedStyle(swatch.firstElementChild).borderTopLeftRadius,
+						caption: getComputedStyle(swatch.lastElementChild, '::before').content,
+						note: card.lastElementChild.textContent,
+					};
+				}),
+			);
+		};
+
+		const [dossier, dossierFoe] = await labelsFor('dossier');
+		const [blueprint, blueprintFoe] = await labelsFor('blueprint');
+		const [vault, vaultFoe] = await labelsFor('vault');
+		const all = [dossier, dossierFoe, blueprint, blueprintFoe, vault, vaultFoe];
+
+		// Whatever it is wearing, it is still the word — the entire point of the cards saying it.
+		expect(all.map(label => label.word)).toEqual(['Friend', 'Foe', 'Friend', 'Foe', 'Friend', 'Foe']);
+
+		// Typed on the stock, with a rule under it. No chip: a typewriter cannot reverse type out of a
+		// colour, so the ink is mixed out of the alignment instead — and green ink is not red ink.
+		expect(alphaOf(dossier.fill)).toBe(0);
+		expect(alphaOf(dossier.rule)).toBeGreaterThan(0);
+		expect(dossier.ink).not.toEqual(dossierFoe.ink);
+
+		// Reversed out of the alignment's own colour, undimmed by the sheet the card is printed on, and
+		// numbered — a drawing numbers its figures, and the two cards are not the same figure.
+		expect(alphaOf(blueprint.fill)).toBe(1);
+		expect(alphaOf(blueprint.rule)).toBe(0);
+		expect(blueprint.figure).toContain('FIG. 1');
+		expect(blueprintFoe.figure).toContain('FIG. 2');
+
+		// The same fill on a small enamelled tag: rounded, bevelled, and unnumbered.
+		expect(alphaOf(vault.fill)).toBe(1);
+		expect(vault.fill).toEqual(blueprint.fill);
+		expect(vault.radius).not.toBe('0px');
+		expect(vault.figure).toBe('""');
+		expect(dossier.figure).toBe('""');
+
+		// Three directions, three inks, and in none of them is the word the colour of what is behind
+		// it — which is what a dropped declaration would leave.
+		expect(new Set([dossier.ink, blueprint.ink, vault.ink]).size).toBe(3);
+		all.forEach(label => expect(label.ink).not.toEqual(label.fill));
+
+		// A colour, never a width. The rule is Dossier's underline and the other two set it
+		// transparent, so the word occupies the same box in all three.
+		expect(new Set(all.map(label => label.ruleWidth)).size).toBe(1);
+
+		// And what the alignment does to your score, on every card in every direction. This is the one
+		// fact on the card that nobody can infer from green and red.
+		expect(dossier.note).toBe('their points are yours');
+		expect(dossierFoe.note).toBe('their points come off yours');
+		expect(new Set(all.map(card => card.note)).size).toBe(2);
+
+		// The team runs the width of the card, ruled above and below rather than boxed — so the sides
+		// are transparent in two of the three, and only the case bezels it all the way round.
+		expect(alphaOf(dossier.teamSide)).toBe(0);
+		expect(alphaOf(blueprint.teamSide)).toBe(0);
+		expect(alphaOf(vault.teamSide)).toBeGreaterThan(0);
+
+		// A drawing cannot print a colour: Blueprint names the team and calls the colour out separately,
+		// which is why its block is the one with no fill at all.
+		expect(alphaOf(blueprint.teamFill)).toBe(0);
+		expect(alphaOf(dossier.teamFill)).toBe(1);
+		expect(alphaOf(vault.teamFill)).toBe(1);
+
+		// The colour itself, captioned the way each direction would caption a material — and round only
+		// where it is an indicator lamp rather than a chip.
+		expect(dossier.caption).toContain('colour of record');
+		expect(blueprint.caption).toContain('colour ref');
+		expect(vault.caption).toContain('anodised');
+		expect(vault.chipRadius).not.toBe('0px');
+		expect(dossier.chipRadius).toBe('0px');
+	});
 });
+
+// Two players in, cards dealt, board up. The specs below need a real board rather than a mock,
+// because what they are reading is where the renderer put things.
+async function toBoard(page, query) {
+	await page.goto(`/${query}`);
+	await page.fill('#player-name1', 'Fede');
+	await page.fill('#player-name2', 'Sara');
+	await page.click('#start-btn');
+	await page.waitForSelector('#alignments-btn');
+
+	for (const _player of [1, 2]) {
+		await page.click('#alingnment-card-friend');
+		await page.click('#alingnment-card-foe');
+		await page.click('#alignments-btn');
+	}
+
+	await page.click('#alignments-btn');
+	await page.waitForSelector('#pz-0-A1');
+}
 
 test.describe('a skin changes the chrome and nothing else', () => {
 	// The reason this matters is not tidiness: every hexagon and every piece is a transparent DOM
@@ -242,6 +388,114 @@ test.describe('a skin changes the chrome and nothing else', () => {
 
 		// The other half of the vocabulary, brightness(2) on a selected piece, is asserted forty times
 		// over by the sniper and spy specs — and those now run with the skin pinned by the fixture.
+	});
+
+	// The board is a section of the page: a rule around it, and a recess inside it darker than the
+	// ground. The rule is a border, which is safe — it paints its own hairline and nothing else. The
+	// FILL is the interesting half, because the canvas sits under `.game`: a background on this element
+	// would be a filter over every tile the renderer drew rather than a surface under them. So the
+	// recess is painted by the renderer in 3D and by CSS only on the flat path, and this asserts both
+	// halves of that — including, in 3D, that nothing is painted here at all.
+	test('seats the board in a recess without painting over the renderer', async ({ page }) => {
+		const boardFor = async query => {
+			await toBoard(page, query);
+
+			// #board rather than a hexagon's offsetParent: flat, a hexagon is positioned against its own
+			// row, and it is only in 3D that the rows stop being positioned ancestors.
+			return page.evaluate(() => {
+				const style = getComputedStyle(document.querySelector('#board'));
+
+				return { frame: style.borderTopColor, width: style.borderTopWidth, fill: style.backgroundColor };
+			});
+		};
+
+		const dossier = await boardFor('?skin=dossier');
+		const blueprint = await boardFor('?skin=blueprint');
+		const vault = await boardFor('?skin=vault');
+		const flat = await boardFor('?skin=dossier&flat');
+
+		// One hairline, three colours: the rule that divides this section from the strip above it is the
+		// direction's own, and a width that varied would move every tile the boxes are projected from.
+		expect(new Set([dossier.width, blueprint.width, vault.width, flat.width])).toEqual(new Set(['1px']));
+		expect(new Set([dossier.frame, blueprint.frame, vault.frame]).size).toBe(3);
+
+		// Nothing over the canvas. The renderer clears this element's own rectangle with the recess
+		// instead — see SKIN_PLINTH.well in theme/tokens.js.
+		expect(dossier.fill).toBe('rgba(0, 0, 0, 0)');
+		expect(blueprint.fill).toBe('rgba(0, 0, 0, 0)');
+		expect(vault.fill).toBe('rgba(0, 0, 0, 0)');
+
+		// And with the renderer off there is no canvas to be in front of, so the same recess arrives as
+		// an ordinary background.
+		expect(flat.fill).not.toBe('rgba(0, 0, 0, 0)');
+	});
+
+	// Who holds a team, in each direction's own words — including the state that used to be nothing on
+	// screen at all: nobody. `#hq-control-{team}` is the line and its words are ::before content, which
+	// is where a direction's vocabulary lives and what textContent cannot see; `#claim-{team}` is the
+	// control beside it, which the card offers only while there is something to claim.
+	test('says who holds each team the way its own direction would', async ({ page }) => {
+		const noteFor = async skin => {
+			await toBoard(page, `?skin=${skin}`);
+
+			const read = () =>
+				page.evaluate(() => {
+					const line = document.querySelector('#hq-control-0');
+					const claim = document.querySelector('#claim-0');
+
+					return {
+						words: getComputedStyle(line, '::before').content,
+						// The rule the line hangs under is on the row, which is the line's own parent.
+						rule: getComputedStyle(line.parentElement).borderTopStyle,
+						name: line.textContent,
+						holders: document.querySelectorAll('#controlled-0').length,
+						offer: claim && { label: claim.textContent, disabled: claim.disabled },
+					};
+				});
+
+			const open = await read();
+
+			// Claiming is not enough: control becomes real when the CEO is on the board.
+			await page.click('#claim-0');
+			await page.click('#hex-3-3');
+			await page.click('#hex-3-3');
+			await expect(page.locator('#controlled-0')).toHaveText('FEDE');
+
+			return { open, claimed: await read() };
+		};
+
+		const dossier = await noteFor('dossier');
+		const blueprint = await noteFor('blueprint');
+		const vault = await noteFor('vault');
+		const all = [dossier, blueprint, vault];
+
+		// A file logs control, a drawing has it signed off, a case has it claimed. Three vocabularies for
+		// one fact, and the name is the same DOM text under all of them.
+		expect(dossier.claimed.words).toContain('CONTROL');
+		expect(blueprint.claimed.words).toContain('SIGNED OFF');
+		expect(vault.claimed.words).toContain('CLAIMED');
+		expect(all.map(skin => skin.claimed.name)).toEqual(['FEDE', 'FEDE', 'FEDE']);
+
+		// Unclaimed, every direction says so — under a rule the drawing draws dashed — and every one of
+		// them offers the claim beside it.
+		expect(dossier.open.words).toContain('UNCLAIMED');
+		expect(blueprint.open.words).toContain('UNASSIGNED');
+		expect(vault.open.words).toContain('UNCLAIMED');
+		expect(blueprint.open.rule).toBe('dashed');
+		expect(all.map(skin => skin.open.offer)).toEqual([
+			{ label: 'CLAIM', disabled: false },
+			{ label: 'CLAIM', disabled: false },
+			{ label: 'CLAIM', disabled: false },
+		]);
+
+		// And in none of them does an unclaimed team name anybody: the holder is a child of the line and
+		// exists only when there is one.
+		expect(all.map(skin => skin.open.name)).toEqual(['', '', '']);
+		expect(all.map(skin => skin.open.holders)).toEqual([0, 0, 0]);
+
+		// Once the CEO is out there is nothing left to claim, so the offer is gone rather than dimmed and
+		// the line is purely a statement.
+		expect(all.map(skin => skin.claimed.offer)).toEqual([null, null, null]);
 	});
 });
 

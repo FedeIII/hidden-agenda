@@ -64,11 +64,12 @@ test.describe('PHONE LAYOUT', () => {
 			await expect(page.locator('#snipe')).toBeInViewport();
 		});
 
-		test('the claim button fits inside its HQ', async ({ page, goToPlay }) => {
+		test('the claim control fits inside its HQ', async ({ page, goToPlay }) => {
 			await goToPlay(2);
 
-			// "Claim Control" used to be wider than a phone-sized HQ, so it rendered as
-			// "Claim Contro" cut off mid-word.
+			// "Claim Control" across the top of the card used to be wider than a phone-sized HQ, so it
+			// rendered as "Claim Contro" cut off mid-word. It is a line at the foot of the card now and
+			// each direction words it differently, so the same check still earns its keep.
 			for (const team of [0, 1, 2, 3]) {
 				const overflow = await page.locator(`#claim-${team}`).evaluate(el => el.scrollWidth - el.clientWidth);
 

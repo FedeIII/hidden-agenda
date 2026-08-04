@@ -424,9 +424,24 @@ const withBoardHeight = ({ dimensional }) => {
 	}
 };
 
-// Deliberately no background, in any skin. The canvas is a sibling of .game and sits UNDER it, so
-// anything painted here is a filter over every tile the renderer drew — which is why the well a
-// direction seats its board in is the 3D plinth (three/palette.js#boardColors) and not a CSS fill.
+// The board is a section of the page and says so: a rule around it, and a recess inside it darker
+// than the ground so the table is the one lit thing on the screen. Both are what divide it from the
+// turn strip above and the controls below.
+//
+// The rule is a DOM border, which only ever paints its own hairline. The fill cannot be: the canvas
+// is a sibling of .game and sits UNDER it, so a background here would be a filter over every tile
+// the renderer drew rather than a surface beneath them. In 3D the recess is therefore painted by the
+// renderer, which clears this element's own rectangle with it before drawing (three/stage.js, and
+// SKIN_PLINTH.well in theme/tokens.js). Flat, there is no canvas to get in front of and the same
+// colour arrives as an ordinary background.
+const asWell = ({ dimensional }) => {
+	if (!dimensional) {
+		return css`
+			background: var(--ha-well);
+		`;
+	}
+};
+
 export const TableBoardStyled = styled.div`
 	position: relative;
 	width: 45%;
@@ -434,7 +449,11 @@ export const TableBoardStyled = styled.div`
 	flex-direction: column;
 	justify-content: center;
 	padding: 0 20px;
+	/* A colour, never a width: 1px in all three directions, so a cell's box within the board is
+	   identical whichever one is on. skin.test.js asserts exactly that. */
+	border: 1px solid var(--ha-well-edge);
 
+	${asWell}
 	${withBoardHeight}
 
 	/* Stacked, the board gets the full width — which is what makes it usable with a thumb. */
@@ -586,38 +605,22 @@ export const Dimension = styled.span`
 	}
 `;
 
+// The rack takes everything the card has left, which since the claim button came off the top of it is
+// nearly twice what it had: the button was absolute, so what reserved its room was 53px of margin
+// here — 26px on a phone — and both are gone. That box is what a socket projects from and therefore
+// how big a target a thumb has, which is the whole reason to give it the space rather than centre a
+// smaller tray in it.
 export const HqStore = styled.div`
 	position: relative;
 	width: 100%;
-	height: 80%;
+	flex: 1;
+	min-height: 0;
 	background-image: url('img/hexgrid.png');
 	background-size: 100% 100%;
 	background-repeat: no-repeat;
-	margin-top: 53px;
 	margin-bottom: 8px;
 
 	${asRack}
-
-	/* The pieces are sized from the store's width but positioned down its height, so the store
-	   has to keep roughly its desktop proportions or they hang out of the bottom. */
-	${narrowOrShort} {
-		margin-top: 26px;
-		height: calc(100% - 32px);
-	}
-`;
-
-export const HqButton = styled(Button)`
-	position: absolute;
-	font-size: 16px;
-	width: calc(100% - 16px);
-
-	/* "Claim Control" at 16px with wide letter-spacing is wider than a phone-sized HQ, which is
-	   what produced "Claim Contro" cut off mid-word. */
-	${narrowOrShort} {
-		font-size: 11px;
-		letter-spacing: 0;
-		padding: 4px 2px;
-	}
 `;
 
 // The team's name, on the thing each direction would put a name on: a file tab cut into the top edge
@@ -663,38 +666,114 @@ export const HqFile = styled.b`
 	font-variant-numeric: tabular-nums;
 `;
 
-// Who holds this team. A stamp on the file, a signed-off note, or tamper tape across the tray —
-// the words are the same in all three, which they have to be: claimControl.test.js asserts them
-// verbatim.
+// The foot of an HQ card: who holds the team, and the control that takes it.
 //
-// pointer-events: none is not cosmetic. This sits over the top of the rack, and the rack is where
-// eight pieces are clicked and dragged from.
-export const HqMessage = styled.span`
-	position: absolute;
-	left: -4px;
-	right: -4px;
-	top: 38px;
-	z-index: 2;
-	pointer-events: none;
-	text-align: center;
-	font-family: var(--ha-face-data);
-	font-size: 11px;
-	letter-spacing: var(--ha-track-label);
-	/* Small caps rather than text-transform, which is not a stylistic preference: innerText applies
-	   text-transform and claimControl.test.js asserts this string verbatim through it. A glyph-level
-	   feature gives the same look and leaves the text alone. */
-	font-variant-caps: all-small-caps;
-	padding: 2px 0 1px;
-	background: var(--ha-claim-bg);
-	color: var(--ha-claim-ink);
-	border: var(--ha-claim-edge);
-	transform: rotate(var(--ha-claim-rotate));
+// It was a button across the top of the rack plus a separate note underneath. The button was the
+// widest thing on the card and said what the note said, so they are one line — and the rack got the
+// button's 53px back. Then the line was the control itself, with the unclaimed words doing double duty
+// as the thing you click, which turns out to read as a label whatever the cursor does. So: the words
+// say the state, and a control of the direction's own next to them says what you can do about it.
+//
+// A file logs CONTROL, a drawing has it SIGNED OFF, a case has it CLAIMED, and all three say so when
+// nobody has claimed it either — a state that used to be nothing at all on screen.
+//
+// The row's height is fixed and the same in all three directions, and that is not cosmetic: the rack
+// above it takes what is left over, and a socket projects from the rack's box. A line that measured
+// one thing on a typed page and another on a drawing would be a skin changing how big a target a
+// thumb has.
+export const HqFoot = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex: none;
+	height: 20px;
+	margin-top: 3px;
+	/* The rule the line hangs under. A colour, never a width — Blueprint is the one direction that
+	   draws it, and it draws it dashed. */
+	border-top: var(--ha-claim-rule);
+`;
 
-	${narrowOrShort} {
-		font-size: 8px;
-		top: 24px;
-		letter-spacing: 0;
+// The held state wears the direction's ornament — a stamp on the file, tape across the tray. Its frame
+// is a box-shadow rather than a border because the row's border-top is spoken for, and a shorthand
+// `border` in here knocked it out once, leaving Blueprint's dashed rule transparent.
+const claimStatement = ({ $held, $flat }) => {
+	if ($held) {
+		return css`
+			background: var(--ha-claim-bg);
+			color: var(--ha-claim-ink);
+			box-shadow: var(--ha-claim-frame);
+			transform: rotate(var(--ha-claim-rotate));
+
+			&::before {
+				content: var(--ha-claim-key);
+			}
+		`;
 	}
+
+	return css`
+		/* Over the 3D rack the card is smoked glass and the skin's own faint ink is right. On the flat
+		   path the card is painted in a raw team colour and states its own ink — the same reason
+		   pieceCount picks its colour from the card rather than from the tokens. */
+		color: ${$flat ? 'inherit' : 'var(--ha-ink-faint)'};
+
+		&::before {
+			content: var(--ha-claim-empty);
+		}
+	`;
+};
+
+// Only the holder's NAME is text in the DOM; the words around it are the direction's and arrive as
+// `content` on the ::before, which textContent does not see. That split is what keeps the specs
+// honest: claimControl.test.js asks who holds a team and reads a name, while which words each
+// direction puts around it is asserted in skin.test.js where it belongs.
+//
+// No text-transform anywhere in here, and that is not a stylistic preference: innerText applies it and
+// claimControl.test.js reads the holder's name through that. The ::before words are already written in
+// the case they should print in.
+export const HqStatement = styled.span`
+	flex: 1;
+	min-width: 0;
+	text-align: var(--ha-claim-align);
+	font-family: var(--ha-face-data);
+	font-size: 9px;
+	line-height: 12px;
+	letter-spacing: var(--ha-track-label);
+	padding: 2px 0 1px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+
+	${claimStatement}
+`;
+
+// The claim itself, as the control this direction makes controls out of — a rubber stamp, a drafted
+// rectangle with its corner cut, a brass switch. It is the app's Button, at the size a card's foot has
+// room for, so a skin never has to say twice what a control looks like.
+export const HqClaim = styled(Button)`
+	flex: none;
+	font-size: 8px;
+	letter-spacing: var(--ha-track-label);
+	/* Fixed, so the three directions' different border widths cannot make three different heights out
+	   of the row the rack is measured against. */
+	height: 15px;
+	line-height: 13px;
+	padding: 0 6px;
+
+	/* The tracking goes rather than the type: this is the one control on the card and 7px of it is not
+	   a target. The statement beside it ellipsises instead — it is saying something the button is
+	   already offering. */
+	${narrowOrShort} {
+		letter-spacing: 0;
+		padding: 0 4px;
+	}
+`;
+
+// The holder's name, which each direction marks as the one word on the line that is a person:
+// underlined in the file, ferro red on the drawing, left alone under the tape.
+export const HqHolder = styled.b`
+	font-weight: inherit;
+	color: var(--ha-claim-holder-ink, inherit);
+	border-bottom: var(--ha-claim-holder-rule);
 `;
 
 export const ActionButton = styled(Button)`

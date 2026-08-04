@@ -18,6 +18,11 @@ const EDGE_ROW_CELLS = 3;
 const WIDEST_ROW = CELLS_BY_ROW.indexOf(Math.max(...CELLS_BY_ROW));
 const PLAYABLE_CELLS = CELLS_BY_ROW.reduce((total, cells) => total + cells, 0);
 
+// What a dimension line measures is the thing's extent, so this is the board's width in cells — the
+// widest row, seven — and not the number of rows. It said ROWS for a while, which is a different
+// number that happens to be seven as well.
+const BOARD_CELLS = Math.max(...CELLS_BY_ROW);
+
 // Spelled out for the callout, because "A" is a fine id and a poor label.
 const TYPE_NAMES = { A: 'AGENT', C: 'CEO', S: 'SPY', N: 'SNIPER' };
 
@@ -103,7 +108,7 @@ function BoardCoordinates({ layout, selected }) {
 		<BoardMarks aria-hidden="true">
 			<Dimension>
 				<span>
-					{CELLS_BY_ROW.length} ROWS &middot; {PLAYABLE_CELLS} PLAYABLE
+					{BOARD_CELLS} CELLS &middot; {PLAYABLE_CELLS} PLAYABLE
 				</span>
 			</Dimension>
 
@@ -190,7 +195,7 @@ function TableBoard() {
 	const board = { pieces, highlightedPositions, layout, aim, onHover: layout ? onHover : undefined };
 
 	return (
-		<TableBoardStyled ref={boardRef} dimensional={!!layout} onMouseLeave={onLeave}>
+		<TableBoardStyled id="board" ref={boardRef} dimensional={!!layout} onMouseLeave={onLeave}>
 			<BoardCoordinates layout={layout} selected={selectedPiece} />
 
 			{renderRow(-1, EDGE_ROW_CELLS, board)}

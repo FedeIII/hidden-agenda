@@ -1,5 +1,14 @@
 import { test, expect } from './fixtures';
 
+// The foot of an HQ card says who holds the team and offers the claim beside it. Three hooks, and they
+// are not interchangeable: `#hq-control-{team}` is the line, `#controlled-{team}` is the holder's name
+// inside it and exists only when there is one, and `#claim-{team}` is the button — which is present
+// only while the claim is on offer at all, because a team whose CEO is on the board cannot be claimed
+// by anybody. The words around the name are the direction's own and arrive as ::before content, which
+// textContent does not see; skin.test.js is where those are asserted. What belongs here is who is
+// named, whether anybody is, and what the button does.
+const holderOf = (page, team) => page.locator(`#controlled-${team}`);
+
 test.describe('CLAIM CONTROL', () => {
 	let alignments;
 
@@ -88,8 +97,8 @@ test.describe('CLAIM CONTROL', () => {
 
 			expect(await get.cell(3, 3).isHighlighted).toBeTruthy();
 			expect(await get.team(0).ceo().isHighlighted).toBeTruthy();
-			await expect(page.locator('#claim-0')).toHaveText('Cancel');
-			await expect(page.locator('#controlled-0')).toHaveCount(0);
+			await expect(page.locator('#claim-0')).toHaveText('CANCEL');
+			await expect(holderOf(page, 0)).toHaveCount(0);
 		});
 
 		test('deselects CEO when "Cancel" is clicked', async ({ page, clickOn, get, drag, goToPlay }) => {
@@ -98,8 +107,8 @@ test.describe('CLAIM CONTROL', () => {
 
 			expect(await get.cell(3, 3).isHighlighted).toBeFalsy();
 			expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
-			await expect(page.locator('#claim-0')).toHaveText('Claim Control');
-			await expect(page.locator('#controlled-0')).toHaveCount(0);
+			await expect(page.locator('#claim-0')).toHaveText('CLAIM');
+			await expect(holderOf(page, 0)).toHaveCount(0);
 		});
 
 		test('sets control when placing CEO', async ({ page, clickOn, get, drag, goToPlay }) => {
@@ -110,7 +119,7 @@ test.describe('CLAIM CONTROL', () => {
 
 			expect(await get.pieceIn(3, 3).id).toEqual('pz-0-C');
 			expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
-			await expect(page.locator('#controlled-0')).toHaveText('Controlled by: FEDE');
+			await expect(holderOf(page, 0)).toHaveText('FEDE');
 		});
 
 		test('changes control when claiming another company', async ({ page, clickOn, get, drag, goToPlay }) => {
@@ -132,8 +141,30 @@ test.describe('CLAIM CONTROL', () => {
 			await clickOn.cell(4, 4);
 			await clickOn.cell(4, 4);
 
-			await expect(page.locator('#controlled-0')).toHaveCount(0);
-			await expect(page.locator('#controlled-1')).toHaveText('Controlled by: FEDE');
+			await expect(holderOf(page, 0)).toHaveCount(0);
+			await expect(holderOf(page, 1)).toHaveText('FEDE');
+		});
+
+		// The reported bug, from the outside: FEDE claims a team and deploys its CEO, and on SARA's turn
+		// the line at the foot of that HQ still accepted a click. The claim itself was refused — but the
+		// pieces half of the same action selected FEDE's CEO anyway, and SARA could move it. The line
+		// says so by being disabled now, and the rule behind it is covered in unit/gameCore.test.js.
+		test('offers nothing on a company somebody already controls', async ({ page, clickOn, get, goToPlay }) => {
+			await page.click('#claim-0');
+
+			await clickOn.cell(3, 3);
+			await clickOn.cell(3, 3);
+
+			await page.click('#next-turn');
+
+			await expect(holderOf(page, 0)).toHaveText('FEDE');
+			// Not merely disabled: there is nothing to claim, so the card does not offer the control at
+			// all. The line beside it says who has it.
+			await expect(page.locator('#claim-0')).toHaveCount(0);
+
+			// And the CEO it would have selected is still nobody's: brightness(2) is what a selected
+			// piece reads as, and helpers/get.js asserts exactly that string.
+			expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
 		});
 
 		test('can NOT take control of a company with its CEO deployed', async ({ page, clickOn, get, drag, goToPlay }) => {
@@ -157,8 +188,11 @@ test.describe('CLAIM CONTROL', () => {
 
 			await page.click('#next-turn');
 
-			// Team 0's CEO is on the board, so its HQ cannot be claimed — and the button says so by being
-			// disabled rather than by accepting a click and quietly doing nothing.
+			// Team 0's CEO is on the board, so its HQ cannot be claimed by anybody. The control is still
+			// on the card here, disabled, because FEDE let this team go when they claimed team 1 and it
+			// kept them as its `prevPlayer` — which is a claim in progress as far as the card is
+			// concerned, and cancelling it is what would hand the team back. What it may not be is
+			// clickable. (Where a team is simply held, the control is absent: see the spec above.)
 			await expect(page.locator('#claim-0')).toBeDisabled();
 
 			expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
@@ -176,7 +210,11 @@ test.describe('CLAIM CONTROL', () => {
 			await clickOn.cell(1, 1);
 			await clickOn.cell(2, 2);
 
-			await page.click('#claim-0');
+			// The turn is spent, so the claim would do nothing — and the control says so by being
+			// disabled rather than by taking the click. This spec used to click it and assert that
+			// nothing happened, which is the same shape as the two dead-button clicks that were found
+			// when Button started rendering `disabled` for real.
+			await expect(page.locator('#claim-0')).toBeDisabled();
 
 			expect(await get.team(0).ceo().isHighlighted).toBeFalsy();
 			expect(await get.cell(3, 3).isHighlighted).toBeFalsy();
@@ -188,25 +226,25 @@ test.describe('CLAIM CONTROL', () => {
 			await page.click('#reveal');
 			await page.click('#reveal-friend');
 
-			await expect(page.locator(`#controlled-${player(0).friend}`)).toHaveText('Controlled by: FEDE');
+			await expect(holderOf(page, player(0).friend)).toHaveText('FEDE');
 		});
 
 		test('sets control when revealing foe', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await page.click('#reveal');
 			await page.click('#reveal-foe');
 
-			await expect(page.locator(`#controlled-${player(0).foe}`)).toHaveText('Controlled by: FEDE');
+			await expect(holderOf(page, player(0).foe)).toHaveText('FEDE');
 		});
 
 		test('changes control when revealing the second alignment', async ({ page, clickOn, get, drag, goToPlay }) => {
 			await page.click('#reveal');
 			await page.click('#reveal-friend');
 
-			await expect(page.locator(`#controlled-${player(0).friend}`)).toHaveText('Controlled by: FEDE');
+			await expect(holderOf(page, player(0).friend)).toHaveText('FEDE');
 
 			await page.click('#reveal-foe');
 
-			await expect(page.locator(`#controlled-${player(0).foe}`)).toHaveText('Controlled by: FEDE');
+			await expect(holderOf(page, player(0).foe)).toHaveText('FEDE');
 		});
 	});
 
@@ -222,7 +260,7 @@ test.describe('CLAIM CONTROL', () => {
 			await page.click('#reveal');
 			await page.click('#reveal-friend');
 
-			expect(await page.locator(`#controlled-${player(1).friend}`).innerText()).toEqual('Controlled by: SARA');
+			expect(await holderOf(page, player(1).friend).innerText()).toEqual('SARA');
 		});
 
 		test('replaces reveal control with ceo', async ({ page, clickOn, get, drag, goToPlay }) => {
@@ -241,7 +279,7 @@ test.describe('CLAIM CONTROL', () => {
 			await clickOn.cell(4, 4);
 			await clickOn.cell(4, 4);
 
-			expect(await page.locator(`#controlled-${player(0).friend}`).innerText()).toEqual('Controlled by: SARA');
+			expect(await holderOf(page, player(0).friend).innerText()).toEqual('SARA');
 		});
 
 		test('can NOT remove control by claiming and cancelling control', async ({

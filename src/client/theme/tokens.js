@@ -61,7 +61,10 @@ const DOSSIER = {
 	// everything the renderer drew rather than a backdrop behind it.
 	'--ha-ground-wash': `radial-gradient(140% 110% at 8% -8%, rgba(255, 250, 235, 0.5), transparent 55%),
 		repeating-linear-gradient(97deg, rgba(120, 92, 48, 0.055) 0 2px, transparent 2px 6px)`,
-	'--ha-well': '#16211c',
+	// The board's own recess, and the rule that frames it. The colour is the same one the renderer
+	// clears the board's rectangle with (SKIN_PLINTH.well below); this is the flat path's copy of it,
+	// where there is no canvas to sit in front of.
+	'--ha-well': '#1c2b25',
 	'--ha-well-edge': '#0f1712',
 
 	'--ha-panel': '#ddc79a',
@@ -110,13 +113,65 @@ const DOSSIER = {
 	'--ha-title-bg': 'transparent',
 
 	// A carbon copy, with the team's colour stuck on as an index tab.
-	'--ha-card-bg-mix': 'rgba(255, 250, 235, 0.34)',
+	//
+	// Carbon flimsies came in colours, so on this direction the alignment is the colour of the PAPER
+	// rather than a chip laid on it — which means the wash over it is heavy and slightly warm, and the
+	// card lands on pale sage and pale rose stock. That is also what makes a typed word legible on it:
+	// ink mixed out of the alignment's own colour has to be typed on something close to paper.
+	'--ha-card-bg-mix': 'rgba(241, 224, 213, 0.75)',
 	'--ha-card-edge': '1px solid rgba(90, 70, 36, 0.55)',
 	'--ha-card-shadow': '2px 3px 0 rgba(90, 60, 40, 0.28)',
 	'--ha-card-rotate': '-1deg',
-	'--ha-team-bezel': '1px solid rgba(44, 38, 32, 0.5)',
 	'--ha-team-overlay': 'none',
 	'--ha-team-tab': 'block',
+	// A typed caption and a pencilled note, both a shade off the ink they are written beside.
+	'--ha-card-note-ink': '#6a5834',
+
+	// FRIEND or FOE, typed in the corner of the flimsy and ruled underneath. No chip: a typewriter
+	// cannot reverse type out of a colour, so the word arrives as ink mixed out of the stock it is
+	// typed on.
+	//
+	// The tint stops at 55% where the study said 62%. The study set this label larger; at the 9px the
+	// corner wants, its mix came out under 4:1 on the same stock. The word exists to be read across a
+	// table — it is the whole reason the cards say it in letters at all — so the ink goes a little
+	// deeper and keeps the hue, which is the half of the recipe that matters.
+	'--ha-card-label-fill': '0%',
+	'--ha-card-label-tint': '55%',
+	'--ha-card-label-ink': '#241f19',
+	'--ha-card-label-weight': '400',
+	'--ha-card-label-pad': '0 2px 1px',
+	'--ha-card-label-radius': '0',
+	'--ha-card-label-rule': '1px solid currentColor',
+	'--ha-card-label-shadow': 'none',
+	// A file numbers its enclosures, not its words.
+	'--ha-card-fig-friend': "''",
+	'--ha-card-fig-foe': "''",
+
+	// The team over-printed on a block of its own colour, run out to both edges of the sheet and ruled
+	// above and below. A typed page rules a field; it does not draw a box round it.
+	'--ha-card-team-fill': '100%',
+	'--ha-card-team-edge': '1px solid rgba(44, 38, 32, 0.45)',
+	'--ha-card-team-side': '1px solid transparent',
+	'--ha-card-team-radius': '0',
+	'--ha-card-team-shadow': 'none',
+
+	// The colour of record: a chip off a colour chart, glued on slightly crooked.
+	'--ha-card-chip-size': '26px',
+	'--ha-card-chip-radius': '0',
+	'--ha-card-chip-overlay': 'none',
+	'--ha-card-chip-inner': '1px 1px 0 rgba(90, 70, 36, 0.35)',
+	'--ha-card-chip-glow': '0%',
+	'--ha-card-chip-rotate': '-2.5deg',
+
+	'--ha-card-swatch-bg': 'transparent',
+	'--ha-card-swatch-edge': '1px solid transparent',
+	'--ha-card-swatch-radius': '0',
+	'--ha-card-swatch-pad': '0',
+	'--ha-card-swatch-shadow': 'none',
+	'--ha-card-swatch-key': "'colour of record'",
+	// The name is already typed on the block above in 22px caps. A file does not say it twice.
+	'--ha-card-swatch-ref': 'none',
+	'--ha-card-swatch-name': 'none',
 
 	// The HQ card in 3D is smoked glass over a rack the renderer drew, and thinner than it looks
 	// like it should be: the canvas is UNDER .game, so every pixel of this is a filter on the tray.
@@ -143,11 +198,19 @@ const DOSSIER = {
 	'--ha-hq-label-clip': 'polygon(0 0, 100% 0, calc(100% - 7px) 100%, 0 100%)',
 	'--ha-hq-label-shadow': '1px 1px 0 rgba(90, 70, 36, 0.35)',
 
-	// Claiming a team is a stamp on the file.
+	// Claiming a team is a stamp on the file, and the file says so even when nobody has claimed it.
 	'--ha-claim-bg': 'rgba(255, 250, 235, 0.72)',
 	'--ha-claim-ink': '#a3282b',
-	'--ha-claim-edge': '1px solid #a3282b',
+	// A hairline as a shadow rather than a border: the border-top is the rule the line hangs under.
+	'--ha-claim-frame': '0 0 0 1px #a3282b',
 	'--ha-claim-rotate': '-2deg',
+	'--ha-claim-align': 'left',
+	'--ha-claim-key': "'CONTROL: '",
+	'--ha-claim-empty': "'CONTROL: UNCLAIMED'",
+	'--ha-claim-rule': '1px solid transparent',
+	'--ha-claim-holder-ink': '#2c2620',
+	// Typed, then underlined by hand in red pencil.
+	'--ha-claim-holder-rule': '1px solid #a3282b',
 
 	// A drawing's coordinates and dimension callouts. Not a Dossier idea: a file has no scale.
 	'--ha-mark-display': 'none',
@@ -196,8 +259,10 @@ const BLUEPRINT = {
 		radial-gradient(120% 100% at 50% -10%, rgba(255, 255, 255, 0.07), transparent 60%),
 		repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 22px),
 		repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 22px)`,
-	'--ha-well': '#0a1b2b',
-	'--ha-well-edge': '#38648a',
+	'--ha-well': 'rgba(8, 26, 42, 0.55)',
+	// The same chalk hairline every other section of the drawing is framed with, because that is what
+	// divides one from the next.
+	'--ha-well-edge': 'rgba(220, 232, 242, 0.42)',
 
 	'--ha-panel': 'rgba(8, 26, 42, 0.42)',
 	'--ha-panel-edge': '#dce8f2',
@@ -246,10 +311,55 @@ const BLUEPRINT = {
 	'--ha-card-edge': '1px solid #dce8f2',
 	'--ha-card-shadow': 'none',
 	'--ha-card-rotate': '0deg',
-	'--ha-team-bezel': '1px solid rgba(220, 232, 242, 0.65)',
-	// Half hatched, half solid: how a drawing calls out a finish it cannot print.
-	'--ha-team-overlay': 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.3) 0 3px, transparent 3px 6px)',
+	// The team's own colour never fills anything on a drawing — see the block and the chip below.
+	'--ha-team-overlay': 'none',
 	'--ha-team-tab': 'none',
+	'--ha-card-note-ink': '#9dbdd6',
+
+	// A figure is labelled in a filled tab in the corner, so friend or foe rides the tab: the
+	// alignment's own colour undimmed by the sheet's wash, with the ink reversed out of it.
+	'--ha-card-label-fill': '100%',
+	'--ha-card-label-tint': '0%',
+	'--ha-card-label-ink': '#0d2033',
+	'--ha-card-label-weight': '600',
+	'--ha-card-label-pad': '2px 8px',
+	'--ha-card-label-radius': '0',
+	'--ha-card-label-rule': '1px solid transparent',
+	'--ha-card-label-shadow': 'none',
+	// And a drawing numbers its figures. Same mechanism as the strip's section flag: content is a
+	// value, so the direction gets to say the word its own way without the component knowing which
+	// direction it is in.
+	'--ha-card-fig-friend': "'FIG. 1 — '",
+	'--ha-card-fig-foe': "'FIG. 2 — '",
+
+	// A drawing cannot print a colour, so it does not pretend to: the team is NAMED in chalk between
+	// two rules, and the colour itself is called out underneath as a finish. That is the whole
+	// argument for this direction having a swatch at all, and the reason the block's fill is 0%.
+	'--ha-card-team-fill': '0%',
+	'--ha-card-team-ink': '#eaf2f8',
+	'--ha-card-team-edge': '1px solid rgba(220, 232, 242, 0.45)',
+	'--ha-card-team-side': '1px solid transparent',
+	'--ha-card-team-radius': '0',
+	'--ha-card-team-shadow': 'none',
+
+	// The finish callout: a chip in a bordered cell with its reference beside it. Half hatched, so it
+	// reads as specified rather than rendered.
+	'--ha-card-chip-size': '22px',
+	'--ha-card-chip-radius': '0',
+	'--ha-card-chip-overlay': 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.34) 0 2px, transparent 2px 4px)',
+	'--ha-card-chip-inner': '0 0 0 0 transparent',
+	'--ha-card-chip-glow': '0%',
+	'--ha-card-chip-rotate': '0deg',
+
+	'--ha-card-swatch-bg': 'transparent',
+	'--ha-card-swatch-edge': '1px solid rgba(220, 232, 242, 0.5)',
+	'--ha-card-swatch-radius': '0',
+	'--ha-card-swatch-pad': '6px 7px',
+	'--ha-card-swatch-shadow': 'none',
+	// A drawing references a part by its number, not by its name.
+	'--ha-card-swatch-key': "'colour ref'",
+	'--ha-card-swatch-ref': 'block',
+	'--ha-card-swatch-name': 'none',
 
 	'--ha-hq-glass': 'rgba(10, 27, 43, 0.16)',
 	'--ha-hq-inner': 'inset 0 0 18px rgba(0, 0, 0, 0.3)',
@@ -269,11 +379,19 @@ const BLUEPRINT = {
 	'--ha-hq-label-clip': 'none',
 	'--ha-hq-label-shadow': 'none',
 
-	// Signed off by, in ferro red, under a dashed rule.
+	// Signed off, in ferro red, under a dashed rule — and UNASSIGNED under the same rule where nobody
+	// has signed. A sheet with a blank in it is a sheet that has not been approved, which is a fact
+	// about the drawing and not an absence of one.
 	'--ha-claim-bg': 'transparent',
-	'--ha-claim-ink': '#ff6b4a',
-	'--ha-claim-edge': 'none',
+	'--ha-claim-ink': '#85aecc',
+	'--ha-claim-frame': 'none',
 	'--ha-claim-rotate': '0deg',
+	'--ha-claim-align': 'left',
+	'--ha-claim-key': "'SIGNED OFF '",
+	'--ha-claim-empty': "'UNASSIGNED'",
+	'--ha-claim-rule': '1px dashed rgba(220, 232, 242, 0.35)',
+	'--ha-claim-holder-ink': '#ff6b4a',
+	'--ha-claim-holder-rule': '1px solid transparent',
 
 	// The direction that actually wants coordinates: on a drawing they are native, and they let the
 	// table say R3C4 out loud. They land on the phantom ring — the cells that are already clickable
@@ -311,8 +429,8 @@ const VAULT = {
 	'--ha-ground': '#24282d',
 	'--ha-ground-wash': `linear-gradient(rgba(255, 255, 255, 0.05), transparent 45%),
 		repeating-linear-gradient(92deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 3px)`,
-	'--ha-well': '#111417',
-	'--ha-well-edge': '#3a3f45',
+	'--ha-well': '#14171a',
+	'--ha-well-edge': '#0c0e10',
 
 	'--ha-panel': 'linear-gradient(#2b3035, #22262a)',
 	'--ha-panel-edge': '#14171a',
@@ -368,10 +486,50 @@ const VAULT = {
 	'--ha-card-edge': '1px solid #14171a',
 	'--ha-card-shadow': 'inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 3px 8px rgba(0, 0, 0, 0.45)',
 	'--ha-card-rotate': '0deg',
-	// Anodised in the team's colour, bezelled in brass.
-	'--ha-team-bezel': '2px solid #a8842f',
+	// Anodised in the team's colour, lit from the top edge.
 	'--ha-team-overlay': 'linear-gradient(rgba(255, 255, 255, 0.22), transparent 60%)',
 	'--ha-team-tab': 'none',
+	'--ha-card-note-ink': '#8b9199',
+
+	// FRIEND or FOE on a small enamelled tag in the corner, bevelled like everything else in the case.
+	'--ha-card-label-fill': '100%',
+	'--ha-card-label-tint': '0%',
+	'--ha-card-label-ink': '#14171a',
+	'--ha-card-label-weight': '500',
+	'--ha-card-label-pad': '3px 9px 2px',
+	'--ha-card-label-radius': '2px',
+	'--ha-card-label-rule': '1px solid transparent',
+	'--ha-card-label-shadow': 'inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 1px 2px rgba(0, 0, 0, 0.5)',
+	// A tag is stamped, not catalogued.
+	'--ha-card-fig-friend': "''",
+	'--ha-card-fig-foe': "''",
+
+	// The team on an anodised plate the width of the tray, bezelled in brass all the way round — the
+	// one direction of the three that boxes this field rather than ruling it.
+	'--ha-card-team-fill': '100%',
+	'--ha-card-team-edge': '2px solid #a8842f',
+	'--ha-card-team-side': '2px solid #a8842f',
+	'--ha-card-team-radius': '2px',
+	'--ha-card-team-shadow': 'inset 0 1px 0 rgba(255, 255, 255, 0.26), 0 1px 3px rgba(0, 0, 0, 0.5)',
+
+	// The indicator jewel the trays already carry, one size up: round, sunk under its own rim, and
+	// throwing a little of its own colour onto the recess it sits in.
+	'--ha-card-chip-size': '22px',
+	'--ha-card-chip-radius': '50%',
+	'--ha-card-chip-overlay': 'none',
+	'--ha-card-chip-inner': 'inset 0 -2px 3px rgba(0, 0, 0, 0.5)',
+	'--ha-card-chip-glow': '55%',
+	'--ha-card-chip-rotate': '0deg',
+
+	'--ha-card-swatch-bg': 'linear-gradient(#22262a, #191c1f)',
+	'--ha-card-swatch-edge': '1px solid #101315',
+	'--ha-card-swatch-radius': '2px',
+	'--ha-card-swatch-pad': '6px 8px',
+	'--ha-card-swatch-shadow': 'inset 0 1px 0 rgba(255, 255, 255, 0.06)',
+	// A plate is engraved with a name, not a part number.
+	'--ha-card-swatch-key': "'anodised'",
+	'--ha-card-swatch-ref': 'none',
+	'--ha-card-swatch-name': 'block',
 
 	'--ha-hq-glass': 'rgba(12, 15, 18, 0.16)',
 	'--ha-hq-inner': 'inset 0 1px 0 rgba(255, 255, 255, 0.09), inset 0 -8px 16px rgba(0, 0, 0, 0.4)',
@@ -391,11 +549,21 @@ const VAULT = {
 	'--ha-hq-label-clip': 'none',
 	'--ha-hq-label-shadow': 'inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(0, 0, 0, 0.5)',
 
-	// Tamper tape, which reads as claimed from across the room at any size and without a word.
+	// Tamper tape, which reads as claimed from across the room at any size and without a word — and
+	// nothing whatsoever when the team is unclaimed, because an unsealed tray is already the
+	// statement. This is the one direction of the three that says it by absence.
 	'--ha-claim-bg': 'repeating-linear-gradient(45deg, #c49a45 0 6px, #9d7a33 6px 12px)',
 	'--ha-claim-ink': '#22150f',
-	'--ha-claim-edge': 'none',
+	'--ha-claim-frame': '0 1px 3px rgba(0, 0, 0, 0.5)',
 	'--ha-claim-rotate': '-3deg',
+	'--ha-claim-align': 'center',
+	'--ha-claim-key': "'CLAIMED · '",
+	// This direction would rather say nothing at all than say UNCLAIMED — an unsealed tray is already
+	// the statement. It says it anyway, because the line is what a player clicks to claim the team and
+	// a control nobody can see is not a control.
+	'--ha-claim-empty': "'UNCLAIMED'",
+	'--ha-claim-rule': '1px solid transparent',
+	'--ha-claim-holder-rule': '1px solid transparent',
 
 	'--ha-mark-display': 'none',
 	'--ha-mark-ink': 'transparent',
@@ -427,13 +595,25 @@ export const SKIN_TOKENS = {
 
 export { SHARED };
 
-// The one thing about the *board itself* that a direction changes: the plinth the tiles are seated
-// in. Read by three/palette.js, which is why these are plain strings and not custom properties —
-// the renderer cannot resolve a var().
+// What a direction changes about the *board itself*: the plinth the tiles are seated in, and the
+// recess it is seated in. Read by three/palette.js, which is why these are plain strings and not
+// custom properties — the renderer cannot resolve a var().
+//
+// The `well` is the board section's own ground, and it has to be painted by the renderer rather than
+// by CSS: the canvas is a sibling of `.game` and sits UNDER it, so a background on the board element
+// would be a filter over every tile drawn instead of a surface beneath them. stage.js clears each
+// view's own rectangle with it before the scene draws, which puts it exactly where a DOM background
+// would have gone and behind everything instead of in front of it. `--ha-well` below is the same
+// colour for the flat path, where there is no canvas to get in front of.
+//
+// A little lighter than the plinth in every direction, which is the study's reading and the right way
+// round: the recess is the table showing through, and the tray sits on it.
 export const SKIN_PLINTH = {
-	[SKINS.DOSSIER]: { plinth: '#16211c', plinthEdge: '#3a5145' },
-	[SKINS.BLUEPRINT]: { plinth: '#0a1b2b', plinthEdge: '#38648a' },
-	[SKINS.VAULT]: { plinth: '#111417', plinthEdge: '#3a3f45' },
+	[SKINS.DOSSIER]: { plinth: '#16211c', plinthEdge: '#3a5145', well: '#1c2b25', wellAlpha: 1 },
+	// The one translucent well of the three, so the drawing grid ghosts through its own board the way
+	// a print does. An alpha in the clear, not a blend: the canvas is composited over the page.
+	[SKINS.BLUEPRINT]: { plinth: '#0a1b2b', plinthEdge: '#38648a', well: '#081a2a', wellAlpha: 0.55 },
+	[SKINS.VAULT]: { plinth: '#111417', plinthEdge: '#3a3f45', well: '#14171a', wellAlpha: 1 },
 };
 
 export default SKIN_TOKENS;

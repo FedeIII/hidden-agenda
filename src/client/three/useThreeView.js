@@ -90,6 +90,7 @@ export default function useThreeView(elementRef, createScene, state) {
 			camera: scene.camera,
 			onResize: measure,
 			extent: scene.extent,
+			well: scene.well,
 			overlay: scene.overlay,
 			widen: scene.widen,
 			order: scene.order,

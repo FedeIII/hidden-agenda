@@ -757,8 +757,22 @@ function isAnyPieceThroughSniperLine(pieces) {
 // CLAIM CONTROL //
 ///////////////////
 
+/**
+ * Whether a team is there to be claimed at all: its CEO has to be still in its HQ.
+ *
+ * Claiming *is* deploying that CEO — the toggle below selects it and control becomes real when it
+ * lands — so a team whose CEO is already on the board cannot be claimed by anybody, its own holder
+ * included. `teams.claimControl` has always refused for exactly this reason and this half did not,
+ * which is the whole of a real bug: clicking claim on a team somebody else already controlled left
+ * the control alone and selected their CEO anyway, handing it to whoever clicked. One predicate now,
+ * called by both halves of the action, so they cannot disagree again.
+ */
+function canClaimControl(team, pieces) {
+	return !cells.inBoard(getCeo(pieces, team).position);
+}
+
 function claimControl(team, { pieces, hasTurnEnded }) {
-	if (hasTurnEnded) {
+	if (hasTurnEnded || !canClaimControl(team, pieces)) {
 		return pieces;
 	}
 
@@ -779,8 +793,8 @@ function claimControlPieceMap(team) {
 	};
 }
 
-function claimControlPieceState(team, { teamControl, pieceState }) {
-	if (teamControl[team].player) {
+function claimControlPieceState(team, { pieces, teamControl, pieceState }) {
+	if (teamControl[team].player || !canClaimControl(team, pieces)) {
 		return pieceState;
 	}
 
@@ -1050,6 +1064,7 @@ export const pz = {
 	clearSniperSights,
 
 	// CLAIM CONTROL
+	canClaimControl,
 	claimControl,
 	claimControlPieceState,
 	cancelControl,
