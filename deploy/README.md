@@ -126,6 +126,17 @@ pm2 reload hidden-agenda
 
 Rooms in progress survive it — they are reloaded from `/var/lib/hidden-agenda/rooms` — but a client on the old bundle will keep talking to the new server, so prefer rolling back at a quiet moment.
 
+## Open, and not blocking
+
+Both of these outlived the plan that recorded them, and both are the box's business rather than this
+repo's:
+
+- **The box runs Node 18.19, EOL since April 2025.** This app targets `node18` deliberately so it does
+  not force the question, but the other five PM2 apps share that runtime. Do not raise
+  `target: 'node18'` in `vite.server.config.mjs` speculatively — there is a comment there saying so.
+- **Rotate the Cloudflare API token** used to create the DNS record. It was pasted into a chat
+  transcript, which is not where API tokens should live.
+
 ## Cache trap, deliberately handled
 
 The apex `azyr.io` site serves `*.js` with `expires 1y; Cache-Control: immutable`, but that rule is **server-scoped, so this site inherits nothing** — checked on the box. This site therefore sets its own. Assets here are **content-hashed**, so `/assets/` is pinned hard on purpose and `index.html` is `no-store` — it is the file that points at the current hashed bundle. Never add a fixed-filename script, and never cache `index.html`.

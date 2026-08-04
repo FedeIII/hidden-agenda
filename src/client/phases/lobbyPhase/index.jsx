@@ -139,6 +139,10 @@ function WaitingRoom({ session }) {
 	);
 }
 
+// This is the index now, so it is also where a player finds out there is no server to talk to — a
+// build served off GitHub Pages has none at all, and neither does a laptop running the client without
+// `./dev.sh`. Both look identical from here: a socket that will not open. Saying so beside the way out
+// is the difference between a dead form and a choice.
 function LobbyPhase() {
 	const session = useSession();
 	const { status, code, seatId, error, actions } = session;
@@ -146,6 +150,7 @@ function LobbyPhase() {
 	// A seat in this room means the waiting room; a code without a seat means somebody followed a
 	// shared link and still has to say who they are.
 	const seated = Boolean(seatId);
+	const unreachable = status === 'reconnecting';
 
 	return (
 		<LobbyContainer>
@@ -163,6 +168,22 @@ function LobbyPhase() {
 				<WaitingRoom session={session} />
 			) : (
 				<JoinForm code={code} onCreate={actions.createRoom} onJoin={actions.joinRoom} />
+			)}
+
+			{/* A room is the game this is for. One screen passed around a table is the other way to play
+			    it, and it needs nothing but this tab — which is also the answer when no server answers. */}
+			{!seated && (
+				<>
+					<Buttons>
+						<Button id="play-hotseat-btn" small active onClick={actions.goHotSeat}>
+							PLAY HOT-SEAT INSTEAD
+						</Button>
+					</Buttons>
+
+					{unreachable && (
+						<Notice id="lobby-no-server">No server answered. Hot-seat plays in this tab and needs none.</Notice>
+					)}
+				</>
 			)}
 		</LobbyContainer>
 	);

@@ -118,7 +118,6 @@ test.describe('ONLINE', () => {
 		const guest = await guestContext.newPage();
 
 		await host.goto('/');
-		await host.click('#play-online-btn');
 		await host.fill('#lobby-name', 'ANA');
 		await host.click('#lobby-create');
 		await expect(host.locator('#lobby-room-code')).toBeVisible();

@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Hidden Agenda: a hex board game with hidden information (React 18 + styled-components + Vite, plus a `ws` server). 2–6 players command four teams (0–3 = black/red/white/yellow) of 5 agents + CEO + spy + sniper. Each player secretly holds a *friend* and a *foe* team; the psychology is that everyone moves everyone's pieces. Published at https://fedeiii.github.io/hidden-agenda/ from the committed `docs/` build.
+Hidden Agenda: a hex board game with hidden information (React 18 + styled-components + Vite, plus a `ws` server). 2–6 players command four teams (0–3 = black/red/white/yellow) of 5 agents + CEO + spy + sniper. Each player secretly holds a *friend* and a *foe* team; the psychology is that everyone moves everyone's pieces. Live at https://hidden-agenda.azyr.io (rooms over a socket) and at https://fedeiii.github.io/hidden-agenda/?hotseat from the same committed `docs/` build — Pages has no server, hence the handle.
 
-`MULTIPLAYER-PLAN.md` is the live plan for making it playable over the internet and deploying it to a VPS. **Phases −1, 0 and 1 are done; the client is not yet wired to the server.** Read the plan before any structural change — several decisions below exist to serve it.
+Online play is **done and deployed**. `deploy/README.md` is the record of the box; the plan that got it there is in the git history rather than in a file that now only says "done".
 
-Right now the game still plays hot-seat in one tab: the server exists and is tested, but `createTransport()` always returns the local store. Phase 2 connects them.
+**The index is the online lobby.** A game of this is people in different places holding cards nobody else can see, so that is what the front door offers; the one-tab table is `?hotseat`, an option in the lobby, and what nearly the whole browser suite plays. `detectMode()` in `state/index.jsx` decides, and only three things move it: a room code in the hash is online (somebody followed a shared link), `?hotseat` is local, and `?test=` is local because a mid-game mock has no server it could have come from. Both directions are also written back into the URL by `rememberMode`, so a reload keeps you where you were.
 
 ## Commands
 
@@ -95,6 +95,8 @@ Things worth knowing before touching the suite:
 `?test=play` or `?test=endgame` replaces `initialState` with `src/client/state/mocks/{play,endgame}.js` and makes `Game` start directly in that phase. Useful for reaching a board position without clicking through. Note neither mock has a piece on the board — both start with all 32 in their HQs.
 
 `?flat` turns the 3D renderer off and gives you the original CSS board, which is the fastest way to tell whether a bug is in the game or in the renderer.
+
+`?hotseat` plays in this one tab instead of asking for a room, which is what the index offers by default. Nearly every spec carries it — the shared `page` fixture navigates to `?skin=dossier&hotseat`, and a spec that navigates for itself has to say both. An online spec needs neither: it lands on the lobby anyway, and the test server's `HA_SKIN` covers the skin.
 
 `?skin=dossier|blueprint|vault` pins the visual direction instead of drawing one. **Local mode only** — online the room's skin wins, because the table has to agree. It exists because otherwise the only way to see a direction is to restart games until the draw goes your way, and because the browser suite needs it: every spec walks the real start → alignment flow, and that flow draws a skin.
 

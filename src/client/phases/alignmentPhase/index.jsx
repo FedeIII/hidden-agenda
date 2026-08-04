@@ -10,8 +10,8 @@ import { dealAlignments } from 'Domain/deal';
 import SkinPicker from 'Client/components/skinPicker';
 import { AlignmentPhaseContainer } from './components';
 
-// Dealt once for the whole table instead of a card at a time off a shared deck. Phase 1 of
-// MULTIPLAYER-PLAN.md moves this to the server, which sends each player only their own pair.
+// Dealt once for the whole table instead of a card at a time off a shared deck. Hot-seat only: online
+// the server deals, and sends each player nothing but their own pair.
 function useDealtAlignments(players) {
 	const [dealt] = useState(() =>
 		dealAlignments(players.map(player => player.name)).reduce(

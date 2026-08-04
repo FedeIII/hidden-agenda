@@ -2,7 +2,11 @@
 An abstract board game with psychology
 
 * **Play over the internet:** https://hidden-agenda.azyr.io — make a room, share the code, one seat per player.
-* **Play hot-seat:** https://fedeiii.github.io/hidden-agenda/ — everyone round one screen.
+  This is what the front door offers: the game is people in different places holding cards nobody else
+  can see.
+* **Play hot-seat:** https://fedeiii.github.io/hidden-agenda/?hotseat — everyone round one screen. Also
+  an option in the lobby, on either site. The Pages build has no server behind it, which is why that
+  link says so up front.
 
 The rules are in **[RULES.md](RULES.md)**.
 
@@ -34,7 +38,8 @@ production, so online play works locally with no configuration — host a game i
 | `./dev.sh --clean` | drop persisted rooms first |
 | `./dev.sh --no-open` | don't open a browser |
 
-The client takes three URL handles, all local-only: `?flat` turns the 3D renderer off, `?test=play`
+The client takes four URL handles: `?hotseat` plays in one tab instead of asking for a room (the index
+is the lobby), and three that are local-only — `?flat` turns the 3D renderer off, `?test=play`
 or `?test=endgame` drops you into a mid-game state, and `?skin=dossier|blueprint|vault` pins the
 visual direction instead of letting the game draw one. `HA_SKIN` does the same for every room the
 server makes.
@@ -144,7 +149,9 @@ against a stale `dist-server` is otherwise silently possible.
 `npm run build` writes `docs/` and **the output is committed**, as is `dist-server/main.mjs`. Rebuild
 and commit both when shipping a user-visible change.
 
-* **GitHub Pages** serves `docs/` from `master` — hot-seat only, no server.
+* **GitHub Pages** serves `docs/` from `master` — hot-seat only, no server, which is why the link at the
+  top of this file carries `?hotseat`. Without it the index offers a room and nothing answers; the lobby
+  says so and offers the one-tab table beside it, but the link should not need the detour.
 * **The VPS** serves the same `docs/` off disk through nginx and proxies `/ws` and `/healthz` to one
   small PM2-managed Node process. Because both artifacts are committed, the box installs exactly one
   package (`ws`) and never runs a build — which is what lets it stay on Node 18 while the toolchain
@@ -158,6 +165,25 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.3.0
+The front door is a room.
+
+* **The index is the online lobby.** This game is people in different places holding cards nobody else
+  can see, so that is what it offers first: a name, a room, a code to share
+* **Hot-seat is an option on it**, and `?hotseat` in the URL — which the switch writes back, so a reload
+  keeps you where you were rather than dropping you on the default. The
+  [Pages link](https://fedeiii.github.io/hidden-agenda/?hotseat) carries it, because that build has no
+  server behind it
+* **A build with nothing behind `/ws` says so.** Pressing NEW ROOM where no server answers now explains
+  itself and points at the table that needs none, instead of retrying in silence
+* **The lobby no longer claims to be connecting** before it has opened a socket — it said so twice, in a
+  notice and a banner, on a screen where nothing was in flight. That screen is the first thing anybody
+  reads now
+* **Documentation**: `MULTIPLAYER-PLAN.md` is gone. Every phase of it shipped, so it had become a file
+  that said "done" six times; what is still true lives in `CLAUDE.md` and `deploy/README.md`, and the
+  two open items it was holding — the box's EOL Node 18, and a Cloudflare token to rotate — moved to the
+  runbook with the rest of the box
+
 ### v3.2.0
 The interface has three faces.
 
@@ -340,7 +366,7 @@ Play it over the internet. Also a complete change of toolchain underneath, and t
 * **Documentation**
   * **[RULES.md](RULES.md)**: the full rules, derived from the implementation and verified against it,
     including an appendix of edge cases that are in the game whether or not anybody designed them
-  * `CLAUDE.md`, `MULTIPLAYER-PLAN.md` and `deploy/README.md` describe what is there now
+  * `CLAUDE.md` and `deploy/README.md` describe what is there now
 * 102 tests → **176**
 * **v3.0.1**
   * Fixed the SNIPE! action, whose rule was lost in the move to multiplayer. A sniper answers the move
@@ -483,6 +509,7 @@ Play it over the internet. Also a complete change of toolchain underneath, and t
 * Port to electron
 
 ## Known Bugs
+* ~~The lobby said it was connecting before it had opened a socket at all~~
 * ~~A team you controlled could be claimed out from under you, which handed its CEO to whoever clicked~~
 * ~~The interface said nothing about the game it was wrapped around~~
 * ~~A piece dragged out of an HQ was invisible over that HQ, and cut in half at the board's edge~~

@@ -15,16 +15,30 @@ const skinOf = page => page.evaluate(() => document.documentElement.dataset.skin
 const expectSkin = (page, skin) => expect.poll(() => skinOf(page)).toBe(skin);
 
 test.describe('the main menu', () => {
-	test('is always the file room', async ({ page }) => {
-		// The first screen a player ever sees is not a draw. A game starts as a form on a desk.
+	// The first screen a player ever sees is not a draw, and that is true of both of them: the lobby
+	// the index opens on, and the hot-seat form behind `?hotseat`. A game becomes a table later, and
+	// that is where it gets a look of its own.
+	test('is always the file room, and the index is the lobby', async ({ page }) => {
 		await page.goto('/');
-		await expect(page.locator('#start-btn')).toBeVisible();
+		await expect(page.locator('#lobby-create')).toBeVisible();
 
 		expect(await skinOf(page)).toBe(DEFAULT_SKIN);
 	});
 
-	test('is still the file room after the names are filled in', async ({ page }) => {
+	test('offers the one-tab table, and that is the file room too', async ({ page }) => {
 		await page.goto('/');
+		await page.click('#play-hotseat-btn');
+		await expect(page.locator('#start-btn')).toBeVisible();
+
+		expect(await skinOf(page)).toBe(DEFAULT_SKIN);
+
+		// And the way back, so neither is a dead end.
+		await page.click('#play-online-btn');
+		await expect(page.locator('#lobby-create')).toBeVisible();
+	});
+
+	test('is still the file room after the names are filled in', async ({ page }) => {
+		await page.goto('/?hotseat');
 		await page.fill('#player-name1', 'Fede');
 		await page.fill('#player-name2', 'Sara');
 
@@ -34,7 +48,7 @@ test.describe('the main menu', () => {
 
 test.describe('a hot-seat game', () => {
 	test('draws a skin on the way in to friend & foe', async ({ page }) => {
-		await page.goto('/');
+		await page.goto('/?hotseat');
 		await page.fill('#player-name1', 'Fede');
 		await page.fill('#player-name2', 'Sara');
 		await page.click('#start-btn');
@@ -45,7 +59,7 @@ test.describe('a hot-seat game', () => {
 	});
 
 	test('keeps the drawn skin for the rest of the game', async ({ page }) => {
-		await page.goto('/');
+		await page.goto('/?hotseat');
 		await page.fill('#player-name1', 'Fede');
 		await page.fill('#player-name2', 'Sara');
 		await page.click('#start-btn');
@@ -71,7 +85,7 @@ test.describe('a hot-seat game', () => {
 	});
 
 	test('honours a pinned skin instead of drawing', async ({ page }) => {
-		await page.goto('/?skin=vault');
+		await page.goto('/?skin=vault&hotseat');
 		expect(await skinOf(page)).toBe('vault');
 
 		await page.fill('#player-name1', 'Fede');
@@ -84,7 +98,7 @@ test.describe('a hot-seat game', () => {
 
 	test('ignores a skin that does not exist', async ({ page }) => {
 		// A stale link should fall back rather than leave the app with no tokens at all.
-		await page.goto('/?skin=wire');
+		await page.goto('/?skin=wire&hotseat');
 
 		expect(await skinOf(page)).toBe(DEFAULT_SKIN);
 	});
@@ -103,7 +117,7 @@ test.describe('a skin actually paints the page', () => {
 	// somewhere other than where it was written.
 	for (const skin of SKIN_NAMES) {
 		test(`${skin} has a ground and a body ink`, async ({ page }) => {
-			await page.goto(`/?skin=${skin}`);
+			await page.goto(`/?skin=${skin}&hotseat`);
 			await expect(page.locator('#start-btn')).toBeVisible();
 
 			const painted = await page.evaluate(() => {
@@ -125,7 +139,7 @@ test.describe('a skin actually paints the page', () => {
 	test('every skin block is a block of its own', async ({ page }) => {
 		// The failure above showed up in the cascade as one selector swallowing another. Reading the
 		// injected rules back is the only way to see that from the outside.
-		await page.goto('/');
+		await page.goto('/?hotseat');
 		await expect(page.locator('#start-btn')).toBeVisible();
 
 		const selectors = await page.evaluate(() => {
@@ -173,7 +187,7 @@ test.describe('a skin actually paints the page', () => {
 		};
 
 		const labelsFor = async skin => {
-			await page.goto(`/?skin=${skin}`);
+			await page.goto(`/?skin=${skin}&hotseat`);
 			await page.fill('#player-name1', 'Fede');
 			await page.fill('#player-name2', 'Sara');
 			await page.click('#start-btn');
@@ -284,7 +298,7 @@ test.describe('a skin actually paints the page', () => {
 // Two players in, cards dealt, board up. The specs below need a real board rather than a mock,
 // because what they are reading is where the renderer put things.
 async function toBoard(page, query) {
-	await page.goto(`/${query}`);
+	await page.goto(`/${query}&hotseat`);
 	await page.fill('#player-name1', 'Fede');
 	await page.fill('#player-name2', 'Sara');
 	await page.click('#start-btn');
@@ -313,7 +327,7 @@ test.describe('a skin changes the chrome and nothing else', () => {
 	// with it exactly. What must never differ is a cell's SIZE or where it sits inside the board.
 	test('leaves the board geometry alone', async ({ page }) => {
 		const geometryFor = async skin => {
-			await page.goto(`/?skin=${skin}`);
+			await page.goto(`/?skin=${skin}&hotseat`);
 			await page.fill('#player-name1', 'Fede');
 			await page.fill('#player-name2', 'Sara');
 			await page.click('#start-btn');
@@ -356,7 +370,7 @@ test.describe('a skin changes the chrome and nothing else', () => {
 		// Red means "you may go there" in every direction, and a selected piece is still
 		// brightness(2). Re-tuning either per skin would make the board mean different things on
 		// different evenings — and would take forty assertions in this suite with it.
-		await page.goto('/?skin=blueprint');
+		await page.goto('/?skin=blueprint&hotseat');
 		await page.fill('#player-name1', 'Fede');
 		await page.fill('#player-name2', 'Sara');
 		await page.click('#start-btn');
@@ -509,7 +523,6 @@ test.describe('a skin changes the chrome and nothing else', () => {
 test.describe('an online room', () => {
 	test('shows the host its own skin in the waiting room', async ({ page }) => {
 		await page.goto('/');
-		await page.click('#play-online-btn');
 		await page.fill('#lobby-name', 'ANA');
 		await page.click('#lobby-create');
 		await expect(page.locator('#lobby-room-code')).toBeVisible();
@@ -524,7 +537,6 @@ test.describe('an online room', () => {
 		const guest = await guestContext.newPage();
 
 		await host.goto('/');
-		await host.click('#play-online-btn');
 		await host.fill('#lobby-name', 'ANA');
 		await host.click('#lobby-create');
 		await expect(host.locator('#lobby-room-code')).toBeVisible();
@@ -582,7 +594,6 @@ test.describe('an online room', () => {
 		const guest = await guestContext.newPage();
 
 		await host.goto('/');
-		await host.click('#play-online-btn');
 		await host.fill('#lobby-name', 'ANA');
 		await host.click('#lobby-create');
 		await expect(host.locator('#lobby-room-code')).toBeVisible();
@@ -610,13 +621,13 @@ test.describe('an online room', () => {
 // friend-and-foe cards. After that the board is up and the furniture stops moving.
 test.describe('changing the style', () => {
 	test('hot-seat: not offered on the main menu', async ({ page }) => {
-		await page.goto('/');
+		await page.goto('/?hotseat');
 
 		await expect(page.locator('#skin-picker')).toHaveCount(0);
 	});
 
 	test('hot-seat: offered at friend & foe, and it sticks into the game', async ({ page }) => {
-		await page.goto('/?skin=dossier');
+		await page.goto('/?skin=dossier&hotseat');
 		await page.fill('#player-name1', 'Fede');
 		await page.fill('#player-name2', 'Sara');
 		await page.click('#start-btn');
@@ -640,7 +651,7 @@ test.describe('changing the style', () => {
 	});
 
 	test('hot-seat: gone once the game has started', async ({ page }) => {
-		await page.goto('/?skin=dossier');
+		await page.goto('/?skin=dossier&hotseat');
 		await page.fill('#player-name1', 'Fede');
 		await page.fill('#player-name2', 'Sara');
 		await page.click('#start-btn');
@@ -665,7 +676,6 @@ test.describe('changing the style', () => {
 		const guest = await guestContext.newPage();
 
 		await host.goto('/');
-		await host.click('#play-online-btn');
 		await host.fill('#lobby-name', 'ANA');
 		await host.click('#lobby-create');
 		await expect(host.locator('#lobby-room-code')).toBeVisible();

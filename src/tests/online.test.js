@@ -6,11 +6,9 @@ import { test, expect } from './fixtures';
 // contortion; here a context is just a second browser.
 
 async function joinRoom(page, { code, name }) {
+	// No detour through a menu: online is what the index is, and a room code in the hash is the same
+	// lobby with the code already filled in.
 	await page.goto(code ? `/#/r/${code}` : '/');
-
-	if (!code) {
-		await page.click('#play-online-btn');
-	}
 
 	await page.fill('#lobby-name', name);
 

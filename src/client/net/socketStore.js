@@ -100,7 +100,11 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 	const game = createObservable(createInitialState());
 	const session = createObservable({
 		mode: 'online',
-		status: 'connecting',
+		// Idle unless there is something in flight. A client with no room in its URL has not opened a
+		// socket — the intent to create or join is what opens one — so announcing a connection on the
+		// way in is a message about nothing, and it is the first thing a player reads now that the
+		// lobby is the index.
+		status: roomCode ? 'connecting' : 'ready',
 		code: roomCode,
 		seatId: null,
 		name: null,

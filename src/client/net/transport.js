@@ -19,7 +19,7 @@ const MOCKS = {
 
 // Read at call time, not at import. When this was module-level the game core could not be loaded
 // in node at all, which is exactly what the server needs to do.
-function readTestParam() {
+export function readTestParam() {
 	if (typeof window === 'undefined') {
 		return null;
 	}
@@ -41,6 +41,18 @@ export function readSkinOverride() {
 	const requested = new URLSearchParams(window.location.search).get('skin');
 
 	return isSkin(requested) ? requested : null;
+}
+
+// `?hotseat` plays the whole game in this one tab, the way the game started out. Online is what the
+// index offers now, so this is the way back — and it is a URL handle rather than only a button for two
+// reasons: a reload keeps you where you were, and the browser suite is nearly all hot-seat and has to
+// be able to ask for it without clicking through the lobby first.
+export function readHotSeat() {
+	if (typeof window === 'undefined') {
+		return false;
+	}
+
+	return new URLSearchParams(window.location.search).has('hotseat');
 }
 
 export function readRoomCode() {
