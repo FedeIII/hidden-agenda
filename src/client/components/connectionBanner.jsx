@@ -21,14 +21,22 @@ const Banner = styled.div`
 const MESSAGES = {
 	connecting: 'Connecting…',
 	reconnecting: 'Connection lost — reconnecting…',
+	// Not an error and not a lost connection: this seat is being played from a window that asked for
+	// it more recently. Said plainly, because the alternative is a tab that silently does nothing.
+	displaced: 'This seat is open in another window — play there, or reload here to take it back.',
 };
 
 // Silent while everything is fine, and absent entirely in a local game. A player whose connection
 // drops mid-turn needs to know that is why nothing is responding.
+//
+// It also needs a seat. The lobby opens a socket the moment it is shown now, because the room finder
+// is fed by one — so on a build with no server at all (GitHub Pages) an unseated client is *always*
+// reconnecting, and shouting "connection lost" at somebody who has not tried to do anything yet is a
+// message about nothing. The lobby says it in its own words, next to the way out.
 function ConnectionBanner() {
-	const { mode, status } = useSession();
+	const { mode, status, seatId } = useSession();
 
-	if (mode !== 'online' || status === 'ready') {
+	if (mode !== 'online' || status === 'ready' || !seatId) {
 		return null;
 	}
 
@@ -39,7 +47,7 @@ function ConnectionBanner() {
 	}
 
 	return (
-		<Banner id="connection-banner" lost={status === 'reconnecting'}>
+		<Banner id="connection-banner" lost={status !== 'connecting'}>
 			{message}
 		</Banner>
 	);

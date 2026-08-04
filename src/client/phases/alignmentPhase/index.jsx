@@ -8,6 +8,7 @@ import { TEAM_NAMES } from 'Domain/teams';
 import useSession from 'Hooks/useSession';
 import { dealAlignments } from 'Domain/deal';
 import SkinPicker from 'Client/components/skinPicker';
+import LeaveGame from 'Client/components/leaveGame';
 import { AlignmentPhaseContainer } from './components';
 
 // Dealt once for the whole table instead of a card at a time off a shared deck. Hot-seat only: online
@@ -163,6 +164,12 @@ function OnlineAlignment({ onReady }) {
 				<Button id="alignments-btn" active={!ready} onClick={confirm}>
 					{ready ? 'WAITING…' : 'READY'}
 				</Button>
+
+				{/* Straight out, with nothing to confirm — unlike leaving from the board, where LEAVE sits
+				    among the controls a player is pressing all game and a misclick would end theirs. This is
+				    a waiting screen: nothing has happened yet, and if the table is waiting on somebody who
+				    has closed their laptop, this button is the way out rather than a hazard on the way past. */}
+				<LeaveGame />
 			</Buttons>
 
 			<Subtitle id="alignment-ready-count">

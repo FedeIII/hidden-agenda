@@ -83,6 +83,30 @@ function removeControlFor(team, pieces) {
 	};
 }
 
+// A player who leaves takes no team with them. Whatever they held goes back to being unheld — and
+// `claimEnabled` is derived from the one predicate that decides it rather than carried through, the
+// way every other writer in this file does it, because a team whose CEO is already on the board is
+// not claimable by anybody. So a team abandoned with its CEO deployed becomes nobody's and stays
+// unclaimable, which is right: its pieces keep playing, moved by whoever is on turn, as ever.
+function releasePlayer(playerName, { teamControl, pieces }) {
+	return teamControl.map((control, teamIndex) => {
+		const heldByThem = control.player === playerName;
+
+		if (!heldByThem && control.prevPlayer !== playerName) {
+			return control;
+		}
+
+		return {
+			player: heldByThem ? null : control.player,
+			// Cleared too, or CANCEL_CONTROL would hand the team back to somebody who is not at the
+			// table any more.
+			prevPlayer: control.prevPlayer === playerName ? null : control.prevPlayer,
+			claimEnabled: pz.canClaimControl(teamIndex, pieces),
+			controlling: heldByThem ? false : control.controlling,
+		};
+	});
+}
+
 function getPointsFromKills(team, pieces) {
 	return Object.entries(pz.getKilledPiecesByTeam(team, pieces)).reduce(
 		(score, [pieceType, pieceCount]) => score + POINTS_PER_PIECE_TYPE[pieceType] * pieceCount,
@@ -207,6 +231,7 @@ export default {
 	initControl,
 	claimControl,
 	cancelControl,
+	releasePlayer,
 	getPointsForTeam,
 	movePieceForControl,
 	revealFriend,

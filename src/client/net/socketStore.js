@@ -16,6 +16,10 @@ import {
 // second observable for session state (room, seats, phase, connection), which only the lobby and
 // the connection banner care about.
 
+// The close code the server uses when a newer connection claims a seat this socket was holding. It
+// is in the private 4000–4999 range and matches `bind` in server/index.js.
+const SEAT_RECLAIMED = 4000;
+
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 8000;
 const PING_MS = 25_000;
@@ -50,6 +54,15 @@ const PREDICT_LOCALLY = new Set([
 ]);
 
 const STORAGE_PREFIX = 'ha:room:';
+// The seats this browser holds, newest first, alongside the tokens. The tokens are what a rejoin
+// needs; this is what the *lobby* needs, because a player who arrives at the front door rather than
+// by refreshing has no room code in the URL and nothing else could tell them they are still in a game.
+const SEATS_KEY = 'ha:seats';
+const MAX_REMEMBERED_SEATS = 8;
+// The server evicts a room three hours after it was opened, whatever is happening in it, so a seat
+// older than that provably does not exist any more. Pruning by age keeps the offer honest without a
+// round trip to find out.
+const SEAT_MEMORY_MS = 3 * 60 * 60_000;
 
 function readToken(code) {
 	try {
@@ -65,6 +78,52 @@ function writeToken(code, token) {
 	} catch {
 		// Private browsing, or storage disabled. A refresh will just lose the seat.
 	}
+}
+
+// Anything unparseable, or from a build that wrote a different shape, reads as "no seats" rather
+// than throwing on the way into the lobby.
+function readSeats(at = Date.now()) {
+	try {
+		const stored = JSON.parse(window.localStorage.getItem(SEATS_KEY) || '[]');
+
+		if (!Array.isArray(stored)) {
+			return [];
+		}
+
+		return stored.filter(
+			entry =>
+				entry && typeof entry.code === 'string' && at - (entry.at || 0) < SEAT_MEMORY_MS && readToken(entry.code),
+		);
+	} catch {
+		return [];
+	}
+}
+
+function writeSeats(seats) {
+	try {
+		window.localStorage.setItem(SEATS_KEY, JSON.stringify(seats.slice(0, MAX_REMEMBERED_SEATS)));
+	} catch {
+		// As above: storage is a convenience here, never a dependency.
+	}
+}
+
+// Merged rather than replaced, because the two halves arrive in different frames: the seat frame
+// knows the player's name, the room frame that follows it knows the room's.
+function rememberSeat(patch) {
+	const at = Date.now();
+	const existing = readSeats(at).find(entry => entry.code === patch.code) || {};
+
+	writeSeats([{ ...existing, ...patch, at }, ...readSeats(at).filter(entry => entry.code !== patch.code)]);
+}
+
+function forgetSeat(code) {
+	try {
+		window.localStorage.removeItem(STORAGE_PREFIX + code);
+	} catch {
+		// Nothing to clean up if there was no storage to write to in the first place.
+	}
+
+	writeSeats(readSeats().filter(entry => entry.code !== code));
 }
 
 function socketUrl() {
@@ -94,24 +153,34 @@ function createObservable(initial) {
 	};
 }
 
-export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
-	const reduce = createGameReducer();
-
-	const game = createObservable(createInitialState());
-	const session = createObservable({
+// What a client with no seat looks like. A function rather than a literal because it is needed twice:
+// on the way in, and again when a player leaves a room — and what is on screen after leaving is the
+// lobby, which means the lobby's own state rather than the last room's with holes punched in it.
+function unseatedSession({ code = null, error = null } = {}) {
+	return {
 		mode: 'online',
-		// Idle unless there is something in flight. A client with no room in its URL has not opened a
-		// socket — the intent to create or join is what opens one — so announcing a connection on the
-		// way in is a message about nothing, and it is the first thing a player reads now that the
-		// lobby is the index.
-		status: roomCode ? 'connecting' : 'ready',
-		code: roomCode,
+		// Idle unless something the player asked for is in flight. A client with no room in its URL is
+		// looking at the lobby, and the socket the lobby opens is for the room list — announcing a
+		// connection on the way in would be a message about nothing, on the first screen anybody reads.
+		// A room code, on the other hand, means a seat is being reclaimed, which is worth saying.
+		status: code ? 'connecting' : 'ready',
+		code,
 		seatId: null,
 		name: null,
 		phase: null,
 		seats: [],
 		hostSeatId: null,
-		error: null,
+		error,
+		// The room's own name and whether it is listed. Both arrive with the seat list.
+		roomName: null,
+		roomPrivate: false,
+		// The public list, as of the last frame the server pushed. `roomsTotal` is how many matched
+		// before the server's cap, so the finder can say when it is not showing everything.
+		rooms: [],
+		roomsTotal: 0,
+		// Seats this browser already holds, so the lobby can offer to go back to one instead of
+		// making somebody who is mid-game start again.
+		resumable: readSeats(),
 		// Until the room frame arrives this is a client with no room, so it shows the menu's own
 		// look. The server's choice replaces it, and every seat receives the same one.
 		skin: DEFAULT_SKIN,
@@ -119,7 +188,14 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		// as separate frames, so there is a window where the phase says "play" but the state is
 		// still the empty initial one — and rendering the board against no players throws.
 		synced: false,
-	});
+	};
+}
+
+export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
+	const reduce = createGameReducer();
+
+	const game = createObservable(createInitialState());
+	const session = createObservable(unseatedSession({ code: roomCode }));
 
 	// The last state the server told us about. Optimistic work is applied on top of it and
 	// discarded back to it if the server disagrees.
@@ -128,6 +204,9 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 	let seq = 0;
 	let token = roomCode ? readToken(roomCode) : null;
 	let intent = null; // what to send once connected: create / join / rejoin
+	// The finder's standing query, or null when nobody is looking at the list. Kept here rather than
+	// in the component so a reconnect re-asks by itself — the server drops a watcher with the socket.
+	let listQuery = null;
 
 	let socket = null;
 	let reconnectDelay = RECONNECT_MIN_MS;
@@ -175,7 +254,7 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		}
 
 		if (intent.kind === 'create') {
-			return send({ type: 'create', name: intent.name });
+			return send({ type: 'create', name: intent.name, room: intent.room, private: intent.private });
 		}
 
 		if (intent.kind === 'join') {
@@ -217,18 +296,60 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 			case 'seat':
 				token = message.token;
 				writeToken(message.code, message.token);
+				rememberSeat({ code: message.code, name: message.name });
 				// So a refresh — and a shared link — lands back in the same room.
 				window.history.replaceState(null, '', `#/r/${message.code}`);
 				intent = { kind: 'rejoin', code: message.code, token: message.token };
-				session.update({ code: message.code, seatId: message.seatId, name: message.name, error: null });
+				// Seated, so the finder is over. The server has already stopped counting this socket
+				// as a watcher; this is the client agreeing rather than asking again on reconnect.
+				listQuery = null;
+				session.update({
+					code: message.code,
+					seatId: message.seatId,
+					name: message.name,
+					error: null,
+					rooms: [],
+					resumable: readSeats(),
+				});
 				break;
 
+			case 'rooms':
+				session.update({ rooms: message.rooms || [], roomsTotal: message.total || 0 });
+				break;
+
+			// This seat is no longer in that room, either because the player asked or because everybody
+			// else went and a game of this needs two. The socket stays open — they are going back to the
+			// lobby, not off the internet — so everything that was about the room has to go instead.
+			case 'left': {
+				const { code } = session.get();
+
+				forgetSeat(code);
+				intent = null;
+				token = null;
+				version = -1;
+				seq = 0;
+				outstanding = [];
+				pendingAim = null;
+				authoritative = createInitialState();
+				// Through the reducer rather than straight into the observable, the same way a snapshot
+				// goes in: every state change in the app goes through exactly one door.
+				game.set(reduce(game.get(), syncState(createInitialState())));
+				// The hash is what puts a reload back into a room, and there is no room to go back to.
+				window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+				session.set(unseatedSession({ error: message.reason === 'left_alone' ? 'left_alone' : null }));
+				break;
+			}
+
 			case 'room':
+				rememberSeat({ code: message.code, room: message.name });
 				session.update({
 					status: 'ready',
 					phase: message.phase,
 					seats: message.seats,
 					hostSeatId: message.hostSeatId,
+					roomName: message.name || message.code,
+					roomPrivate: Boolean(message.private),
+					resumable: readSeats(),
 					// The room's look, chosen once when it was made. It arrives with the seat list
 					// rather than in the snapshot because it is not game state — it survives being
 					// redacted, and a seat that has not been dealt anything yet still needs it.
@@ -261,9 +382,34 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 				break;
 			}
 
-			case 'error':
-				session.update({ error: message.reason, status: session.get().status === 'connecting' ? 'ready' : undefined });
+			case 'error': {
+				// A seat this browser remembered is gone — the room was evicted, or its code has been
+				// recycled since. Forget it, and if we know who the player wanted to be, take the
+				// second door and join as a new seat instead of leaving them looking at a dead offer.
+				if (message.reason === 'seat_lost' && intent?.kind === 'rejoin') {
+					const { code, name, retried } = intent;
+
+					forgetSeat(code);
+					session.update({ resumable: readSeats() });
+
+					if (name && !retried) {
+						intent = { kind: 'join', code, name, retried: true };
+						sendIntent();
+
+						break;
+					}
+				}
+
+				// Only 'connecting' is resolved by an error arriving; every other status is about the
+				// socket, not about the request. Writing `status: undefined` here — which is what this
+				// did — cleared it, and useCanAct reads `status === 'ready'`, so any error frame
+				// mid-game quietly stopped the player being able to act at all.
+				session.update({
+					error: message.reason,
+					...(session.get().status === 'connecting' ? { status: 'ready' } : {}),
+				});
 				break;
+			}
 
 			default:
 				break;
@@ -297,13 +443,32 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		socket.addEventListener('open', () => {
 			reconnectDelay = RECONNECT_MIN_MS;
 			sendIntent();
+
+			// A watcher of the public list is tracked per socket on the server, so a reconnect has to
+			// ask again or the finder stops updating without ever saying so.
+			if (listQuery !== null) {
+				send({ type: 'list', query: listQuery });
+			}
+
 			pingTimer = setInterval(() => send({ type: 'ping' }), PING_MS);
 		});
 
 		socket.addEventListener('message', event => onMessage(event.data));
 
-		socket.addEventListener('close', () => {
+		socket.addEventListener('close', event => {
 			clearInterval(pingTimer);
+
+			// The server says another connection has taken this seat: a second tab, or a page that
+			// reloaded while this one was still open. Reconnecting would take it straight back, and the
+			// two would then trade the seat forever — with every action landing on whichever socket had
+			// just lost it. Standing down is the only stable answer, and the seat is not lost: it is
+			// being played from the window that asked most recently.
+			if (event.code === SEAT_RECLAIMED) {
+				session.update({ status: 'displaced' });
+
+				return;
+			}
+
 			scheduleReconnect();
 		});
 
@@ -343,40 +508,92 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		send({ type: 'action', seq, action });
 	}
 
-	function createRoom(name) {
-		intent = { kind: 'create', name };
+	function createRoom(name, { room = null, isPrivate = false } = {}) {
+		intent = { kind: 'create', name, room: room || undefined, private: isPrivate };
 		session.update({ status: 'connecting', error: null });
 		sendIntent() || connect();
 	}
 
+	/**
+	 * Enters a room by code, from the finder or from the code field — the same operation either way.
+	 *
+	 * A token for that code turns this into a rejoin, which is what makes selecting a room you are
+	 * already in put you back in your seat rather than fail with `room_already_started`. The name is
+	 * carried along even then, so an expired token can fall back to joining as somebody new.
+	 */
 	function joinRoom(code, name) {
-		intent = { kind: 'join', code, name };
+		const stored = readToken(code);
+
+		intent = stored ? { kind: 'rejoin', code, token: stored, name } : { kind: 'join', code, name };
 		session.update({ status: 'connecting', error: null });
 		sendIntent() || connect();
 	}
 
-	// A room code in the URL means "put me back in that room" — try the stored token first.
-	if (roomCode && token) {
-		intent = { kind: 'rejoin', code: roomCode, token };
-		connect();
-	} else if (roomCode) {
-		// We know the room but have no seat in it. The lobby will ask for a name.
-		session.update({ status: 'ready', phase: null });
-		connect();
+	// Asking for the public list is also what opens the socket on the way into the lobby. Status is
+	// deliberately left alone: nothing the player asked for is in flight, so a socket that will not
+	// open should read as "there is no server here" — which is the hot-seat hint — rather than as a
+	// failed attempt to do something.
+	function listRooms(query = '') {
+		listQuery = query;
+		send({ type: 'list', query }) || connect();
+	}
+
+	/**
+	 * Opens the socket. Called from an effect, never during render, and that is the whole point.
+	 *
+	 * This used to run at construction — and constructing the store happens inside a `useMemo`, which
+	 * React is entitled to call more than once for a single mounted component and does. Two stores
+	 * were built, two sockets were opened, and only the one React kept was ever closed. The orphan
+	 * then rejoined, the server handed the seat to it and closed the other with `seat reclaimed`, that
+	 * one's close handler reconnected and took the seat straight back, and the two traded it every few
+	 * hundred milliseconds forever.
+	 *
+	 * What that looked like from the outside was a refresh that appeared to work: the board came back,
+	 * because a snapshot does arrive. But every action after it was dispatched onto whichever socket
+	 * had just lost the seat, so `send` returned false and the move went nowhere — the player saw it
+	 * happen locally, since discrete actions are predicted, and nobody else at the table ever did.
+	 *
+	 * A socket is a side effect. It belongs in an effect, where React promises exactly one live copy.
+	 */
+	function open() {
+		// A remount after close() — StrictMode does exactly this in development — is a real open again.
+		closedByUs = false;
+
+		// A room code in the URL means "put me back in that room" — try the stored token first. This is
+		// the whole of what makes a refresh mid-game seamless: the hash survives the reload, the token
+		// survives it in storage, and the seat is reclaimed before anything is rendered.
+		if (roomCode && token) {
+			intent = { kind: 'rejoin', code: roomCode, token };
+			connect();
+		} else if (roomCode) {
+			// We know the room but have no seat in it. The lobby will ask for a name.
+			session.update({ status: 'ready', phase: null });
+			connect();
+		}
 	}
 
 	return {
 		getState: game.get,
 		subscribe: game.subscribe,
 		dispatch,
+		open,
 
 		getSession: session.get,
 		subscribeSession: session.subscribe,
 
 		createRoom,
 		joinRoom,
+		listRooms,
+		// Leaving the finder. The server forgets a watcher when the socket goes either way; this stops
+		// a reconnect from re-subscribing to a list nobody is looking at.
+		stopListing: () => {
+			listQuery = null;
+		},
 		start: () => send({ type: 'start' }),
 		ready: () => send({ type: 'ready' }),
+		// No optimistic anything: the server decides what leaving means — whether a game loses a player
+		// or a room ceases to exist — and answers with a `left` frame either way.
+		leave: () => send({ type: 'leave' }),
 		// Host only, and the server says so — this just asks. No optimistic update: the whole point
 		// of the skin being the room's is that every seat changes together, off one frame.
 		setSkin: skin => send({ type: 'skin', skin }),

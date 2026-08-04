@@ -6,10 +6,12 @@ import useBooleanState from 'Hooks/useBooleanState';
 import { useCanAct, useCanSnipe } from 'Hooks/useSession';
 import { snipe } from 'Game/actions';
 import { Button } from 'Client/components/button';
+import LeaveGame from 'Client/components/leaveGame';
 import { Actions, Action, ActionButton } from './components';
 import AccuseScreen from './accuseScreen';
 import RevealScreen from './revealScreen';
 import AlignmentScreen from './alignmentScreen';
+import LeaveScreen from './leaveScreen';
 
 // Not gated on canAct like every other action here: sniping is the rest of the table's answer to
 // the move the player on turn has just made, so it is theirs and not the mover's.
@@ -38,11 +40,13 @@ function useScreens() {
 	const [isAccuseShown, showAccuse, hideAccuse] = useBooleanState(false);
 	const [isRevealShown, showReveal, hideReveal] = useBooleanState(false);
 	const [isAlignmentShown, showAlignment, hideAlignment] = useBooleanState(false);
+	const [isLeaveShown, showLeave, hideLeave] = useBooleanState(false);
 
 	return {
 		accuse: { shown: isAccuseShown, show: showAccuse, hide: hideAccuse },
 		reveal: { shown: isRevealShown, show: showReveal, hide: hideReveal },
 		alignment: { shown: isAlignmentShown, show: showAlignment, hide: hideAlignment },
+		leave: { shown: isLeaveShown, show: showLeave, hide: hideLeave },
 	};
 }
 
@@ -78,16 +82,22 @@ function PlayActions() {
 				</ActionButton>
 			</Action>
 
+			{/* Both of these are about the player rather than about the board: the cards they were dealt,
+			    and the seat they are sitting in. They share a group rather than LEAVE getting a fourth one
+			    of its own, because the bar is `flex-basis: 33%` three ways and the landscape phone layout
+			    has no slack to give. LEAVE renders nothing at all in a hot-seat game. */}
 			<Action>
 				<Button id="friend-foe" small active onClick={screens.alignment.show}>
 					FRIEND &amp; FOE
 				</Button>
+				<LeaveGame onClick={screens.leave.show} />
 			</Action>
 
 			{/* Outside the bar on purpose: these are screens, not menus that grow out of a button. */}
 			{screens.accuse.shown && <AccuseScreen onClose={screens.accuse.hide} />}
 			{screens.reveal.shown && <RevealScreen onClose={screens.reveal.hide} />}
 			{screens.alignment.shown && <AlignmentScreen onClose={screens.alignment.hide} />}
+			{screens.leave.shown && <LeaveScreen onClose={screens.leave.hide} />}
 		</Actions>
 	);
 }

@@ -165,6 +165,36 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.4.0
+Rooms have names, you can go looking for one, and you can walk away from one.
+
+* **Every room is named**, and the field opens on a draw from two lists of themed words — `secret-agent`,
+  `cunning-traitor`, `unlucky-quartermaster` — so a name is mandatory without a host having to think of
+  one. The code is still what you type; the name is what the table calls itself
+* **Public by default, and public rooms are listed on the index.** Search by name, and a space matches a
+  hyphen, so typing what somebody read out to you works. Each row says what the room is called, who
+  opened it, how full it is and whether it has started
+* **Private is one thing only: not in the list.** The code still joins it, so a shared link to a private
+  table works exactly as it did
+* **Started rooms sort to the end and stay there**, because they are no use to a stranger and are exactly
+  what somebody coming back to their own game is looking for. Selecting one you have a seat in puts you
+  back in that seat rather than refusing you as a latecomer
+* **Coming back to the front door offers your seat.** A refresh already kept the room in the URL;
+  arriving on the plain address — a bookmark, a new tab — did not, and the game you were in the middle of
+  was invisible from the one screen that could have taken you back to it
+* **A second window no longer fights the first for a seat.** Whichever asked most recently holds it, and
+  the other says so instead of going quietly dead
+* **You can leave.** From the waiting room, from the friend-and-foe screen, from the board and from the
+  score table — and the seat count everybody else is looking at goes down as you go
+* **Leaving the board asks first**, because a started room takes no new seats and there is no way back
+  in. Leaving a waiting room does not: the room is still there and its code still joins it
+* **A game needs two, so leaving one that would strand somebody takes them with you** and says as much
+  before you do it. The player left behind is told the game ended rather than being dropped back at the
+  front door wondering what happened
+* **A player leaving a three-hander is just a shorter table.** The turn passes on if it was theirs,
+  whatever team they held goes back to being nobody's, and nothing on the board moves — pieces belong to
+  teams here, not to people
+
 ### v3.3.0
 The front door is a room.
 
@@ -506,9 +536,14 @@ Play it over the internet. Also a complete change of toolchain underneath, and t
 * ~~UI revamp~~
 * 3D
 * ~~Remote multiplayer~~
+* ~~Room finder~~
+* ~~Leaving a game~~
 * Port to electron
 
 ## Known Bugs
+* ~~A refresh mid-game looked like it worked and then swallowed every move afterwards: two sockets held
+  the one seat and took it off each other, so actions went out on whichever had just lost it~~
+* ~~A player who reloaded was marked offline by the connection they had just replaced~~
 * ~~The lobby said it was connecting before it had opened a socket at all~~
 * ~~A team you controlled could be claimed out from under you, which handed its CEO to whoever clicked~~
 * ~~The interface said nothing about the game it was wrapped around~~

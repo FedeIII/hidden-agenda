@@ -8,7 +8,7 @@ Hidden Agenda: a hex board game with hidden information (React 18 + styled-compo
 
 Online play is **done and deployed**. `deploy/README.md` is the record of the box; the plan that got it there is in the git history rather than in a file that now only says "done".
 
-**The index is the online lobby.** A game of this is people in different places holding cards nobody else can see, so that is what the front door offers; the one-tab table is `?hotseat`, an option in the lobby, and what nearly the whole browser suite plays. `detectMode()` in `state/index.jsx` decides, and only three things move it: a room code in the hash is online (somebody followed a shared link), `?hotseat` is local, and `?test=` is local because a mid-game mock has no server it could have come from. Both directions are also written back into the URL by `rememberMode`, so a reload keeps you where you were.
+**The index is the online lobby**, and it lists the public rooms — see *Finding a room*. A game of this is people in different places holding cards nobody else can see, so that is what the front door offers; the one-tab table is `?hotseat`, an option in the lobby, and what nearly the whole browser suite plays. `detectMode()` in `state/index.jsx` decides, and only three things move it: a room code in the hash is online (somebody followed a shared link), `?hotseat` is local, and `?test=` is local because a mid-game mock has no server it could have come from. Both directions are also written back into the URL by `rememberMode`, so a reload keeps you where you were.
 
 ## Commands
 
@@ -180,6 +180,39 @@ Things not to undo:
 - **A room holds no sockets.** It stays plain JSON so `persistence.js` can write it per file, which is what lets a deploy restart without killing games in progress. Live sockets live in a `Map` keyed by seat id in `index.js`.
 - **Persistence is best-effort on purpose.** `/var/lib` is not writable on a dev machine, so it disables itself and logs; failing to save must never take the server down.
 - `createGameServer()` (in `index.js`) is separate from the process entry (`main.js`) so tests can create a server without binding a port or installing signal handlers.
+- **A seat is reclaimed by token, and the displaced socket is closed with code `SEAT_RECLAIMED` (4000).** The code is not decoration: the client reads it and stands down instead of reconnecting. Without that, two sockets holding one seat take it off each other forever — see the socket rule below, which is how that actually happened.
+- **A socket closing only reports its seat as disconnected if it was still the registered one.** A socket that has already been displaced closing says nothing about the seat, because somebody else is holding it. Reporting it anyway marked a player who had just reloaded as offline, started the 60-second turn-grace clock under them, and broadcast the room twice for a reconnection that had already worked.
+
+### Finding a room
+
+The index lists public rooms. A room has a **name** as well as a code — the code is what you type, the name is what a table calls itself and what a latecomer searches for — and a **visibility**, public by default. Private means one thing only: absent from the list. The code still joins it, which is what makes a shared link to a private table work.
+
+- **The name is drawn, not required.** `pickRoomName` combines one word from each of two themed lists (`secret-agent`, `cunning-traitor`), so the field is never empty and "mandatory" costs a host nothing. The lists are in `domain` because the server validates the name and the client draws the default from the same place. A create with **no** name gets one drawn server-side — the lobby cannot send that, so it means some other client, and every row in the list should be readable. A name that is *present and malformed* is refused (`bad_room_name`): that is hostile input, not a missing default.
+- **Searching treats a space and a hyphen as the same separator**, so somebody who reads `secret-agent` off another screen and types what they would say out loud still finds it.
+- **Started rooms sort to the end, and stay in the list.** They are no use to a stranger — `addSeat` refuses them — but they are exactly what somebody coming back to their own game is looking for. Which is why **selecting a room is one operation**: `joinRoom` rejoins when this browser holds a token for that code and joins otherwise, so a row you already have a seat in puts you back in it rather than refusing you as a latecomer.
+- **The list is pushed, not polled.** A socket becomes a watcher by asking (`list`), stops being one the moment it has a seat, and `refreshLists` sends only when the answer has actually changed. It is **one timer for every watcher rather than an invalidation hook in create / addSeat / start / remove**: a hook that gets forgotten leaves a stale list and nothing says so, while a timer that recomputes and compares cannot be forgotten.
+- The `rooms` frame is the one frame in the protocol **sent to sockets with no seat anywhere**, so it has no recipient to be redacted for and must never carry game state. `server.test.js` pins its keys.
+- The lobby opens a socket to feed the finder, which is why **`ConnectionBanner` needs a `seatId`**: on a build with no server at all (Pages) an unseated client is always reconnecting, and shouting "connection lost" at somebody who has not tried to do anything is a message about nothing. The lobby says it in its own words next to the way out.
+
+### Leaving
+
+`leave` is a message, not an action, and the server names the player from the seat that sent it — so **`REMOVE_PLAYER` is deliberately absent from `PLAY_ACTIONS`** and nothing a client can send removes anybody but itself.
+
+- **Nothing on the board is orphaned when a player goes**, and that is a property of the game rather than luck: pieces belong to *teams*, everybody moves everybody's pieces, and a team is only ever claimed. What leaves is a place in the turn order, a pair of cards nobody will score, and whatever team they held — released through `teams.releasePlayer`, which derives `claimEnabled` from `pz.canClaimControl` like every other writer, so a team abandoned with its CEO on the board stays unclaimable rather than becoming free.
+- **The turn is the one thing that cannot just be filtered out.** Exactly one player holds it and `py.getTurn` reads that with no guard, so `py.removePlayer` passes it on if it was theirs. The server *also* applies a real `NEXT_TURN` first, because a turn change is more than a flag — it snapshots the board for the sniper rollback, clears a half-finished move and recomputes the CEO buffs. Same shape as the 60-second forced pass in `apply.js`.
+- **A game needs two, so leaving a dealt table in a way that would strand somebody takes them with it** and the room is gone. Scoped to `alignment` and `play` on purpose: at `end` there is nothing to play either way and the scores are worth reading, and in the waiting room being alone is just what having opened a room looks like. The two departures are told apart on the wire (`you_left` / `left_alone`) because they need different words on screen — one is something the player did, the other is something that happened to them.
+- **A seat leaving during `alignment` can be the last one the room was waiting for.** `advanceIfEveryoneIsReady` is called from `leave` as well as `markReady`, or the others sit looking at cards they have already confirmed in a game that never starts.
+- The host leaving hands the room to whoever is left, or `START` belongs to somebody who is not there.
+- **The socket stays open** — the player is going back to the lobby, not off the internet — so `unseat` clears everything tying it to a seat, and the client resets to `unseatedSession()` rather than the last room's state with holes in it.
+- Where the control appears, and why the confirmation is not uniform: a screen on the board (`leaveScreen.jsx`, the same reasoning as accuse and reveal — a decision with a price, in a bar three items wide), and a plain button in the waiting room (nothing is lost: the code still joins it), on the friend-and-foe screen (a waiting screen, where a confirm step would be the obstacle rather than the safeguard — and the way out when the table is waiting on somebody who has closed their laptop) and at `end` (the game is over). It renders **nothing at all** in hot-seat, like `SkinPicker`: there is no room to leave.
+- It shares the `FRIEND & FOE` group in the action bar rather than taking a fourth. `Actions` is `flex-basis: 33%` three ways and the landscape phone layout has no slack; `responsive.test.js` has an online spec for that bar, because the hot-seat ones can never see this button.
+- **`Buttons` is a flex row with a gap now**, not `text-align: center`. It had never had to hold two controls before, and each direction gives a control an edge of its own — so `START` and `LEAVE ROOM` shared one, and in Dossier, where a stamp sits slightly rotated, they overlapped outright.
+
+### Refreshing without leaving the game
+
+A refresh keeps the room in the hash and the seat token in `localStorage`, so the seat is reclaimed before anything renders. Arriving at the **front door** instead — a bookmark, a new tab — loses the hash, so `ha:seats` records what this browser is holding and the lobby offers it back. Entries are pruned at three hours, because the server evicts a room by then whatever is happening in it, and forgotten on `seat_lost` — which also retries as a plain join when a name is known, since a code can be recycled after an eviction.
+
+**The socket is opened from an effect, never during render, and this is the rule to not undo.** `createTransport` runs inside a `useMemo`, and React may call a memo factory more than once for a single mounted component — it is a cache, not a lifecycle. When the store opened its own socket at construction, two were built and only the one React kept was ever closed. The orphan reconnected, the server gave it the seat and displaced its twin, the twin took it back, and the two traded the seat every half second. **What that looked like was a refresh that worked**: the board came back, because a snapshot does arrive. Every action after it went out on whichever socket had just lost the seat, so `send` returned false and nothing was sent — and since discrete actions are predicted locally, the player watched their own move happen and nobody else at the table ever saw it. `socketStore#open` is the seam; `online.test.js` pins both halves, the behaviour and the socket count.
 
 Build with `npm run build:server` → `dist-server/main.mjs` (committed, like `docs/`). Note the **`.mjs`** extension, and that `vite.server.config.mjs` needs `publicDir: false` or the bundle acquires all 116 piece images.
 
@@ -194,7 +227,8 @@ Build with `npm run build:server` → `dist-server/main.mjs` (committed, like `d
 | `domain/teams.js` | Team control (who commands which team's HQ) and team point totals. |
 | `domain/cells.js` | Hex board geometry, plus `CELLS_BY_ROW` / `ROW_NUMBERS`. |
 | `domain/deal.js` | Deals the hidden friend/foe alignments. Pure and takes an `rng` because Phase 1 moves it to the server. |
-| `domain/phases.js` | The four phase names. In `domain` because the server will send these strings. |
+| `domain/phases.js` | The four phase names, plus `ROOM_STATES` and `roomStateFor` — what a room looks like from outside it. In `domain` because the server sends these strings. |
+| `domain/roomNames.js` | The two word lists a room's default name is drawn from, `pickRoomName(rng)`, and the shape and search rules. In `domain` because the server validates the name and the client draws it. |
 | `domain/utils.js` | Coord helpers, the six-direction ring, `memoize`. |
 
 `pz` and `py` import each other, which works because both go through their default-exported objects. Keep new cross-module calls doing the same.
@@ -220,6 +254,8 @@ swatch names the same team but takes it as a prop — so a strict-mode locator s
 label is also the card's only `<i>`, which is why the chip is a `span`.
 
 DOM ids the tests depend on: `pz-{pieceId}`, `hex-{row}-{cell}`, `board`, `store-{team}`, `claim-{team}`, `controlled-{team}`, `piece-count-{team}-{TYPE}`, plus `next-turn`, `snipe`, `accuse`, `reveal`, `reveal-friend`, `reveal-foe`, `start-btn`, `alignments-btn`, `player-name{n}`.
+
+The lobby's own: `lobby-name`, `lobby-code`, `lobby-join`, `lobby-create`, `lobby-room-name`, `lobby-room-reroll`, `lobby-visibility-{public,private}`, `lobby-search`, `lobby-rooms`, `lobby-room-{CODE}`, `lobby-resume-{CODE}`, `lobby-room-code`, `lobby-room-title`, `lobby-seat-{NAME}`, `lobby-start`, `lobby-leave`. Leaving from elsewhere: `leave-game` (the bar and the friend-and-foe screen), `leave-screen`, `leave-note`, `leave-cost`, `leave-confirm`, `leave-close`, `end-leave`. **A row in the finder carries its facts in `data-room-{name,host,players,state}`** rather than in its text, for the `innerText` reason above: what the row *says* is the direction's business — it is set in small caps and free to abbreviate — while the count and the state are what a player acts on.
 
 Three of those belong to one line at the foot of an HQ card and are not interchangeable:
 

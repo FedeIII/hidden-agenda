@@ -10,6 +10,169 @@ var PHASES = {
 	PLAY: "play",
 	END: "end"
 };
+var ROOM_STATES = {
+	LOBBY: "lobby",
+	STARTED: "started"
+};
+function roomStateFor(phase) {
+	return phase === PHASES.START ? ROOM_STATES.LOBBY : ROOM_STATES.STARTED;
+}
+//#endregion
+//#region src/domain/roomNames.js
+var ADJECTIVES = [
+	"secret",
+	"hidden",
+	"silent",
+	"quiet",
+	"cunning",
+	"ruthless",
+	"patient",
+	"restless",
+	"nameless",
+	"faceless",
+	"double",
+	"crooked",
+	"loyal",
+	"wary",
+	"invisible",
+	"sleeping",
+	"burning",
+	"frozen",
+	"broken",
+	"gilded",
+	"hollow",
+	"velvet",
+	"brittle",
+	"candid",
+	"careless",
+	"discreet",
+	"elusive",
+	"forged",
+	"guarded",
+	"idle",
+	"jaded",
+	"keen",
+	"lonely",
+	"masked",
+	"nervous",
+	"obscure",
+	"polite",
+	"reckless",
+	"sealed",
+	"shadowed",
+	"sly",
+	"sombre",
+	"stolen",
+	"sunken",
+	"tangled",
+	"unseen",
+	"vacant",
+	"veiled",
+	"watchful",
+	"wounded",
+	"absent",
+	"bitter",
+	"clever",
+	"deadly",
+	"eager",
+	"false",
+	"grim",
+	"humble",
+	"impatient",
+	"unlucky"
+];
+var NOUNS = [
+	"agent",
+	"spy",
+	"traitor",
+	"courier",
+	"handler",
+	"mole",
+	"cipher",
+	"dossier",
+	"envelope",
+	"ledger",
+	"whisper",
+	"rumour",
+	"alias",
+	"briefcase",
+	"keyhole",
+	"lantern",
+	"matchbook",
+	"notebook",
+	"passport",
+	"postcard",
+	"signal",
+	"stamp",
+	"telegram",
+	"typewriter",
+	"umbrella",
+	"vault",
+	"wireless",
+	"safehouse",
+	"sniper",
+	"chauffeur",
+	"diplomat",
+	"informant",
+	"defector",
+	"custodian",
+	"gatekeeper",
+	"interpreter",
+	"janitor",
+	"librarian",
+	"locksmith",
+	"messenger",
+	"minister",
+	"nightwatch",
+	"operator",
+	"photographer",
+	"quartermaster",
+	"receptionist",
+	"secretary",
+	"sentry",
+	"steward",
+	"switchboard",
+	"telephonist",
+	"understudy",
+	"waiter",
+	"watchman",
+	"cartographer",
+	"bookkeeper",
+	"clockmaker",
+	"tailor",
+	"translator",
+	"stenographer"
+];
+/**
+* Draws a room name: one word from each list, hyphenated — `secret-agent`, `cunning-traitor`.
+*
+* Takes an `rng` for the same reason `pickSkin` and `deal` do: the server calls it with its own when
+* a client sends no name at all, and a spec needs the draw to be deterministic.
+*/
+function pickRoomName(rng = Math.random) {
+	return `${ADJECTIVES[Math.floor(rng() * ADJECTIVES.length) % ADJECTIVES.length]}-${NOUNS[Math.floor(rng() * NOUNS.length) % NOUNS.length]}`;
+}
+/**
+* Trims, and collapses runs of spaces and hyphens to a single space or hyphen.
+*
+* Applied before storing rather than only before comparing, so the list never shows two rooms whose
+* names differ by whitespace nobody can see.
+*/
+function normaliseRoomName(value) {
+	if (typeof value !== "string") return "";
+	return value.trim().replace(/\s+/g, " ").replace(/-+/g, "-");
+}
+function isRoomNameShaped(value) {
+	const name = normaliseRoomName(value);
+	return name.length >= 3 && name.length <= 24 && /^[A-Za-z0-9][A-Za-z0-9 -]*$/.test(name);
+}
+function searchable(value) {
+	return normaliseRoomName(value).toLowerCase().replace(/-/g, " ");
+}
+function matchesRoomQuery(name, query) {
+	const needle = searchable(query);
+	return needle.length === 0 || searchable(name).includes(needle);
+}
 //#endregion
 //#region src/domain/deal.js
 var TEAMS$1 = [
@@ -991,6 +1154,18 @@ function removeControlFor(team, pieces) {
 		return teamControl;
 	};
 }
+function releasePlayer(playerName, { teamControl, pieces }) {
+	return teamControl.map((control, teamIndex) => {
+		const heldByThem = control.player === playerName;
+		if (!heldByThem && control.prevPlayer !== playerName) return control;
+		return {
+			player: heldByThem ? null : control.player,
+			prevPlayer: control.prevPlayer === playerName ? null : control.prevPlayer,
+			claimEnabled: pz.canClaimControl(teamIndex, pieces),
+			controlling: heldByThem ? false : control.controlling
+		};
+	});
+}
 function getPointsFromKills(team, pieces) {
 	return Object.entries(pz.getKilledPiecesByTeam(team, pieces)).reduce((score, [pieceType, pieceCount]) => score + POINTS_PER_PIECE_TYPE[pieceType] * pieceCount, 0);
 }
@@ -1050,6 +1225,7 @@ var teams_default = {
 	initControl,
 	claimControl,
 	cancelControl,
+	releasePlayer,
 	getPointsForTeam,
 	movePieceForControl,
 	revealFriend: revealFriend$1,
@@ -1084,12 +1260,36 @@ function init(playerNames) {
 		}
 	}));
 }
-function nextTurn(players) {
+function nextTurn$1(players) {
 	const currentIndex = players.findIndex((player) => player.turn);
 	const nextIndex = currentIndex + 1 >= players.length ? 0 : currentIndex + 1;
 	return players.map((player, i) => ({
 		...player,
 		turn: i === nextIndex
+	}));
+}
+/**
+* Somebody has left the table mid-game.
+*
+* Nothing on the board is orphaned by this, and that is a property of the game rather than luck:
+* pieces belong to *teams*, every player moves every team's pieces, and a team is only ever claimed.
+* What leaves with a player is a place in the turn order and a pair of cards nobody will score.
+*
+* The turn is the one thing that cannot simply be filtered out. Exactly one player holds it at all
+* times and `getTurn` reads that with no guard, so if it was theirs it moves on to whoever it would
+* have gone to next. The server passes the turn properly first — a turn change is more than a flag,
+* it snapshots the board for the sniper rollback and recomputes the CEO buffs — but the invariant is
+* kept here as well, because this is the function that could break it.
+*/
+function removePlayer$1(players, name) {
+	const index = players.findIndex((player) => player.name === name);
+	if (index === -1) return players;
+	const remaining = players.filter((player) => player.name !== name);
+	if (!remaining.length || !players[index].turn) return remaining;
+	const next = players[(index + 1) % players.length].name;
+	return remaining.map((player) => ({
+		...player,
+		turn: player.name === next
 	}));
 }
 function setAlignment$1(players, playerName, friend, foe) {
@@ -1208,7 +1408,8 @@ function sortByPoints(players, pieces) {
 }
 var py_default = {
 	init,
-	nextTurn,
+	nextTurn: nextTurn$1,
+	removePlayer: removePlayer$1,
 	setAlignment: setAlignment$1,
 	getTurn,
 	isRevealActive,
@@ -1243,6 +1444,16 @@ function setAlignment({ name, friend, foe }) {
 	};
 }
 var NEXT_TURN = "NEXT_TURN";
+function nextTurn() {
+	return { type: NEXT_TURN };
+}
+var REMOVE_PLAYER = "REMOVE_PLAYER";
+function removePlayer(name) {
+	return {
+		type: REMOVE_PLAYER,
+		payload: { name }
+	};
+}
 var TOGGLE_PIECE = "TOGGLE_PIECE";
 var MOVE_PIECE = "MOVE_PIECE";
 var DIRECT_PIECE = "DIRECT_PIECE";
@@ -1258,6 +1469,7 @@ function playersReducer({ players }, action) {
 	switch (action.type) {
 		case START_GAME: return py_default.init(action.payload);
 		case NEXT_TURN: return py_default.nextTurn(players);
+		case REMOVE_PLAYER: return py_default.removePlayer(players, action.payload.name);
 		case SET_ALIGNMENT: {
 			const { name, friend, foe } = action.payload;
 			return py_default.setAlignment(players, name, friend, foe);
@@ -1436,6 +1648,7 @@ function piecesPrevStateReducer(state, action) {
 function teamControlReducer(state, action) {
 	switch (action.type) {
 		case CLAIM_CONTROL: return teams_default.claimControl(action.payload.playerName, action.payload.team, state);
+		case REMOVE_PLAYER: return teams_default.releasePlayer(action.payload.name, state);
 		case CANCEL_CONTROL: return teams_default.cancelControl(action.payload.team, state);
 		case MOVE_PIECE: return teams_default.movePieceForControl(action.payload.pieceId, state);
 		case REVEAL_FRIEND: return teams_default.revealFriend(state.players, state);
@@ -1505,11 +1718,13 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = nul
 	function get(code) {
 		return rooms.get(code) || null;
 	}
-	function create() {
+	function create({ name = null, isPrivate = false } = {}) {
 		if (rooms.size >= 200) return null;
 		const code = createCode((candidate) => rooms.has(candidate));
 		const room = {
 			code,
+			name: isRoomNameShaped(name) ? normaliseRoomName(name) : pickRoomName(rng),
+			private: Boolean(isPrivate),
 			phase: PHASES.START,
 			state: createInitialState(),
 			seats: [],
@@ -1574,15 +1789,43 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = nul
 		room.updatedAt = now();
 		return { room };
 	}
+	function advanceIfEveryoneIsReady(room) {
+		if (room.phase !== PHASES.ALIGNMENT || !room.seats.length || !room.seats.every((seat) => seat.ready)) return;
+		room.phase = PHASES.PLAY;
+		room.version += 1;
+	}
 	function markReady(room, seat) {
 		if (room.phase !== PHASES.ALIGNMENT) return { error: "not_in_alignment" };
 		seat.ready = true;
 		room.updatedAt = now();
-		if (room.seats.every((other) => other.ready)) {
-			room.phase = PHASES.PLAY;
+		advanceIfEveryoneIsReady(room);
+		return { room };
+	}
+	const PLAYABLE = [PHASES.ALIGNMENT, PHASES.PLAY];
+	/**
+	* Takes a seat out of a room, and out of the game if one is running.
+	*
+	* Returns every seat that ended up leaving — the one that asked, plus anybody stranded by it — and
+	* whether the room has nobody left in it at all.
+	*/
+	function leave(room, seat) {
+		const others = room.seats.filter((other) => other.id !== seat.id);
+		const stranded = PLAYABLE.includes(room.phase) && others.length === 1 ? others : [];
+		const gone = [seat, ...stranded];
+		room.seats = others.filter((other) => !stranded.includes(other));
+		if (room.phase !== PHASES.START) {
+			room.state = gone.reduce((state, departing) => {
+				return gameReducer(state.players.some((player) => player.turn && player.name === departing.name) ? gameReducer(state, nextTurn()) : state, removePlayer(departing.name));
+			}, room.state);
 			room.version += 1;
 		}
-		return { room };
+		if (!room.seats.some((other) => other.id === room.hostSeatId)) room.hostSeatId = room.seats.length ? room.seats[0].id : null;
+		advanceIfEveryoneIsReady(room);
+		room.updatedAt = now();
+		return {
+			gone,
+			dissolved: room.seats.length === 0
+		};
 	}
 	function setConnected(room, seat, connected) {
 		seat.connected = connected;
@@ -1595,8 +1838,45 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = nul
 	function all() {
 		return [...rooms.values()];
 	}
+	function hostName(room) {
+		const host = room.seats.find((seat) => seat.id === room.hostSeatId) || room.seats[0];
+		return host ? host.name : null;
+	}
+	function listingFor(room) {
+		return {
+			code: room.code,
+			name: room.name || room.code,
+			host: hostName(room),
+			players: room.seats.length,
+			state: roomStateFor(room.phase)
+		};
+	}
+	const STATE_ORDER = {
+		[ROOM_STATES.LOBBY]: 0,
+		[ROOM_STATES.STARTED]: 1
+	};
+	/**
+	* The public list. Private rooms are absent from it entirely — not dimmed, not marked — which is
+	* the whole of what private means here.
+	*
+	* Returns the total as well as the page, because a cap that is not reported reads as "that is
+	* every room" when it is not.
+	*/
+	function list({ query = "", limit = 60 } = {}) {
+		const ordered = all().filter((room) => !room.private && matchesRoomQuery(room.name || room.code, query)).sort((a, b) => {
+			return STATE_ORDER[roomStateFor(a.phase)] - STATE_ORDER[roomStateFor(b.phase)] || b.createdAt - a.createdAt;
+		});
+		return {
+			rooms: ordered.slice(0, limit).map(listingFor),
+			total: ordered.length
+		};
+	}
 	function load(room) {
-		rooms.set(room.code, room);
+		rooms.set(room.code, {
+			name: room.code,
+			private: false,
+			...room
+		});
 	}
 	return {
 		get,
@@ -1607,9 +1887,11 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = nul
 		start,
 		setSkin,
 		markReady,
+		leave,
 		setConnected,
 		remove,
 		all,
+		list,
 		load,
 		get size() {
 			return rooms.size;
@@ -1852,6 +2134,8 @@ var CLIENT = {
 	CREATE: "create",
 	JOIN: "join",
 	REJOIN: "rejoin",
+	LEAVE: "leave",
+	LIST: "list",
 	START: "start",
 	READY: "ready",
 	SKIN: "skin",
@@ -1861,10 +2145,16 @@ var CLIENT = {
 var SERVER = {
 	SEAT: "seat",
 	ROOM: "room",
+	ROOMS: "rooms",
 	SNAPSHOT: "snapshot",
+	LEFT: "left",
 	REJECTED: "rejected",
 	ERROR: "error",
 	PONG: "pong"
+};
+var LEFT = {
+	ASKED: "you_left",
+	ALONE: "left_alone"
 };
 function parseMessage(raw) {
 	if (typeof raw !== "string" || raw.length > 8192) return { error: "message_too_large" };
@@ -1885,10 +2175,19 @@ function seatMessage(room, seat) {
 		name: seat.name
 	};
 }
+function roomsMessage({ rooms, total }) {
+	return {
+		type: SERVER.ROOMS,
+		rooms,
+		total
+	};
+}
 function roomMessage(room) {
 	return {
 		type: SERVER.ROOM,
 		code: room.code,
+		name: room.name || room.code,
+		private: Boolean(room.private),
 		phase: room.phase,
 		hostSeatId: room.hostSeatId,
 		skin: room.skin || DEFAULT_SKIN,
@@ -1909,6 +2208,12 @@ function snapshotMessage(room, seat) {
 		state: redactFor(seat.name, room.state, room.phase)
 	};
 }
+function leftMessage(reason) {
+	return {
+		type: SERVER.LEFT,
+		reason
+	};
+}
 function rejectedMessage({ seq, reason, version }) {
 	return {
 		type: SERVER.REJECTED,
@@ -1926,9 +2231,12 @@ function errorMessage(reason) {
 //#endregion
 //#region server/index.js
 var DEFAULT_PORT = 3007;
+var SEAT_RECLAIMED = 4e3;
 var PING_INTERVAL_MS = 25e3;
 var SNAPSHOT_COALESCE_MS = 40;
 var SWEEP_INTERVAL_MS = 6e4;
+var LIST_INTERVAL_MS = 3e3;
+var LIST_MIN_INTERVAL_MS = 250;
 var EVICT_AFTER_ALL_GONE_MS = 18e5;
 var EVICT_HARD_CAP_MS = 108e5;
 var JOINS_PER_IP_PER_MINUTE = Number(process.env.HA_JOINS_PER_MINUTE) || 10;
@@ -1945,6 +2253,7 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 	const sockets = /* @__PURE__ */ new Map();
 	const pendingSnapshots = /* @__PURE__ */ new Map();
 	const joinsByIp = /* @__PURE__ */ new Map();
+	const watchers = /* @__PURE__ */ new Map();
 	for (const room of persistence.loadAll()) rooms.load(room);
 	if (rooms.size) log(`reloaded ${rooms.size} room(s) from disk`);
 	function send(seatId, message) {
@@ -1969,7 +2278,8 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 	}
 	function bind(socket, room, seat) {
 		const previous = sockets.get(seat.id);
-		if (previous && previous !== socket) previous.close(4e3, "seat reclaimed");
+		if (previous && previous !== socket) previous.close(SEAT_RECLAIMED, "seat reclaimed");
+		watchers.delete(socket);
 		sockets.set(seat.id, socket);
 		socket.seatId = seat.id;
 		socket.roomCode = room.code;
@@ -1985,10 +2295,46 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 		joinsByIp.set(ip, [...recent, at]);
 		return true;
 	}
+	function handleList(socket, message) {
+		const query = typeof message.query === "string" ? message.query.slice(0, 24) : "";
+		const at = now();
+		const watcher = watchers.get(socket);
+		if (watcher && at - watcher.at < LIST_MIN_INTERVAL_MS) {
+			watchers.set(socket, {
+				query,
+				at: watcher.at,
+				sent: null
+			});
+			return;
+		}
+		const encoded = JSON.stringify(roomsMessage(rooms.list({ query })));
+		watchers.set(socket, {
+			query,
+			at,
+			sent: encoded
+		});
+		socket.send(encoded);
+	}
+	function refreshLists() {
+		for (const [socket, watcher] of watchers) {
+			if (socket.readyState !== socket.OPEN) {
+				watchers.delete(socket);
+				continue;
+			}
+			const encoded = JSON.stringify(roomsMessage(rooms.list({ query: watcher.query })));
+			if (encoded === watcher.sent) continue;
+			watcher.sent = encoded;
+			socket.send(encoded);
+		}
+	}
 	function handleCreate(socket, message, ip) {
-		if (!isNameShaped(message.name)) return send(socket.seatId, errorMessage("bad_name"));
+		if (!isNameShaped(message.name)) return socket.send(JSON.stringify(errorMessage("bad_name")));
+		if (message.room !== void 0 && !isRoomNameShaped(message.room)) return socket.send(JSON.stringify(errorMessage("bad_room_name")));
 		if (!allowJoinFrom(ip)) return socket.send(JSON.stringify(errorMessage("slow_down")));
-		const room = rooms.create();
+		const room = rooms.create({
+			name: message.room,
+			isPrivate: message.private
+		});
 		if (!room) return socket.send(JSON.stringify(errorMessage("server_full")));
 		const { seat, error } = rooms.addSeat(room, message.name.trim());
 		if (error) return socket.send(JSON.stringify(errorMessage(error)));
@@ -2044,6 +2390,37 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 			persistence.save(room);
 		});
 	}
+	function forget(room) {
+		clearTimeout(pendingSnapshots.get(room.code));
+		pendingSnapshots.delete(room.code);
+		rooms.remove(room.code);
+		persistence.remove(room.code);
+	}
+	function unseat(seatId) {
+		const socket = sockets.get(seatId);
+		sockets.delete(seatId);
+		if (socket) {
+			socket.seatId = void 0;
+			socket.roomCode = void 0;
+		}
+	}
+	function handleLeave(socket) {
+		return withSeat(socket, (room, seat) => {
+			const { gone, dissolved } = rooms.leave(room, seat);
+			gone.forEach((departed) => {
+				send(departed.id, leftMessage(departed.id === seat.id ? LEFT.ASKED : LEFT.ALONE));
+				unseat(departed.id);
+			});
+			if (dissolved) {
+				forget(room);
+				log(`room ${room.code} dissolved: nobody left in it`);
+				return;
+			}
+			broadcastRoom(room);
+			sendSnapshots(room);
+			persistence.save(room);
+		});
+	}
 	function handleReady(socket) {
 		return withSeat(socket, (room, seat) => {
 			const { error } = rooms.markReady(room, seat);
@@ -2078,6 +2455,8 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 			case CLIENT.CREATE: return handleCreate(socket, message, ip);
 			case CLIENT.JOIN: return handleJoin(socket, message, ip);
 			case CLIENT.REJOIN: return handleRejoin(socket, message);
+			case CLIENT.LEAVE: return handleLeave(socket);
+			case CLIENT.LIST: return handleList(socket, message);
 			case CLIENT.START: return handleStart(socket);
 			case CLIENT.READY: return handleReady(socket);
 			case CLIENT.SKIN: return handleSkin(socket, message);
@@ -2089,8 +2468,10 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 	function handleClose(socket) {
 		const room = rooms.get(socket.roomCode);
 		const seat = room ? rooms.seatById(room, socket.seatId) : null;
-		if (sockets.get(socket.seatId) === socket) sockets.delete(socket.seatId);
-		if (room && seat) {
+		watchers.delete(socket);
+		const wasCurrent = sockets.get(socket.seatId) === socket;
+		if (wasCurrent) sockets.delete(socket.seatId);
+		if (room && seat && wasCurrent) {
 			rooms.setConnected(room, seat, false);
 			broadcastRoom(room);
 			persistence.save(room);
@@ -2104,8 +2485,7 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 			const ageFor = at - room.createdAt;
 			if (!anyoneConnected && idleFor > EVICT_AFTER_ALL_GONE_MS || ageFor > EVICT_HARD_CAP_MS) {
 				room.seats.forEach((seat) => sockets.delete(seat.id));
-				rooms.remove(room.code);
-				persistence.remove(room.code);
+				forget(room);
 				log(`evicted room ${room.code}`);
 			}
 		}
@@ -2166,18 +2546,23 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 		});
 	}, PING_INTERVAL_MS);
 	const sweeper = setInterval(sweep, SWEEP_INTERVAL_MS);
+	const lister = setInterval(refreshLists, LIST_INTERVAL_MS);
 	heartbeat.unref?.();
 	sweeper.unref?.();
+	lister.unref?.();
 	return {
 		httpServer,
 		rooms,
 		sweep,
+		refreshLists,
 		listen(port = DEFAULT_PORT, host = "127.0.0.1") {
 			return new Promise((resolve) => httpServer.listen(port, host, () => resolve(httpServer.address())));
 		},
 		close() {
 			clearInterval(heartbeat);
 			clearInterval(sweeper);
+			clearInterval(lister);
+			watchers.clear();
 			pendingSnapshots.forEach((timer) => clearTimeout(timer));
 			pendingSnapshots.clear();
 			wss.clients.forEach((socket) => socket.terminate());

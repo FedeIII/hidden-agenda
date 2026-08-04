@@ -1,6 +1,7 @@
 import { createServer as createHttpServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { PHASES } from 'Domain/phases';
+import { isRoomNameShaped, MAX_ROOM_NAME_LENGTH } from 'Domain/roomNames';
 import { createRoomStore, isNameShaped, MAX_ROOMS } from './rooms';
 import { isCodeShaped } from './codes';
 import { applyAction } from './apply';
@@ -9,10 +10,13 @@ import { createRoomPersistence } from './persistence';
 import {
 	CLIENT,
 	SERVER,
+	LEFT,
 	parseMessage,
 	seatMessage,
 	roomMessage,
+	roomsMessage,
 	snapshotMessage,
+	leftMessage,
 	rejectedMessage,
 	errorMessage,
 	MAX_MESSAGE_BYTES,
@@ -20,12 +24,23 @@ import {
 
 export const DEFAULT_PORT = 3007;
 
+// Told to a socket whose seat a newer connection has just claimed. The client reads it and stops
+// reconnecting; see the close handler in src/client/net/socketStore.js.
+export const SEAT_RECLAIMED = 4000;
+
 // Cloudflare drops an idle WebSocket at ~100s, so the connection has to say something first.
 const PING_INTERVAL_MS = 25_000;
 // DIRECT_PIECE arrives at hover rate while aiming, so snapshots are coalesced rather than sent
 // per action.
 const SNAPSHOT_COALESCE_MS = 40;
 const SWEEP_INTERVAL_MS = 60_000;
+// How often a socket watching the public list is told about it. A list that goes stale while you read
+// it is worse than useless — the room you pick has filled up — so it is pushed rather than polled,
+// but only to the sockets that asked and only when the answer has actually changed.
+const LIST_INTERVAL_MS = 3000;
+// Floor on how often one socket may ask for the list. A dropped request costs at most one interval,
+// because the query it asked with is remembered either way.
+const LIST_MIN_INTERVAL_MS = 250;
 const EVICT_AFTER_ALL_GONE_MS = 30 * 60_000;
 const EVICT_HARD_CAP_MS = 3 * 60 * 60_000;
 // 4-character codes are cheap to guess at without this. Raised for the test server rather than
@@ -42,6 +57,10 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 	const sockets = new Map();
 	const pendingSnapshots = new Map();
 	const joinsByIp = new Map();
+	// Sockets watching the public list, and the query each of them asked with. A socket becomes a
+	// watcher by asking for the list and stops being one the moment it has a seat — the finder is
+	// something you use on the way in, and a player at a table has no use for it.
+	const watchers = new Map();
 
 	for (const room of persistence.loadAll()) {
 		rooms.load(room);
@@ -94,9 +113,12 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 		const previous = sockets.get(seat.id);
 
 		if (previous && previous !== socket) {
-			previous.close(4000, 'seat reclaimed');
+			// 4000 rather than a plain close: the client reads the code and stands down instead of
+			// reconnecting. Without that, the two sockets take the seat off each other forever.
+			previous.close(SEAT_RECLAIMED, 'seat reclaimed');
 		}
 
+		watchers.delete(socket);
 		sockets.set(seat.id, socket);
 		socket.seatId = seat.id;
 		socket.roomCode = room.code;
@@ -118,16 +140,67 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 		return true;
 	}
 
+	// The public list, and the socket's standing interest in it. Answered unconditionally, even when
+	// the content is identical to the last frame this socket got: a client that asks and hears nothing
+	// back sits on a spinner. The periodic refresh is the one that stays quiet when nothing changed.
+	function handleList(socket, message) {
+		const query = typeof message.query === 'string' ? message.query.slice(0, MAX_ROOM_NAME_LENGTH) : '';
+		const at = now();
+		const watcher = watchers.get(socket);
+
+		if (watcher && at - watcher.at < LIST_MIN_INTERVAL_MS) {
+			// Too soon. Remember what was asked and drop the send — clearing `sent` so the next
+			// refresh is guaranteed to go out, even if this query happens to produce the same rows
+			// as the last one did.
+			watchers.set(socket, { query, at: watcher.at, sent: null });
+
+			return;
+		}
+
+		const encoded = JSON.stringify(roomsMessage(rooms.list({ query })));
+
+		watchers.set(socket, { query, at, sent: encoded });
+		socket.send(encoded);
+	}
+
+	function refreshLists() {
+		for (const [socket, watcher] of watchers) {
+			if (socket.readyState !== socket.OPEN) {
+				watchers.delete(socket);
+
+				continue;
+			}
+
+			const encoded = JSON.stringify(roomsMessage(rooms.list({ query: watcher.query })));
+
+			if (encoded === watcher.sent) {
+				continue;
+			}
+
+			watcher.sent = encoded;
+			socket.send(encoded);
+		}
+	}
+
 	function handleCreate(socket, message, ip) {
 		if (!isNameShaped(message.name)) {
-			return send(socket.seatId, errorMessage('bad_name'));
+			// socket.send, not send(socket.seatId, …): a socket asking to create a room has no seat
+			// yet, so addressing the reply by seat id sent it to nobody and a bad name failed in
+			// silence.
+			return socket.send(JSON.stringify(errorMessage('bad_name')));
+		}
+
+		// Absent is allowed and gets a drawn name — see rooms.create. Present and malformed is not:
+		// that is a client sending something the lobby cannot produce.
+		if (message.room !== undefined && !isRoomNameShaped(message.room)) {
+			return socket.send(JSON.stringify(errorMessage('bad_room_name')));
 		}
 
 		if (!allowJoinFrom(ip)) {
 			return socket.send(JSON.stringify(errorMessage('slow_down')));
 		}
 
-		const room = rooms.create();
+		const room = rooms.create({ name: message.room, isPrivate: message.private });
 
 		if (!room) {
 			return socket.send(JSON.stringify(errorMessage('server_full')));
@@ -240,6 +313,54 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 		});
 	}
 
+	// Drops a room and everything still pointing at it. The scheduled snapshot matters: it captures the
+	// room object and calls persistence.save on it, so a save landing after the file was removed would
+	// write the room back and hand it to the next restart.
+	function forget(room) {
+		clearTimeout(pendingSnapshots.get(room.code));
+		pendingSnapshots.delete(room.code);
+		rooms.remove(room.code);
+		persistence.remove(room.code);
+	}
+
+	// The socket stays open — the player is going back to the lobby, not off the internet — so what has
+	// to go is everything tying it to a seat it no longer holds.
+	function unseat(seatId) {
+		const socket = sockets.get(seatId);
+
+		sockets.delete(seatId);
+
+		if (socket) {
+			socket.seatId = undefined;
+			socket.roomCode = undefined;
+		}
+	}
+
+	function handleLeave(socket) {
+		return withSeat(socket, (room, seat) => {
+			const { gone, dissolved } = rooms.leave(room, seat);
+
+			// Told before the socket is unseated, because `send` addresses by seat id.
+			gone.forEach(departed => {
+				send(departed.id, leftMessage(departed.id === seat.id ? LEFT.ASKED : LEFT.ALONE));
+				unseat(departed.id);
+			});
+
+			if (dissolved) {
+				forget(room);
+				log(`room ${room.code} dissolved: nobody left in it`);
+
+				return;
+			}
+
+			// The seat list is shorter, and so is the game's player list if one had been dealt — which is
+			// a change to the state, so it goes out as a snapshot too.
+			broadcastRoom(room);
+			sendSnapshots(room);
+			persistence.save(room);
+		});
+	}
+
 	function handleReady(socket) {
 		return withSeat(socket, (room, seat) => {
 			const { error } = rooms.markReady(room, seat);
@@ -292,6 +413,10 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 				return handleJoin(socket, message, ip);
 			case CLIENT.REJOIN:
 				return handleRejoin(socket, message);
+			case CLIENT.LEAVE:
+				return handleLeave(socket);
+			case CLIENT.LIST:
+				return handleList(socket, message);
 			case CLIENT.START:
 				return handleStart(socket);
 			case CLIENT.READY:
@@ -311,11 +436,20 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 		const room = rooms.get(socket.roomCode);
 		const seat = room ? rooms.seatById(room, socket.seatId) : null;
 
-		if (sockets.get(socket.seatId) === socket) {
+		watchers.delete(socket);
+
+		// Whether this socket is still the registered one for its seat is exactly the question of
+		// whether it was displaced by a newer connection. A displaced socket closing says nothing about
+		// the seat — somebody else is holding it — so reporting the seat as disconnected there marked a
+		// player who had just reloaded as offline, started the turn-grace clock under them, and
+		// broadcast the room twice for a reconnection that had already succeeded.
+		const wasCurrent = sockets.get(socket.seatId) === socket;
+
+		if (wasCurrent) {
 			sockets.delete(socket.seatId);
 		}
 
-		if (room && seat) {
+		if (room && seat && wasCurrent) {
 			rooms.setConnected(room, seat, false);
 			broadcastRoom(room);
 			persistence.save(room);
@@ -332,8 +466,7 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 
 			if ((!anyoneConnected && idleFor > EVICT_AFTER_ALL_GONE_MS) || ageFor > EVICT_HARD_CAP_MS) {
 				room.seats.forEach(seat => sockets.delete(seat.id));
-				rooms.remove(room.code);
-				persistence.remove(room.code);
+				forget(room);
 				log(`evicted room ${room.code}`);
 			}
 		}
@@ -411,14 +544,20 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 	}, PING_INTERVAL_MS);
 
 	const sweeper = setInterval(sweep, SWEEP_INTERVAL_MS);
+	// One timer for every watcher rather than an invalidation hook in each of create / addSeat / start
+	// / remove. A hook that gets forgotten leaves a stale list and nothing says so; a timer that
+	// recomputes and compares cannot be forgotten, and costs nothing while nobody is looking.
+	const lister = setInterval(refreshLists, LIST_INTERVAL_MS);
 
 	heartbeat.unref?.();
 	sweeper.unref?.();
+	lister.unref?.();
 
 	return {
 		httpServer,
 		rooms,
 		sweep,
+		refreshLists,
 
 		listen(port = DEFAULT_PORT, host = '127.0.0.1') {
 			return new Promise(resolve => httpServer.listen(port, host, () => resolve(httpServer.address())));
@@ -427,6 +566,8 @@ export function createGameServer({ log = console.log, now = () => Date.now(), rn
 		close() {
 			clearInterval(heartbeat);
 			clearInterval(sweeper);
+			clearInterval(lister);
+			watchers.clear();
 			pendingSnapshots.forEach(timer => clearTimeout(timer));
 			pendingSnapshots.clear();
 			wss.clients.forEach(socket => socket.terminate());

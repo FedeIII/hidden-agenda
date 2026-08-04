@@ -88,3 +88,47 @@ test.describe('dealAlignments', () => {
 		});
 	});
 });
+
+test.describe('py.removePlayer', () => {
+	test('drops the player and leaves everybody else exactly as they were', () => {
+		const players = [player('ANA', '1', '0', { turn: true }), player('BEA', '0', '3'), player('CAI', '2', '1')];
+
+		const result = py.removePlayer(players, 'BEA');
+
+		expect(result.map(entry => entry.name)).toEqual(['ANA', 'CAI']);
+		expect(result[0]).toEqual(players[0]);
+		expect(result[1]).toEqual(players[2]);
+	});
+
+	// The invariant this exists to keep: exactly one player holds the turn, always. getTurn reads it
+	// with no guard — `players.find(...).name` — so a table where nobody has it throws on the next
+	// render, from a component that has nothing to do with anybody leaving.
+	test('passes the turn on when it belonged to the player leaving', () => {
+		const players = [player('ANA', '1', '0', { turn: true }), player('BEA', '0', '3'), player('CAI', '2', '1')];
+
+		const result = py.removePlayer(players, 'ANA');
+
+		expect(result.map(entry => entry.name)).toEqual(['BEA', 'CAI']);
+		expect(py.getTurn(result)).toEqual('BEA');
+	});
+
+	test('wraps, when the player leaving was last in the order and held the turn', () => {
+		const players = [player('ANA', '1', '0'), player('BEA', '0', '3'), player('CAI', '2', '1', { turn: true })];
+
+		const result = py.removePlayer(players, 'CAI');
+
+		expect(py.getTurn(result)).toEqual('ANA');
+	});
+
+	test('the last player leaving empties the table rather than looking for somebody to hand it to', () => {
+		const players = [player('ANA', '1', '0', { turn: true })];
+
+		expect(py.removePlayer(players, 'ANA')).toEqual([]);
+	});
+
+	test('a name nobody at the table has changes nothing', () => {
+		const players = [player('ANA', '1', '0', { turn: true }), player('BEA', '0', '3')];
+
+		expect(py.removePlayer(players, 'NOBODY')).toEqual(players);
+	});
+});

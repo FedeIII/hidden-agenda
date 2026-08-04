@@ -54,7 +54,19 @@ export function withState(WrappedComponent) {
 		const [mode, setMode] = useState(detectMode);
 		const transport = useMemo(() => createTransport({ mode }), [mode]);
 
-		useEffect(() => transport.close, [transport]);
+		// Opening the socket is an effect, and deliberately not something createTransport does for
+		// itself. React may call a useMemo factory more than once for a single mounted component — it
+		// is a cache, not a lifecycle — and it does: two stores were built, each opened a socket of its
+		// own, and only the one React kept was ever closed. The orphan reconnected, the server handed
+		// it the seat and displaced the other, that one took it back, and the two traded it every half
+		// second while the player's actions went out on whichever socket had just lost. A refresh
+		// looked like it had worked, because a snapshot does arrive; nothing the player did afterwards
+		// reached the table. See socketStore#open.
+		useEffect(() => {
+			transport.open();
+
+			return transport.close;
+		}, [transport]);
 
 		const state = useSyncExternalStore(transport.store.subscribe, transport.store.getState);
 		const session = useSyncExternalStore(transport.session.subscribe, transport.session.get);

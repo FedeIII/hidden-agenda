@@ -530,3 +530,468 @@ test.describe('reconnection', () => {
 		}
 	});
 });
+
+test.describe('the public room list', () => {
+	// Opens a room and returns both the seat frame and the room frame, since the name lives on the
+	// second one.
+	async function openRoom(url, { host, room, isPrivate = false }) {
+		const client = createClient(url);
+		await client.opened;
+		client.send({ type: 'create', name: host, room, private: isPrivate });
+
+		const seat = await client.waitFor('seat');
+		const frame = await client.waitFor('room');
+
+		return { client, seat, frame };
+	}
+
+	test('a room carries the name it was opened with, and says whether it is listed', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const { frame } = await openRoom(url, { host: 'ANA', room: 'cunning-traitor' });
+
+			expect(frame.name).toEqual('cunning-traitor');
+			expect(frame.private).toBe(false);
+		} finally {
+			await server.close();
+		}
+	});
+
+	// The lobby's field is prefilled with a draw and cannot be submitted empty, so a create with no
+	// name at all is not the lobby. Giving it one keeps every row in the list readable — the
+	// alternative is a blank line nobody can search for.
+	test('a room with no name asked for gets a drawn one rather than none', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const { frame } = await openRoom(url, { host: 'ANA', room: undefined });
+
+			expect(frame.name).toMatch(/^[a-z]+-[a-z]+$/);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a name that is present and malformed is refused', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const client = createClient(url);
+			await client.opened;
+			client.send({ type: 'create', name: 'ANA', room: '<script>alert(1)</script>' });
+
+			expect((await client.waitFor('error')).reason).toEqual('bad_room_name');
+			// And no room was opened by the attempt.
+			expect(server.rooms.size).toEqual(0);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('lists public rooms with everything the finder shows', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const { seat } = await openRoom(url, { host: 'ANA', room: 'secret-agent' });
+
+			const finder = createClient(url);
+			await finder.opened;
+			finder.send({ type: 'list' });
+
+			const { rooms, total } = await finder.waitFor('rooms');
+
+			expect(total).toEqual(1);
+			expect(rooms).toEqual([{ code: seat.code, name: 'secret-agent', host: 'ANA', players: 1, state: 'lobby' }]);
+		} finally {
+			await server.close();
+		}
+	});
+
+	// The whole of what private means here: absent from the list, and joinable by code exactly as
+	// before. Not dimmed, not marked — a listing a stranger can read is the thing being withheld.
+	test('a private room is absent from the list and still joins by code', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			await openRoom(url, { host: 'ANA', room: 'public-room' });
+			const { seat: hidden } = await openRoom(url, { host: 'BEA', room: 'hidden-room', isPrivate: true });
+
+			const finder = createClient(url);
+			await finder.opened;
+			finder.send({ type: 'list' });
+
+			const { rooms, total } = await finder.waitFor('rooms');
+
+			expect(rooms.map(room => room.name)).toEqual(['public-room']);
+			expect(total).toEqual(1);
+
+			// The code still works, which is what makes a shared link to a private room worth having.
+			finder.send({ type: 'join', code: hidden.code, name: 'CARA' });
+			expect((await finder.waitFor('seat')).code).toEqual(hidden.code);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('searches by name, and a space matches a hyphen', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			await openRoom(url, { host: 'ANA', room: 'secret-agent' });
+			await openRoom(url, { host: 'BEA', room: 'cunning-traitor' });
+
+			const finder = createClient(url);
+			await finder.opened;
+
+			finder.send({ type: 'list', query: 'secret agent' });
+			expect((await finder.waitFor('rooms')).rooms.map(room => room.name)).toEqual(['secret-agent']);
+
+			// A second query has to wait out the per-socket floor, or it is dropped and answered by the
+			// periodic refresh instead — which is correct behaviour, but not what this is testing.
+			await new Promise(resolve => setTimeout(resolve, 300));
+
+			finder.send({ type: 'list', query: 'TRAI' });
+			expect((await finder.waitFor('rooms')).rooms.map(room => room.name)).toEqual(['cunning-traitor']);
+		} finally {
+			await server.close();
+		}
+	});
+
+	// A started room has no seat for a stranger, so it is of no use to somebody scanning for a game —
+	// but it is exactly what somebody coming back to their own game is looking for, which is why it
+	// stays in the list rather than being dropped from it.
+	test('started rooms go to the end of the list', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const started = await openRoom(url, { host: 'ANA', room: 'started-room' });
+
+			const bea = createClient(url);
+			await bea.opened;
+			bea.send({ type: 'join', code: started.seat.code, name: 'BEA' });
+			await bea.waitFor('seat');
+
+			started.client.send({ type: 'start' });
+			await started.client.waitFor(message => message.type === 'room' && message.phase === 'alignment');
+
+			// Opened last, so newest-first would put it top of its group — and it is a lobby room, so
+			// it belongs above the started one either way.
+			await openRoom(url, { host: 'CARA', room: 'waiting-room' });
+
+			const finder = createClient(url);
+			await finder.opened;
+			finder.send({ type: 'list' });
+
+			const { rooms } = await finder.waitFor('rooms');
+
+			expect(rooms.map(room => [room.name, room.state, room.players])).toEqual([
+				['waiting-room', 'lobby', 1],
+				['started-room', 'started', 2],
+			]);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a watcher is pushed a new list when one arrives, and told nothing when nothing changed', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const finder = createClient(url);
+			await finder.opened;
+			finder.send({ type: 'list' });
+			expect((await finder.waitFor('rooms')).rooms).toEqual([]);
+
+			// Nothing has happened, so the refresh has nothing to say. A list frame every few seconds
+			// per idle lobby is exactly the kind of chatter the snapshot coalescing exists to avoid.
+			server.refreshLists();
+			expect(await finder.expectNothing('rooms')).toBe(true);
+
+			await openRoom(url, { host: 'ANA', room: 'secret-agent' });
+			server.refreshLists();
+
+			expect((await finder.waitFor('rooms')).rooms.map(room => room.name)).toEqual(['secret-agent']);
+		} finally {
+			await server.close();
+		}
+	});
+
+	// The finder is something you use on the way in. A socket that has a seat is in a room, and a
+	// player at a table has no use for a list of the others — nor should the server keep computing one.
+	test('a socket stops watching the list once it has a seat', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const finder = createClient(url);
+			await finder.opened;
+			finder.send({ type: 'list' });
+			await finder.waitFor('rooms');
+
+			finder.send({ type: 'create', name: 'ANA', room: 'secret-agent' });
+			await finder.waitFor('seat');
+			finder.drain();
+
+			server.refreshLists();
+
+			expect(await finder.expectNothing('rooms')).toBe(true);
+		} finally {
+			await server.close();
+		}
+	});
+
+	// The list is sent to sockets that have no seat anywhere, so it is the one frame in the protocol
+	// with no recipient to be redacted for. It must not carry game state at all.
+	test('a listing carries nothing but what is on the card', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			await openRoom(url, { host: 'ANA', room: 'secret-agent' });
+
+			const finder = createClient(url);
+			await finder.opened;
+			finder.send({ type: 'list' });
+
+			const { rooms } = await finder.waitFor('rooms');
+
+			expect(Object.keys(rooms[0]).sort()).toEqual(['code', 'host', 'name', 'players', 'state']);
+		} finally {
+			await server.close();
+		}
+	});
+});
+
+test.describe('leaving', () => {
+	// Whoever is left has to be told, or the seat count on their screen is a lie until something else
+	// happens to make the server broadcast.
+	test('a seat leaving the waiting room disappears from everybody else’s seat list', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'create', name: 'ANA' });
+			const anaSeat = await ana.waitFor('seat');
+
+			const bea = createClient(url);
+			await bea.opened;
+			bea.send({ type: 'join', code: anaSeat.code, name: 'BEA' });
+			await bea.waitFor('seat');
+			await ana.waitFor(message => message.type === 'room' && message.seats.length === 2);
+
+			bea.send({ type: 'leave' });
+
+			expect((await bea.waitFor('left')).reason).toEqual('you_left');
+
+			const frame = await ana.waitFor(message => message.type === 'room' && message.seats.length === 1);
+
+			expect(frame.seats.map(seat => seat.name)).toEqual(['ANA']);
+			// And the room is still there, still hers, still findable: leaving a waiting room costs
+			// nothing, which is why the UI does not ask twice about it.
+			expect(server.rooms.get(anaSeat.code)).toBeTruthy();
+			expect(frame.hostSeatId).toEqual(anaSeat.seatId);
+		} finally {
+			await server.close();
+		}
+	});
+
+	// Being alone in a waiting room is what having just opened one looks like, so the last seat is not
+	// turned out of it. That rule is for a table that has been dealt.
+	test('one seat left in a waiting room is left alone', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'create', name: 'ANA' });
+			const anaSeat = await ana.waitFor('seat');
+
+			const bea = createClient(url);
+			await bea.opened;
+			bea.send({ type: 'join', code: anaSeat.code, name: 'BEA' });
+			await bea.waitFor('seat');
+
+			bea.send({ type: 'leave' });
+			await bea.waitFor('left');
+
+			expect(await ana.expectNothing('left')).toBe(true);
+			expect(server.rooms.get(anaSeat.code).seats).toHaveLength(1);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('the host leaving hands the room to whoever is left', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'create', name: 'ANA' });
+			const anaSeat = await ana.waitFor('seat');
+
+			const bea = createClient(url);
+			await bea.opened;
+			bea.send({ type: 'join', code: anaSeat.code, name: 'BEA' });
+			const beaSeat = await bea.waitFor('seat');
+
+			ana.send({ type: 'leave' });
+			await ana.waitFor('left');
+
+			const frame = await bea.waitFor(message => message.type === 'room' && message.seats.length === 1);
+
+			// Otherwise START belongs to somebody who is not there and the room can never begin.
+			expect(frame.hostSeatId).toEqual(beaSeat.seatId);
+		} finally {
+			await server.close();
+		}
+	});
+
+	// The rule the whole thing turns on: a game needs two, so leaving a dealt table in a way that would
+	// strand somebody takes them with you rather than leaving them alone in a game they cannot play.
+	test('leaving a two-player game takes the last player with it, and the room with them', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const { ana, bea, anaSeat } = await playingRoom(url);
+
+			ana.send({ type: 'leave' });
+
+			expect((await ana.waitFor('left')).reason).toEqual('you_left');
+			// Not something BEA did, and the two need different words on screen.
+			expect((await bea.waitFor('left')).reason).toEqual('left_alone');
+			expect(server.rooms.get(anaSeat.code)).toBeNull();
+
+			const health = await fetch(`http://127.0.0.1:${new URL(url).port}/healthz`).then(r => r.json());
+			expect(health.rooms).toEqual(0);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a three-player game carries on without the player who left', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'create', name: 'ANA' });
+			const anaSeat = await ana.waitFor('seat');
+
+			const others = [];
+
+			for (const name of ['BEA', 'CARA']) {
+				const client = createClient(url);
+				await client.opened;
+				client.send({ type: 'join', code: anaSeat.code, name });
+				await client.waitFor('seat');
+				others.push(client);
+			}
+
+			ana.send({ type: 'start' });
+			await ana.waitFor(message => message.type === 'room' && message.phase === 'alignment');
+			[ana, ...others].forEach(client => client.send({ type: 'ready' }));
+			await others[0].waitFor(message => message.type === 'room' && message.phase === 'play');
+			others.forEach(client => client.drain());
+
+			// ANA is on turn, so this is the case that could leave the table with nobody holding it.
+			ana.send({ type: 'leave' });
+			await ana.waitFor('left');
+
+			const snapshot = await others[0].waitFor('snapshot');
+
+			expect(snapshot.state.players.map(player => player.name)).toEqual(['BEA', 'CARA']);
+			// Exactly one player holds the turn at all times: py.getTurn reads it with no guard, so a
+			// table where nobody has it throws on the next render.
+			expect(snapshot.state.players.filter(player => player.turn)).toHaveLength(1);
+			expect(snapshot.state.players.find(player => player.turn).name).toEqual('BEA');
+			expect(server.rooms.get(anaSeat.code).seats.map(seat => seat.name)).toEqual(['BEA', 'CARA']);
+		} finally {
+			await server.close();
+		}
+	});
+
+	// Without this the others sit looking at cards they have already confirmed, in a game that will
+	// never start, because the phase only ever advanced inside markReady.
+	test('a seat leaving during alignment can be the last one the room was waiting for', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'create', name: 'ANA' });
+			const anaSeat = await ana.waitFor('seat');
+
+			const others = [];
+
+			for (const name of ['BEA', 'CARA']) {
+				const client = createClient(url);
+				await client.opened;
+				client.send({ type: 'join', code: anaSeat.code, name });
+				await client.waitFor('seat');
+				others.push(client);
+			}
+
+			ana.send({ type: 'start' });
+			await ana.waitFor(message => message.type === 'room' && message.phase === 'alignment');
+
+			// Everybody but CARA says they are ready, and CARA leaves instead of confirming.
+			ana.send({ type: 'ready' });
+			others[0].send({ type: 'ready' });
+			await ana.waitFor(message => message.type === 'room' && message.seats.filter(seat => seat.ready).length === 2);
+
+			others[1].send({ type: 'leave' });
+			await others[1].waitFor('left');
+
+			const frame = await ana.waitFor(message => message.type === 'room' && message.phase === 'play');
+
+			expect(frame.seats.map(seat => seat.name)).toEqual(['ANA', 'BEA']);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a client with no seat asking to leave is told so rather than crashing anything', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const stranger = createClient(url);
+			await stranger.opened;
+			stranger.send({ type: 'leave' });
+
+			expect((await stranger.waitFor('error')).reason).toEqual('not_seated');
+		} finally {
+			await server.close();
+		}
+	});
+
+	// A leaver goes back to the lobby on the same socket, so everything tying that socket to the seat
+	// has to go with the seat — otherwise the next thing it sends is attributed to a room it is not in.
+	test('the socket is free to use the lobby again afterwards', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'create', name: 'ANA', room: 'secret-agent' });
+			const anaSeat = await ana.waitFor('seat');
+
+			ana.send({ type: 'leave' });
+			await ana.waitFor('left');
+			// The room frame from the first room is still in the inbox, and it has a name too.
+			ana.drain();
+
+			// The room went with her — she was the only seat in it — so a fresh one can be opened on the
+			// same socket, which is what the lobby does next.
+			expect(server.rooms.get(anaSeat.code)).toBeNull();
+
+			ana.send({ type: 'create', name: 'ANA', room: 'second-attempt' });
+			const again = await ana.waitFor('seat');
+
+			expect(again.code).not.toEqual(anaSeat.code);
+			expect((await ana.waitFor('room')).name).toEqual('second-attempt');
+		} finally {
+			await server.close();
+		}
+	});
+});

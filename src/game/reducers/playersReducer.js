@@ -1,4 +1,4 @@
-import { START_GAME, NEXT_TURN, SET_ALIGNMENT, REVEAL_FRIEND, REVEAL_FOE, ACCUSE } from 'Game/actions';
+import { START_GAME, NEXT_TURN, REMOVE_PLAYER, SET_ALIGNMENT, REVEAL_FRIEND, REVEAL_FOE, ACCUSE } from 'Game/actions';
 import py from 'Domain/py';
 
 function playersReducer({ players }, action) {
@@ -7,6 +7,8 @@ function playersReducer({ players }, action) {
 			return py.init(action.payload);
 		case NEXT_TURN:
 			return py.nextTurn(players);
+		case REMOVE_PLAYER:
+			return py.removePlayer(players, action.payload.name);
 		case SET_ALIGNMENT: {
 			const { name, friend, foe } = action.payload;
 			return py.setAlignment(players, name, friend, foe);

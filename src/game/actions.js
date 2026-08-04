@@ -21,6 +21,17 @@ export function nextTurn() {
 	};
 }
 
+// Somebody has left a game in progress. Deliberately not in `PLAY_ACTIONS` in server/validate.js: a
+// client asks to leave with a `leave` message and the server names the player from the seat that sent
+// it, so nothing a client can send removes anybody but itself.
+export const REMOVE_PLAYER = 'REMOVE_PLAYER';
+export function removePlayer(name) {
+	return {
+		type: REMOVE_PLAYER,
+		payload: { name },
+	};
+}
+
 export const TOGGLE_PIECE = 'TOGGLE_PIECE';
 export function togglePiece(pieceId) {
 	return {

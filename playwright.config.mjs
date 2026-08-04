@@ -20,13 +20,18 @@ export default defineConfig({
 			// The join limit is per address and every online spec joins from this one, so it caps
 			// how many of them there can be. Raised here rather than lowered in the server.
 			//
+			// Raised again when the finder and the leaving specs landed: a three-player spec is three
+			// joins, and fullyParallel means they all land inside the same minute. Tripping it reads as
+			// a room code that never appeared, which is why joinRoom in online.test.js now checks the
+			// lobby for what it was actually told.
+			//
 			// HA_SKIN pins the look of every room the server makes. Without it a room would draw one
 			// of three at random and the online specs would be asserting against a different skin on
 			// every run — the same reason the fixtures pin `?skin=` for the local ones.
 			env: {
 				PORT: String(SERVER_PORT),
 				HA_STATE_DIR: '.playwright-rooms',
-				HA_JOINS_PER_MINUTE: '60',
+				HA_JOINS_PER_MINUTE: '400',
 				HA_SKIN: 'dossier',
 			},
 			url: `http://127.0.0.1:${SERVER_PORT}/healthz`,

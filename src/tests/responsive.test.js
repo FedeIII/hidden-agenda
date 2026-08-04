@@ -211,3 +211,61 @@ test.describe('SCORE BREAKDOWN', () => {
 		expect(groups.some(g => g.alignment === 'foe' && g.amount === '− 0')).toBe(true);
 	});
 });
+
+// An online game has one control the hot-seat specs above can never see: LEAVE. It shares the
+// FRIEND & FOE group rather than taking a fourth of its own, because `Actions` is flex-basis 33%
+// three ways and this is the layout with no slack in it — the landscape phone, where the bar was
+// once off the bottom of the screen entirely.
+//
+// Reachability rather than height is what this asserts, deliberately. The projected overlay boxes
+// are recomputed after the first layout, so the board's scroll height is briefly larger than the
+// viewport with or without any of this; what has to hold is that every control can be got at.
+test.describe('PHONE LAYOUT, ONLINE', () => {
+	test('the action bar fits on its side with LEAVE in it', async ({ browser }) => {
+		const contexts = [];
+		const pages = [];
+
+		for (const _seat of ['ANA', 'BEA']) {
+			const context = await browser.newContext({ viewport: LANDSCAPE });
+
+			contexts.push(context);
+			pages.push(await context.newPage());
+		}
+
+		const [host, guest] = pages;
+
+		try {
+			await host.goto('/');
+			await host.fill('#lobby-name', 'ANA');
+			await host.click('#lobby-create');
+
+			const code = await host.locator('#lobby-room-code').innerText();
+
+			await guest.goto(`/#/r/${code}`);
+			await guest.fill('#lobby-name', 'BEA');
+			await guest.fill('#lobby-code', code);
+			await guest.click('#lobby-join');
+			await expect(guest.locator('#lobby-room-code')).toBeVisible();
+
+			await host.click('#lobby-start');
+			await host.click('#alignments-btn');
+			await guest.click('#alignments-btn');
+			await expect(host.locator('#next-turn')).toBeVisible();
+
+			expect(await whatStandsOutSideways(host, '#snipe, #accuse, #reveal, #friend-foe, #leave-game')).toEqual([]);
+
+			for (const id of ['#snipe', '#accuse', '#reveal', '#friend-foe', '#leave-game', '#next-turn']) {
+				await expect(host.locator(id)).toBeInViewport();
+			}
+
+			// And the screen it opens fits too, which is the whole point of it being a screen.
+			await host.click('#leave-game');
+			expect(await whatStandsOutSideways(host, '#leave-confirm, #leave-close')).toEqual([]);
+			await expect(host.locator('#leave-confirm')).toBeInViewport();
+		} finally {
+			for (const context of contexts) {
+				await context.close();
+			}
+		}
+	});
+});

@@ -90,6 +90,13 @@ function createLocalSession(test, { rng = Math.random } = {}) {
 		seats: [],
 		hostSeatId: null,
 		error: null,
+		// Present so the session has one shape in both modes. A hot-seat game is not a room: it has
+		// no name, no visibility, nothing to find and no seat to come back to.
+		roomName: null,
+		roomPrivate: false,
+		rooms: [],
+		roomsTotal: 0,
+		resumable: [],
 		// The main menu is always the file room. A game becomes a table later, and that is where
 		// it gets a look of its own.
 		skin: pinned || DEFAULT_SKIN,
@@ -148,12 +155,17 @@ export function createTransport({ mode = 'local' } = {}) {
 			mode,
 			test,
 			store,
+			// Called from an effect in withState, so exactly one socket exists per mounted transport.
+			open: store.open,
 			session: { get: store.getSession, subscribe: store.subscribeSession },
 			actions: {
 				createRoom: store.createRoom,
 				joinRoom: store.joinRoom,
+				listRooms: store.listRooms,
+				stopListing: store.stopListing,
 				start: store.start,
 				ready: store.ready,
+				leave: store.leave,
 				setSkin: store.setSkin,
 				// The server owns the phase online, so nothing to advance.
 				advance: () => {},
@@ -173,12 +185,18 @@ export function createTransport({ mode = 'local' } = {}) {
 		mode,
 		test,
 		store,
+		// Nothing to open: a hot-seat game is this tab and no more.
+		open: () => {},
 		session: { get: session.get, subscribe: session.subscribe },
 		actions: {
 			createRoom: () => {},
 			joinRoom: () => {},
+			listRooms: () => {},
+			stopListing: () => {},
 			start: () => {},
 			ready: () => {},
+			// Nothing to leave: a hot-seat game is the tab it is in.
+			leave: () => {},
 			setSkin: session.setSkin,
 			advance: session.advance,
 		},

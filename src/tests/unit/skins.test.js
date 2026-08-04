@@ -149,6 +149,10 @@ test.describe('a room owns its skin', () => {
 		// receives is exactly the kind of change that could quietly carry a secret with it, so this
 		// pins the whole shape rather than grepping for a word — "alignment" is also a phase name,
 		// which is how the first version of this assertion passed for the wrong reason.
+		//
+		// `name` and `private` joined it with the room finder, and each is public for the same reason
+		// the skin is: they describe the room rather than anything in it. Changing this list is meant
+		// to take a deliberate edit.
 		const rooms = createRoomStore({ skin: SKINS.DOSSIER });
 		const room = rooms.create();
 
@@ -158,7 +162,16 @@ test.describe('a room owns its skin', () => {
 
 		const frame = roomMessage(room);
 
-		expect(Object.keys(frame).sort()).toEqual(['code', 'hostSeatId', 'phase', 'seats', 'skin', 'type']);
+		expect(Object.keys(frame).sort()).toEqual([
+			'code',
+			'hostSeatId',
+			'name',
+			'phase',
+			'private',
+			'seats',
+			'skin',
+			'type',
+		]);
 		expect(frame.seats.map(seat => Object.keys(seat).sort())).toEqual([
 			['connected', 'id', 'name', 'ready'],
 			['connected', 'id', 'name', 'ready'],

@@ -1,7 +1,17 @@
 import { test, expect } from '@playwright/test';
 import { createInitialState, gameReducer } from 'Game/reducer';
 import { createLocalStore } from 'Game/store';
-import { startGame, nextTurn, revealFriend, revealFoe, syncState, claimControl, movePiece } from 'Game/actions';
+import {
+	startGame,
+	nextTurn,
+	revealFriend,
+	revealFoe,
+	syncState,
+	claimControl,
+	movePiece,
+	togglePiece,
+	removePlayer,
+} from 'Game/actions';
 import { pz } from 'Domain/pieces';
 
 // That this file loads at all is the point of phase 0: it imports the game core in node, with no
@@ -174,5 +184,75 @@ test.describe('claiming a team', () => {
 
 		expect(snatched.teamControl[1].player).toEqual('BEA');
 		expect(pz.getCeo(snatched.pieces, '1').selected).toBe(true);
+	});
+});
+
+test.describe('a player leaving a game in progress', () => {
+	test('takes their place in the turn order and nothing on the board', () => {
+		const selected = gameReducer(twoPlayerGame(), togglePiece('0-A1'));
+		const before = gameReducer(selected, movePiece('0-A1', [1, 1]));
+		const after = gameReducer(before, removePlayer('ANA'));
+
+		expect(after.players.map(player => player.name)).toEqual(['BEA']);
+		// Pieces belong to teams, and every player moves every team's pieces, so a player leaving
+		// orphans nothing. This is the assertion that says so.
+		expect(after.pieces).toEqual(before.pieces);
+	});
+
+	test('lets go of the team they were holding, and of the one they had let go of before', () => {
+		// ANA claims team 1, then takes team 2 instead — which leaves her as team 2's player and as
+		// team 1's prevPlayer, the state CANCEL_CONTROL reads to hand a team back.
+		const claimed = gameReducer(twoPlayerGame(), claimControl('ANA', '1'));
+		const switched = gameReducer(claimed, claimControl('ANA', '2'));
+
+		expect(switched.teamControl[2].player).toEqual('ANA');
+		expect(switched.teamControl[1].prevPlayer).toEqual('ANA');
+
+		const after = gameReducer(switched, removePlayer('ANA'));
+
+		expect(after.teamControl[2].player).toBeNull();
+		expect(after.teamControl[2].controlling).toBe(false);
+		// Cleared as well, or cancelling a claim would hand the team to somebody who is not at the
+		// table any more.
+		expect(after.teamControl[1].prevPlayer).toBeNull();
+	});
+
+	// A team whose CEO is on the board is claimable by nobody, holder included — so an abandoned one
+	// stays unclaimable rather than becoming a free team. Its pieces keep playing, moved by whoever is
+	// on turn, which is how this game works anyway.
+	test('leaves a team it cannot offer to anybody alone', () => {
+		const claimed = gameReducer(twoPlayerGame(), claimControl('ANA', '1'));
+		const deployed = gameReducer(claimed, movePiece('1-C', [3, 3]));
+		const after = gameReducer(deployed, removePlayer('ANA'));
+
+		expect(after.teamControl[1].player).toBeNull();
+		expect(after.teamControl[1].claimEnabled).toBe(false);
+	});
+
+	test('leaves a team nobody was holding untouched', () => {
+		const game = twoPlayerGame();
+		const after = gameReducer(game, removePlayer('ANA'));
+
+		expect(after.teamControl[3]).toEqual(game.teamControl[3]);
+	});
+
+	// Same guard as the piece reducers have: the server keeps one state object per room and persists
+	// it, and StrictMode double-invokes, so anything that mutates its input is a bug that surfaces
+	// somewhere else entirely.
+	function deepFreeze(state) {
+		Object.values(state).forEach(value => {
+			if (Array.isArray(value)) {
+				value.forEach(entry => entry && typeof entry === 'object' && Object.freeze(entry));
+				Object.freeze(value);
+			}
+		});
+
+		return Object.freeze(state);
+	}
+
+	test('does not touch the state it was given', () => {
+		const before = deepFreeze(gameReducer(twoPlayerGame(), claimControl('ANA', '1')));
+
+		expect(() => gameReducer(before, removePlayer('ANA'))).not.toThrow();
 	});
 });

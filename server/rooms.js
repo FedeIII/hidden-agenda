@@ -1,15 +1,20 @@
-import { PHASES } from 'Domain/phases';
+import { PHASES, ROOM_STATES, roomStateFor } from 'Domain/phases';
 import { dealAlignments } from 'Domain/deal';
 import { isSkin, pickSkin } from 'Domain/skins';
+import { isRoomNameShaped, matchesRoomQuery, normaliseRoomName, pickRoomName } from 'Domain/roomNames';
 import { MIN_PLAYERS, MAX_PLAYERS } from 'Domain/py';
 import { createInitialState, gameReducer } from 'Game/reducer';
-import { startGame, setAlignment } from 'Game/actions';
+import { startGame, setAlignment, nextTurn, removePlayer } from 'Game/actions';
 import { createCode, createToken } from './codes';
 
 // Rooms hold no sockets. A room is plain JSON so it can be written to disk and read back after a
 // deploy restart; live connections are tracked separately in index.js by seat id.
 
 export const MAX_ROOMS = 200;
+
+// How many rooms one `rooms` frame carries. Well under MAX_ROOMS on purpose: a list longer than this
+// is not something anybody reads, it is something they search.
+export const LIST_LIMIT = 60;
 
 // Pins the look of every new room. Set in playwright.config.mjs so the browser suite is not
 // asserting against a different skin on every run — the same shape as HA_JOINS_PER_MINUTE, and for
@@ -25,7 +30,12 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 		return rooms.get(code) || null;
 	}
 
-	function create() {
+	// A name and a visibility, both the opener's to choose. `name` is drawn here when the client sends
+	// none at all — the field is mandatory in the lobby and prefilled with a draw, so an absent name
+	// means a client that is not the lobby, and giving it one keeps "every room has a name" true for
+	// the list rather than leaving a blank row in it. A name that is *present and malformed* is
+	// refused by index.js instead: that is hostile input, not a missing default.
+	function create({ name = null, isPrivate = false } = {}) {
 		if (rooms.size >= MAX_ROOMS) {
 			return null;
 		}
@@ -33,6 +43,10 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 		const code = createCode(candidate => rooms.has(candidate));
 		const room = {
 			code,
+			name: isRoomNameShaped(name) ? normaliseRoomName(name) : pickRoomName(rng),
+			// Public unless asked otherwise. A private room is missing from the list and nothing else:
+			// its code still joins it, which is what makes a shared link work.
+			private: Boolean(isPrivate),
 			phase: PHASES.START,
 			state: createInitialState(),
 			seats: [],
@@ -153,6 +167,18 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 		return { room };
 	}
 
+	// Called from two places, which is the point of it being a function. A seat leaving during the
+	// alignment phase can be the last one the room was waiting for, and without this the others sat
+	// looking at cards they had already confirmed, in a game that would never start.
+	function advanceIfEveryoneIsReady(room) {
+		if (room.phase !== PHASES.ALIGNMENT || !room.seats.length || !room.seats.every(seat => seat.ready)) {
+			return;
+		}
+
+		room.phase = PHASES.PLAY;
+		room.version += 1;
+	}
+
 	function markReady(room, seat) {
 		if (room.phase !== PHASES.ALIGNMENT) {
 			return { error: 'not_in_alignment' };
@@ -160,13 +186,58 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 
 		seat.ready = true;
 		room.updatedAt = now();
+		advanceIfEveryoneIsReady(room);
 
-		if (room.seats.every(other => other.ready)) {
-			room.phase = PHASES.PLAY;
+		return { room };
+	}
+
+	// A game needs two players. So once a table has been dealt, leaving in a way that would strand
+	// somebody alone in it takes them with you: there is nothing left for them to play, and the
+	// alternative is a room sitting there with one person in it until the sweeper gets to it.
+	//
+	// Not at the end of a game, and not in the waiting room. At `end` there is nothing to play either
+	// way and the scores are worth reading, so pulling the last player off that screen because somebody
+	// else clicked LEAVE would be a rudeness rather than a rule. In the waiting room being alone is
+	// simply what having just opened a room looks like.
+	const PLAYABLE = [PHASES.ALIGNMENT, PHASES.PLAY];
+
+	/**
+	 * Takes a seat out of a room, and out of the game if one is running.
+	 *
+	 * Returns every seat that ended up leaving — the one that asked, plus anybody stranded by it — and
+	 * whether the room has nobody left in it at all.
+	 */
+	function leave(room, seat) {
+		const others = room.seats.filter(other => other.id !== seat.id);
+		const stranded = PLAYABLE.includes(room.phase) && others.length === 1 ? others : [];
+		const gone = [seat, ...stranded];
+
+		room.seats = others.filter(other => !stranded.includes(other));
+
+		// The game only knows about players once it has been dealt; before that a seat is all there is.
+		if (room.phase !== PHASES.START) {
+			room.state = gone.reduce((state, departing) => {
+				// Passing the turn properly rather than just moving the flag: a turn change snapshots the
+				// board for the sniper rollback, clears the half-finished move and recomputes the CEO
+				// buffs. Leaving mid-move is the same shape as the 60-second forced pass in apply.js.
+				const onTurn = state.players.some(player => player.turn && player.name === departing.name);
+				const passed = onTurn ? gameReducer(state, nextTurn()) : state;
+
+				return gameReducer(passed, removePlayer(departing.name));
+			}, room.state);
+
 			room.version += 1;
 		}
 
-		return { room };
+		// The host leaving hands the room to whoever is left rather than locking START for everybody.
+		if (!room.seats.some(other => other.id === room.hostSeatId)) {
+			room.hostSeatId = room.seats.length ? room.seats[0].id : null;
+		}
+
+		advanceIfEveryoneIsReady(room);
+		room.updatedAt = now();
+
+		return { gone, dissolved: room.seats.length === 0 };
 	}
 
 	function setConnected(room, seat, connected) {
@@ -183,8 +254,58 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 		return [...rooms.values()];
 	}
 
+	// Whoever opened the room. Held as a seat id rather than a name so that renaming — which does not
+	// exist yet — would not need two writes, and read through the seat list here. Falls back to the
+	// first seat, because a room whose host seat has somehow gone still has a table to name.
+	function hostName(room) {
+		const host = room.seats.find(seat => seat.id === room.hostSeatId) || room.seats[0];
+
+		return host ? host.name : null;
+	}
+
+	function listingFor(room) {
+		return {
+			code: room.code,
+			name: room.name || room.code,
+			host: hostName(room),
+			players: room.seats.length,
+			state: roomStateFor(room.phase),
+		};
+	}
+
+	// Started rooms go last, and that is the only ordering the finder promises. Within each group the
+	// newest room comes first: somebody scanning this list is looking for a table that is still
+	// filling up, and the one opened a minute ago is far likelier to be it than one opened an hour ago
+	// that nobody joined.
+	const STATE_ORDER = { [ROOM_STATES.LOBBY]: 0, [ROOM_STATES.STARTED]: 1 };
+
+	/**
+	 * The public list. Private rooms are absent from it entirely — not dimmed, not marked — which is
+	 * the whole of what private means here.
+	 *
+	 * Returns the total as well as the page, because a cap that is not reported reads as "that is
+	 * every room" when it is not.
+	 */
+	function list({ query = '', limit = LIST_LIMIT } = {}) {
+		const matching = all().filter(room => !room.private && matchesRoomQuery(room.name || room.code, query));
+
+		const ordered = matching.sort((a, b) => {
+			const byState = STATE_ORDER[roomStateFor(a.phase)] - STATE_ORDER[roomStateFor(b.phase)];
+
+			return byState || b.createdAt - a.createdAt;
+		});
+
+		return {
+			rooms: ordered.slice(0, limit).map(listingFor),
+			total: ordered.length,
+		};
+	}
+
 	function load(room) {
-		rooms.set(room.code, room);
+		// A room persisted before rooms had a name or a visibility comes back without either. Neither
+		// is game state, so the room is perfectly playable — it only needs something to appear as in
+		// the list, and its own code is the one label that will not change again on the next restart.
+		rooms.set(room.code, { name: room.code, private: false, ...room });
 	}
 
 	return {
@@ -196,9 +317,11 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 		start,
 		setSkin,
 		markReady,
+		leave,
 		setConnected,
 		remove,
 		all,
+		list,
 		load,
 		get size() {
 			return rooms.size;

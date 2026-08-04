@@ -3,6 +3,8 @@ import { StateContext } from 'State';
 import teams from 'Domain/teams';
 import HQs from 'Client/components/hqs';
 import HqStyled from 'Client/components/hqStyled';
+import LeaveGame from 'Client/components/leaveGame';
+import { Buttons } from 'Client/components/button';
 import { Cementery, Survivors } from 'Client/components/pieceCount';
 import { EndPhaseContainer, Score, Points, PieceCountTitle, PieceCountContainer, Scores } from './components';
 import PieceScore from './pieceScore';
@@ -54,6 +56,13 @@ function EndPhase() {
 				<TeamScore team="2" />
 				<TeamScore team="3" />
 			</HQs>
+
+			{/* The only way out of a finished online game. Straight out, with nothing to confirm: the game
+			    is over, so there is nothing left to lose by pressing it — and the last player is not turned
+			    out from here by somebody else leaving, because the scores are worth reading. */}
+			<Buttons>
+				<LeaveGame id="end-leave" label="LEAVE GAME" />
+			</Buttons>
 		</EndPhaseContainer>
 	);
 }

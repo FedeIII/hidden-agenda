@@ -107,6 +107,15 @@ export const Button = styled.button.attrs(({ active }) => ({ disabled: !active }
 	}
 `;
 
+// A row of controls, centred. Flex with a gap rather than `text-align: center`, because it has to hold
+// two now — START beside LEAVE ROOM, READY beside LEAVE — and each skin gives a control an edge of its
+// own, a stamp outline or a bevel, so without air between them they share one. Dossier's stamps sit
+// slightly rotated, which had them overlapping outright.
 export const Buttons = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-items: center;
+	justify-content: center;
 	text-align: center;
 `;

@@ -53,6 +53,38 @@ function nextTurn(players) {
 	}));
 }
 
+/**
+ * Somebody has left the table mid-game.
+ *
+ * Nothing on the board is orphaned by this, and that is a property of the game rather than luck:
+ * pieces belong to *teams*, every player moves every team's pieces, and a team is only ever claimed.
+ * What leaves with a player is a place in the turn order and a pair of cards nobody will score.
+ *
+ * The turn is the one thing that cannot simply be filtered out. Exactly one player holds it at all
+ * times and `getTurn` reads that with no guard, so if it was theirs it moves on to whoever it would
+ * have gone to next. The server passes the turn properly first — a turn change is more than a flag,
+ * it snapshots the board for the sniper rollback and recomputes the CEO buffs — but the invariant is
+ * kept here as well, because this is the function that could break it.
+ */
+function removePlayer(players, name) {
+	const index = players.findIndex(player => player.name === name);
+
+	if (index === -1) {
+		return players;
+	}
+
+	const remaining = players.filter(player => player.name !== name);
+
+	if (!remaining.length || !players[index].turn) {
+		return remaining;
+	}
+
+	// Only reachable while somebody is left, so this never lands back on the player being removed.
+	const next = players[(index + 1) % players.length].name;
+
+	return remaining.map(player => ({ ...player, turn: player.name === next }));
+}
+
 function setAlignment(players, playerName, friend, foe) {
 	return players.map(player => {
 		if (player.name === playerName) {
@@ -215,6 +247,7 @@ function sortByPoints(players, pieces) {
 export default {
 	init,
 	nextTurn,
+	removePlayer,
 	setAlignment,
 	getTurn,
 	isRevealActive,
