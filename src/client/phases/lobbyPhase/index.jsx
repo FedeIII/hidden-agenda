@@ -231,13 +231,16 @@ function Resume({ seats, onEnter }) {
 }
 
 function JoinForm({ session, unreachable }) {
-	const { code, rooms, roomsTotal, resumable, actions } = session;
+	const { code, rooms, roomsTotal, resumable, playerName, actions } = session;
 	// Pulled out as plain values because they are the effects' dependencies. `actions` itself is a new
 	// object on every session update — it is spread with goOnline/goHotSeat — while the functions in it
 	// come straight off the transport and never change, so depending on the object would re-run the
 	// search on every frame the server pushes and ask for the list again each time.
 	const { createRoom, joinRoom, listRooms, stopListing } = actions;
-	const [name, setName] = useState('');
+	// Filled in with whatever this browser played under last. An initialiser rather than a value prop,
+	// so it seeds the field and then gets out of the way: the player is free to type over it, and a name
+	// arriving from the server mid-edit must not overwrite what they are typing.
+	const [name, setName] = useState(() => playerName || '');
 	const [roomCode, setRoomCode] = useState(code || '');
 	const [query, setQuery] = useState('');
 

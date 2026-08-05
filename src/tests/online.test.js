@@ -176,6 +176,68 @@ test.describe('THE ROOM FINDER', () => {
 	});
 });
 
+test.describe('YOUR NAME', () => {
+	// Typing the same six letters every time is the sort of small tax that makes a game feel like a
+	// form, and the lobby asks on the way into every room — after a game, after leaving one, after a
+	// refresh at the front door.
+	test('is remembered, and filled in next time', async ({ browser }) => {
+		const context = await browser.newContext({ viewport: { width: 800, height: 600 } });
+		const page = await context.newPage();
+
+		try {
+			await page.goto('/');
+
+			// A browser that has never played opens empty, exactly as it did.
+			await expect(page.locator('#lobby-name')).toHaveValue('');
+
+			await page.fill('#lobby-name', 'ANA');
+			await page.click('#lobby-create');
+			await expect(page.locator('#lobby-room-code')).toBeVisible();
+
+			// Out of the room and back at the index: no typing.
+			await page.click('#lobby-leave');
+			await expect(page.locator('#lobby-name')).toHaveValue('ANA');
+
+			// And across a reload, which is how a returning player actually arrives.
+			await page.reload();
+			await expect(page.locator('#lobby-name')).toHaveValue('ANA');
+			// Filled in means ready: NEW ROOM is live without a keystroke, because the room name is
+			// drawn and the player's name is already there.
+			await expect(page.locator('#lobby-create')).toBeEnabled();
+		} finally {
+			await context.close();
+		}
+	});
+
+	// Why it is written when the server confirms a seat rather than on every keystroke: what comes back
+	// is a name that actually worked. A name the room refused is not the name to greet somebody with.
+	test('a name the room refused is not the one remembered', async ({ browser }) => {
+		const { hostContext, guestContext, host, guest } = await twoContexts(browser);
+
+		try {
+			await host.goto('/');
+			await host.fill('#lobby-name', 'ANA');
+			await host.click('#lobby-create');
+
+			const code = await host.locator('#lobby-room-code').innerText();
+
+			await guest.goto(`/#/r/${code}`);
+			await guest.fill('#lobby-name', 'ANA');
+			await guest.fill('#lobby-code', code);
+			await guest.click('#lobby-join');
+
+			await expect(guest.locator('#lobby-error')).toContainText('already has that name');
+
+			// Nothing was kept, so the next visit does not open on a name this table will refuse again.
+			await guest.reload();
+			await expect(guest.locator('#lobby-name')).toHaveValue('');
+		} finally {
+			await hostContext.close();
+			await guestContext.close();
+		}
+	});
+});
+
 test.describe('LEAVING', () => {
 	// The seat count everybody is looking at is the thing that has to move. Leaving a waiting room is
 	// the cheap case — the room stays, its code still joins it — so the button goes straight out.
@@ -195,9 +257,11 @@ test.describe('LEAVING', () => {
 
 			await guest.click('#lobby-leave');
 
-			// The guest is back at the front door, with a room to find rather than one to sit in.
+			// The guest is back at the front door, with a room to find rather than one to sit in — and the
+			// room is out of the URL too, so a reload does not put them back in it.
 			await expect(guest.locator('#lobby-create')).toBeVisible();
 			await expect(guest.locator('#lobby-room-code')).toHaveCount(0);
+			expect(new URL(guest.url()).hash).toEqual('');
 
 			// And the host's list is one shorter.
 			await expect(host.locator('#lobby-seats')).not.toContainText('BEA');
@@ -249,9 +313,13 @@ test.describe('LEAVING', () => {
 			await host.click('#leave-game');
 			await host.click('#leave-confirm');
 
+			// Both at the index, both with the room gone from the URL — the one who asked and the one who
+			// did not.
 			await expect(host.locator('#lobby-create')).toBeVisible();
 			await expect(guest.locator('#lobby-create')).toBeVisible();
 			await expect(guest.locator('#lobby-error')).toContainText('Everybody else left');
+			expect(new URL(host.url()).hash).toEqual('');
+			expect(new URL(guest.url()).hash).toEqual('');
 		} finally {
 			await hostContext.close();
 			await guestContext.close();
@@ -346,6 +414,50 @@ test.describe('LEAVING', () => {
 			for (const context of contexts) {
 				await context.close();
 			}
+		}
+	});
+
+	// The hole this closes: leaving used to be a request rather than a decision, so `send` returning
+	// false — no open socket — meant the button did nothing at all. And the moments somebody most wants
+	// out are exactly the ones with no socket.
+	//
+	// This is the reachable one: the same room open in a second tab. It rejoins with the token both tabs
+	// share, the server hands it the seat and closes this one with `seat reclaimed`, and this tab stands
+	// down rather than fighting for it back — so its socket is shut and stays shut. LEAVE has to work
+	// from there.
+	test('leaving works from a tab whose seat was taken, and still lands on the index', async ({ browser }) => {
+		const { hostContext, guestContext, host, guest, code } = await twoPlayerGame(browser);
+
+		try {
+			await host.click('#alignments-btn');
+			await guest.click('#alignments-btn');
+			await expect(host.locator('#next-turn')).toBeVisible();
+
+			// A second tab in the same browser: same localStorage, so the same seat token.
+			const second = await hostContext.newPage();
+
+			await second.goto(`/#/r/${code}`);
+			await expect(second.locator('#next-turn')).toBeVisible();
+
+			// The first tab is told, rather than going quietly dead.
+			await expect(host.locator('#connection-banner')).toContainText('another window');
+
+			await host.click('#leave-game');
+			await host.click('#leave-confirm');
+
+			// At the index, with no room in the URL to be put back into on a reload.
+			await expect(host.locator('#lobby-create')).toBeVisible();
+			await expect(host.locator('#lobby-room-code')).toHaveCount(0);
+			expect(new URL(host.url()).hash).toEqual('');
+
+			// And it stays there: the socket this tab reopens for the room list carries no intent to
+			// rejoin, so nothing puts it back at a table it walked away from.
+			await host.waitForTimeout(1500);
+			await expect(host.locator('#lobby-create')).toBeVisible();
+			await expect(host.locator('#next-turn')).toHaveCount(0);
+		} finally {
+			await hostContext.close();
+			await guestContext.close();
 		}
 	});
 

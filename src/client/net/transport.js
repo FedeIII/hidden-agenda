@@ -2,6 +2,7 @@ import { PHASES } from 'Domain/phases';
 import { DEFAULT_SKIN, isSkin, pickSkin } from 'Domain/skins';
 import { createLocalStore } from 'Game/store';
 import { createSocketStore } from './socketStore';
+import { readPlayerName } from './playerName';
 import playMock from 'Client/state/mocks/play';
 import endgameMock from 'Client/state/mocks/endgame';
 
@@ -97,6 +98,9 @@ function createLocalSession(test, { rng = Math.random } = {}) {
 		rooms: [],
 		roomsTotal: 0,
 		resumable: [],
+		// The name this browser plays under online. Read here too so the shape does not branch, even
+		// though the hot-seat form asks for a name per player rather than for whose screen this is.
+		playerName: readPlayerName(),
 		// The main menu is always the file room. A game becomes a table later, and that is where
 		// it gets a look of its own.
 		skin: pinned || DEFAULT_SKIN,

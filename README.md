@@ -165,6 +165,15 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.4.1
+* **Your name is remembered.** The lobby asks on the way into every room — after a game, after leaving
+  one, after a refresh at the front door — so the field opens filled in with whatever you last played
+  under. The one the server seated you as, not one it refused as already taken
+* **Leaving works when there is nothing to leave through.** It was a request to the server, so with no
+  open socket the button did nothing at all — and the two moments a player most wants out are exactly
+  the ones with no socket: a connection that has dropped, and a seat a second window has taken. It
+  tells the server if it can and takes you back to the index either way
+
 ### v3.4.0
 Rooms have names, you can go looking for one, and you can walk away from one.
 
@@ -541,6 +550,7 @@ Play it over the internet. Also a complete change of toolchain underneath, and t
 * Port to electron
 
 ## Known Bugs
+* ~~LEAVE did nothing at all when the connection was down or a second window had taken the seat~~
 * ~~A refresh mid-game looked like it worked and then swallowed every move afterwards: two sockets held
   the one seat and took it off each other, so actions went out on whichever had just lost it~~
 * ~~A player who reloaded was marked offline by the connection they had just replaced~~

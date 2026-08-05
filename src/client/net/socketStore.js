@@ -1,4 +1,5 @@
 import { DEFAULT_SKIN, isSkin } from 'Domain/skins';
+import { readPlayerName, rememberPlayerName } from './playerName';
 import { createGameReducer, createInitialState } from 'Game/reducer';
 import {
 	syncState,
@@ -181,6 +182,10 @@ function unseatedSession({ code = null, error = null } = {}) {
 		// Seats this browser already holds, so the lobby can offer to go back to one instead of
 		// making somebody who is mid-game start again.
 		resumable: readSeats(),
+		// What this browser played under last time, so the lobby's field opens filled in. Read here
+		// rather than once at module load, because this function also runs when a player leaves a room —
+		// and coming back to the front door is exactly when not having to type it again is the point.
+		playerName: readPlayerName(),
 		// Until the room frame arrives this is a client with no room, so it shows the menu's own
 		// look. The server's choice replaces it, and every seat receives the same one.
 		skin: DEFAULT_SKIN,
@@ -268,6 +273,36 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		return false;
 	}
 
+	/**
+	 * Back to the front door: everything about the room, undone.
+	 *
+	 * Called when the server says this seat has left, and also the moment the player asks — see `leave`.
+	 * It has to be safe to run twice, because in the ordinary case it does.
+	 */
+	function goToIndex({ error = null } = {}) {
+		const { code } = session.get();
+
+		forgetSeat(code);
+		intent = null;
+		token = null;
+		version = -1;
+		seq = 0;
+		outstanding = [];
+		pendingAim = null;
+		authoritative = createInitialState();
+		// The hash is what puts a reload back into a room, and there is no room to go back to.
+		window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+
+		// The session first, deliberately. The two observables notify separately, so a render can land
+		// between them — and emptying the game state while the session still says `play` would render the
+		// board against no players, which throws in py.getTurn. Phase null renders the lobby, which does
+		// not read the game state at all.
+		session.set(unseatedSession({ error }));
+		// Through the reducer rather than straight into the observable, the same way a snapshot goes in:
+		// every state change in the app goes through exactly one door.
+		game.set(reduce(game.get(), syncState(createInitialState())));
+	}
+
 	// A snapshot is the truth as of the actions the server had seen. Anything this client has done
 	// since then is still real and has to go back on top, or the snapshot silently undoes it — and
 	// a half-undone move leaves the next click meaning something different from what the player
@@ -297,6 +332,9 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 				token = message.token;
 				writeToken(message.code, message.token);
 				rememberSeat({ code: message.code, name: message.name });
+				// The name the server seated us under, which is the one worth keeping: a name it refused
+				// as taken, or one that was still being typed, never gets here.
+				rememberPlayerName(message.name);
 				// So a refresh — and a shared link — lands back in the same room.
 				window.history.replaceState(null, '', `#/r/${message.code}`);
 				intent = { kind: 'rejoin', code: message.code, token: message.token };
@@ -307,6 +345,7 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 					code: message.code,
 					seatId: message.seatId,
 					name: message.name,
+					playerName: message.name,
 					error: null,
 					rooms: [],
 					resumable: readSeats(),
@@ -317,28 +356,12 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 				session.update({ rooms: message.rooms || [], roomsTotal: message.total || 0 });
 				break;
 
-			// This seat is no longer in that room, either because the player asked or because everybody
-			// else went and a game of this needs two. The socket stays open — they are going back to the
-			// lobby, not off the internet — so everything that was about the room has to go instead.
-			case 'left': {
-				const { code } = session.get();
-
-				forgetSeat(code);
-				intent = null;
-				token = null;
-				version = -1;
-				seq = 0;
-				outstanding = [];
-				pendingAim = null;
-				authoritative = createInitialState();
-				// Through the reducer rather than straight into the observable, the same way a snapshot
-				// goes in: every state change in the app goes through exactly one door.
-				game.set(reduce(game.get(), syncState(createInitialState())));
-				// The hash is what puts a reload back into a room, and there is no room to go back to.
-				window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
-				session.set(unseatedSession({ error: message.reason === 'left_alone' ? 'left_alone' : null }));
+			// This seat is no longer in that room. When the player asked, `leave` has already done this and
+			// running it again changes nothing; what this frame adds is the case nobody at this end asked
+			// for — everybody else went, and a game of this needs two.
+			case 'left':
+				goToIndex({ error: message.reason === 'left_alone' ? 'left_alone' : null });
 				break;
-			}
 
 			case 'room':
 				rememberSeat({ code: message.code, room: message.name });
@@ -591,9 +614,20 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		},
 		start: () => send({ type: 'start' }),
 		ready: () => send({ type: 'ready' }),
-		// No optimistic anything: the server decides what leaving means — whether a game loses a player
-		// or a room ceases to exist — and answers with a `left` frame either way.
-		leave: () => send({ type: 'leave' }),
+		/**
+		 * Walking away, which is the player's decision rather than a request.
+		 *
+		 * The message is a courtesy: it is what makes the seat disappear from everybody else's screen and
+		 * what ends a game that would otherwise strand somebody. But it needs an open socket, and the
+		 * moments a player most wants out are exactly the ones where there is not one — displaced by
+		 * another window, or reconnecting. So this tells the server if it can and goes to the index
+		 * either way, rather than being a button that does nothing on the screen somebody is trying to
+		 * escape. A seat nobody said goodbye for is left to the sweeper, the same as a closed laptop.
+		 */
+		leave: () => {
+			send({ type: 'leave' });
+			goToIndex();
+		},
 		// Host only, and the server says so — this just asks. No optimistic update: the whole point
 		// of the skin being the room's is that every seat changes together, off one frame.
 		setSkin: skin => send({ type: 'skin', skin }),
