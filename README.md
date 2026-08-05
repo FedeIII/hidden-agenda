@@ -165,6 +165,19 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.7.0
+The game has a mark: a seal cut from the board's own pointy-top hexagon, with the name inked into a
+plain logotype beside it.
+
+* **The lobby title carries it**, next to the typed "Hidden Agenda" it always said — the lobby is always
+  Dossier regardless of what skin a game later draws, so the mark is a literal Dossier red rather than a
+  token
+* **The browser tab and the home-screen icon carry it too**: an SVG favicon, PNG fallbacks at 16 and 32
+  px, and a full-bleed apple-touch-icon, all in `public/` so the build copies them for both origins the
+  same way it always has
+* **A shared link unfurls into a card now** — `og-image.png`, the seal and the logotype on the same
+  manila the game itself opens on, with Open Graph and Twitter Card tags pointing at it
+
 ### v3.6.0
 Players have ratings, and there is a queue that uses them.
 

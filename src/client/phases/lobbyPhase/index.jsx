@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Buttons } from 'Client/components/button';
 import { Title, Subtitle } from 'Client/components/title';
+import Logo from 'Client/components/logo';
 import useSession from 'Hooks/useSession';
 import SkinPicker from 'Client/components/skinPicker';
 import LeaveGame from 'Client/components/leaveGame';
@@ -493,7 +494,10 @@ function LobbyPhase() {
 
 	return (
 		<LobbyContainer>
-			<Title>Hidden Agenda</Title>
+			<Title>
+				<Logo />
+				Hidden Agenda
+			</Title>
 
 			{status === 'connecting' && <Notice id="lobby-connecting">Connecting…</Notice>}
 			{/* Only worth saying to somebody who has a seat to get back to. Unseated, the socket is open
