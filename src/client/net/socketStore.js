@@ -1,5 +1,6 @@
 import { DEFAULT_SKIN, isSkin } from 'Domain/skins';
 import { readPlayerName, rememberPlayerName } from './playerName';
+import { readPlayerId } from './playerId';
 import { createGameReducer, createInitialState } from 'Game/reducer';
 import {
 	syncState,
@@ -157,7 +158,10 @@ function createObservable(initial) {
 // What a client with no seat looks like. A function rather than a literal because it is needed twice:
 // on the way in, and again when a player leaves a room — and what is on screen after leaving is the
 // lobby, which means the lobby's own state rather than the last room's with holes punched in it.
-function unseatedSession({ code = null, error = null } = {}) {
+// `rated` survives being reset, and has to. What a game did to this browser's rating arrives in its own
+// frame, and for a walk-out that frame lands either side of the player being put back in the lobby — so
+// dropping it here would mean the one screen that could report the penalty never sees it.
+function unseatedSession({ code = null, error = null, rated = null } = {}) {
 	return {
 		mode: 'online',
 		// Idle unless something the player asked for is in flight. A client with no room in its URL is
@@ -179,6 +183,14 @@ function unseatedSession({ code = null, error = null } = {}) {
 		// before the server's cap, so the finder can say when it is not showing everything.
 		rooms: [],
 		roomsTotal: 0,
+		// The automatch search, while there is one: how many are waiting, how long this browser has been,
+		// and how wide a rating gap it is currently willing to accept. Null when it is not searching.
+		queue: null,
+		// What the last game did to the ratings of the people in it. Kept on the session rather than in
+		// game state for the same reason the skin is: it is not something the board can be rebuilt from.
+		rated,
+		// How long a refusal said to wait, when it said so. Only `quit_timeout` carries one.
+		errorSeconds: null,
 		// Seats this browser already holds, so the lobby can offer to go back to one instead of
 		// making somebody who is mid-game start again.
 		resumable: readSeats(),
@@ -212,6 +224,10 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 	// The finder's standing query, or null when nobody is looking at the list. Kept here rather than
 	// in the component so a reconnect re-asks by itself — the server drops a watcher with the socket.
 	let listQuery = null;
+	// The name this browser is queueing for automatch under, or null. Held here for the same reason
+	// `listQuery` is: the server drops a queue entry with the socket, so a reconnect has to ask again or
+	// the player waits forever for a match that nothing is looking for.
+	let queueName = null;
 
 	let socket = null;
 	let reconnectDelay = RECONNECT_MIN_MS;
@@ -258,16 +274,20 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 			return false;
 		}
 
+		// The rating id rides every one of these. Read at send time rather than held in a closure, so a
+		// browser that has just been given storage back mints one without needing a reload.
+		const playerId = readPlayerId();
+
 		if (intent.kind === 'create') {
-			return send({ type: 'create', name: intent.name, room: intent.room, private: intent.private });
+			return send({ type: 'create', name: intent.name, room: intent.room, private: intent.private, playerId });
 		}
 
 		if (intent.kind === 'join') {
-			return send({ type: 'join', code: intent.code, name: intent.name });
+			return send({ type: 'join', code: intent.code, name: intent.name, playerId });
 		}
 
 		if (intent.kind === 'rejoin') {
-			return send({ type: 'rejoin', code: intent.code, token: intent.token });
+			return send({ type: 'rejoin', code: intent.code, token: intent.token, playerId });
 		}
 
 		return false;
@@ -280,7 +300,7 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 	 * It has to be safe to run twice, because in the ordinary case it does.
 	 */
 	function goToIndex({ error = null } = {}) {
-		const { code } = session.get();
+		const { code, rated } = session.get();
 
 		forgetSeat(code);
 		intent = null;
@@ -297,7 +317,11 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		// between them — and emptying the game state while the session still says `play` would render the
 		// board against no players, which throws in py.getTurn. Phase null renders the lobby, which does
 		// not read the game state at all.
-		session.set(unseatedSession({ error }));
+		// `rated` is carried across, and this is the only reason it is a parameter. Leaving a game
+		// in progress costs rating, the server says so in its own frame, and that frame arrives either
+		// side of this — so a reset that dropped it would make the penalty invisible on the one screen
+		// the player is looking at. It is cleared when they start something new instead.
+		session.set(unseatedSession({ error, rated }));
 		// Through the reducer rather than straight into the observable, the same way a snapshot goes in:
 		// every state change in the app goes through exactly one door.
 		game.set(reduce(game.get(), syncState(createInitialState())));
@@ -354,6 +378,28 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 
 			case 'rooms':
 				session.update({ rooms: message.rooms || [], roomsTotal: message.total || 0 });
+				break;
+
+			// How the automatch search is going. `searching: false` is the server saying to stop waiting —
+			// on cancelling, and also when another tab of this browser takes the search over.
+			case 'queued':
+				queueName = message.searching ? queueName : null;
+				session.update({
+					queue: message.searching
+						? {
+								waiting: message.waiting,
+								elapsed: message.elapsed,
+								window: message.window,
+								rating: message.rating,
+							}
+						: null,
+				});
+				break;
+
+			// What the game just did to everybody's rating. Arrives at the end of a game, on a refresh at
+			// the score sheet, and to the two people involved in a walk-out.
+			case 'rated':
+				session.update({ rated: { code: message.code, players: message.players || [] } });
 				break;
 
 			// This seat is no longer in that room. When the player asked, `leave` has already done this and
@@ -429,6 +475,9 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 				// mid-game quietly stopped the player being able to act at all.
 				session.update({
 					error: message.reason,
+					// Only `quit_timeout` carries one, and without it the lobby could say no more than
+					// "later" to somebody asking when they can play.
+					errorSeconds: Number.isFinite(message.seconds) ? message.seconds : null,
 					...(session.get().status === 'connecting' ? { status: 'ready' } : {}),
 				});
 				break;
@@ -471,6 +520,11 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 			// ask again or the finder stops updating without ever saying so.
 			if (listQuery !== null) {
 				send({ type: 'list', query: listQuery });
+			}
+
+			// Same again for the queue, which the server also tracks per socket.
+			if (queueName !== null) {
+				send({ type: 'queue', name: queueName, playerId: readPlayerId() });
 			}
 
 			pingTimer = setInterval(() => send({ type: 'ping' }), PING_MS);
@@ -533,7 +587,9 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 
 	function createRoom(name, { room = null, isPrivate = false } = {}) {
 		intent = { kind: 'create', name, room: room || undefined, private: isPrivate };
-		session.update({ status: 'connecting', error: null });
+		// The last game's ratings go here rather than on the way out of it: they are worth reading in the
+		// lobby, and starting something new is the moment they stop being.
+		session.update({ status: 'connecting', error: null, errorSeconds: null, rated: null });
 		sendIntent() || connect();
 	}
 
@@ -548,7 +604,7 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		const stored = readToken(code);
 
 		intent = stored ? { kind: 'rejoin', code, token: stored, name } : { kind: 'join', code, name };
-		session.update({ status: 'connecting', error: null });
+		session.update({ status: 'connecting', error: null, errorSeconds: null, rated: null });
 		sendIntent() || connect();
 	}
 
@@ -559,6 +615,27 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 	function listRooms(query = '') {
 		listQuery = query;
 		send({ type: 'list', query }) || connect();
+	}
+
+	/**
+	 * Automatch: let the server pick the table.
+	 *
+	 * Remembered rather than fired and forgotten, because the server tracks a queue entry per socket —
+	 * so a reconnect has to re-queue or the player waits for a match nothing is looking for. Same shape
+	 * as `listRooms`, and for the same reason.
+	 */
+	function queueUp(name) {
+		queueName = name;
+		session.update({ error: null, errorSeconds: null, rated: null });
+		send({ type: 'queue', name, playerId: readPlayerId() }) || connect();
+	}
+
+	function cancelQueue() {
+		queueName = null;
+		// Optimistic, deliberately: the button has to stop saying "searching" the moment it is pressed,
+		// and the server's own `queued` frame confirms it a moment later.
+		session.update({ queue: null });
+		send({ type: 'unqueue' });
 	}
 
 	/**
@@ -607,6 +684,8 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		createRoom,
 		joinRoom,
 		listRooms,
+		queueUp,
+		cancelQueue,
 		// Leaving the finder. The server forgets a watcher when the socket goes either way; this stops
 		// a reconnect from re-subscribing to a list nobody is looking at.
 		stopListing: () => {

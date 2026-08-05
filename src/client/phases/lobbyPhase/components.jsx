@@ -63,6 +63,23 @@ export const SeatRow = styled.li`
 	opacity: ${({ dim }) => (dim ? 0.55 : 1)};
 `;
 
+// The right-hand end of a seat row. It had one thing in it and now has two, and a third child on a
+// `space-between` row would have spread the name, the rating and the tag evenly across it.
+export const SeatMeta = styled.span`
+	display: flex;
+	gap: 8px;
+	align-items: baseline;
+	flex-shrink: 0;
+`;
+
+// A rating, wherever one is shown. Tabular figures because these sit in a column and a proportional
+// `1` would make the column ragged.
+export const Rating = styled.span`
+	font-family: var(--ha-face-data);
+	font-variant-numeric: tabular-nums;
+	color: var(--ha-ink-faint);
+`;
+
 export const SeatTag = styled.span`
 	font-size: 11px;
 	color: var(--ha-ink-faint);

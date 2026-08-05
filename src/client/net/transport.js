@@ -97,6 +97,9 @@ function createLocalSession(test, { rng = Math.random } = {}) {
 		roomPrivate: false,
 		rooms: [],
 		roomsTotal: 0,
+		queue: null,
+		rated: null,
+		errorSeconds: null,
 		resumable: [],
 		// The name this browser plays under online. Read here too so the shape does not branch, even
 		// though the hot-seat form asks for a name per player rather than for whose screen this is.
@@ -167,6 +170,8 @@ export function createTransport({ mode = 'local' } = {}) {
 				joinRoom: store.joinRoom,
 				listRooms: store.listRooms,
 				stopListing: store.stopListing,
+				queueUp: store.queueUp,
+				cancelQueue: store.cancelQueue,
 				start: store.start,
 				ready: store.ready,
 				leave: store.leave,
@@ -197,6 +202,9 @@ export function createTransport({ mode = 'local' } = {}) {
 			joinRoom: () => {},
 			listRooms: () => {},
 			stopListing: () => {},
+			// There is nobody to be matched with: a hot-seat game is the people round this screen.
+			queueUp: () => {},
+			cancelQueue: () => {},
 			start: () => {},
 			ready: () => {},
 			// Nothing to leave: a hot-seat game is the tab it is in.

@@ -1,5 +1,6 @@
 import { useContext } from 'react';
 import { StateContext } from 'State';
+import useSession from 'Hooks/useSession';
 import py, { BASE_POINTS, REVEAL_COST } from 'Domain/py';
 import teams, { TEAM_NAMES } from 'Domain/teams';
 import {
@@ -9,6 +10,7 @@ import {
 	Breakdown,
 	BreakdownHead,
 	PlayerName,
+	RatingDelta,
 	Base,
 	AlignmentGroup,
 	AlignmentPill,
@@ -46,6 +48,30 @@ function Alignment({ alignment, team, points, revealed }) {
 	);
 }
 
+/**
+ * What this game did to a player's rating.
+ *
+ * Nothing at all in hot-seat, where there are no ratings — the same reasoning as `SkinPicker` and
+ * `LeaveGame`: a control or a figure for something that does not exist here would be worse than its
+ * absence. Nothing either while the frame is still in flight, which is the ordinary case for the first
+ * moment this screen is on.
+ */
+function Movement({ name }) {
+	const { rated } = useSession();
+	const mine = rated?.players?.find(player => player.name === name);
+
+	if (!mine) {
+		return null;
+	}
+
+	return (
+		<RatingDelta data-delta={mine.delta} data-rating={mine.after}>
+			{mine.delta >= 0 ? '+' : '−'}
+			{Math.abs(mine.delta)} → {mine.after}
+		</RatingDelta>
+	);
+}
+
 function PlayerScore({ player }) {
 	const [{ pieces }] = useContext(StateContext);
 
@@ -59,6 +85,7 @@ function PlayerScore({ player }) {
 			<Breakdown>
 				<BreakdownHead>
 					<PlayerName>{player.name}</PlayerName>
+					<Movement name={player.name} />
 					<Base data-term={BASE_POINTS}>{BASE_POINTS}</Base>
 				</BreakdownHead>
 

@@ -38,6 +38,12 @@ function LeaveScreen({ onClose }) {
 						: 'a started room takes no new seats, so there is no way back'}
 				</VerdictCost>
 
+				{/* The rest of the price, added when leaving started costing rating. This screen exists to
+				    name the price, so a cost it did not mention would be the one thing it got wrong — and
+				    the wait is the half a player is most likely to be surprised by. Not gated on the mode:
+				    LeaveGame renders nothing at all in hot-seat, so there is no local way to reach here. */}
+				<VerdictCost id="leave-rating-cost">counts as a loss, and the next game waits on a timer</VerdictCost>
+
 				{/* ScreenChoices rather than Buttons: two controls side by side need the gap, and in Dossier
 				    they are stamps that would otherwise share an edge. Neither is louder than the other —
 				    both are decisions, which is the point of the screen. */}

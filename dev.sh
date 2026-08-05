@@ -28,6 +28,10 @@ unset NODE_OPTIONS VSCODE_INSPECTOR_OPTIONS
 # persistence would quietly disable itself — meaning every server rebuild would drop the game in
 # progress. Pointing it at the repo lets a watch restart survive an in-flight game.
 STATE_DIR=.dev-rooms
+# Ratings, same reasoning, and deliberately **not** inside STATE_DIR: the room loader reads every
+# *.json in its own directory and hands it to the room store, so one foreign file there is enough to
+# make it throw and drop every game in progress on the next restart.
+RATINGS_DIR=.dev-ratings
 # The join limit is per IP and every tab here shares one. Six seats plus a few reloads trips the
 # production limit of 10 in a way that looks nothing like a rate limit, so raise it for dev only.
 JOINS_PER_MINUTE=1000
@@ -117,8 +121,11 @@ check_port "$CLIENT_PORT" "stop it, or the client has nowhere to listen (strictP
 [ "$run_server" -eq 0 ] || check_port "$SERVER_PORT" "stop it, or pass --no-server to use it as-is"
 [ "$inspect" -eq 0 ] || check_port "$INSPECT_PORT" "stop it, or drop --inspect"
 
+# Rooms only. Ratings are deliberately left alone: the log is the history every rating is derived
+# from, so dropping it is a much bigger thing than dropping a game in progress — `rm -rf .dev-ratings`
+# says so out loud, and this flag should not do it quietly.
 if [ "$clean" -eq 1 ] && [ -d "$STATE_DIR" ]; then
-	note "dropping persisted rooms in $STATE_DIR/"
+	note "dropping persisted rooms in $STATE_DIR/ (ratings in $RATINGS_DIR/ are kept)"
 	rm -rf "$STATE_DIR"
 fi
 
@@ -240,7 +247,7 @@ if [ "$run_server" -eq 1 ]; then
 	# Handed to the server process rather than exported: PORT is a name half the ecosystem reads,
 	# and the client is started from this same shell. Unquoted on purpose — the split into separate
 	# assignments is what `env` wants, and none of these values contain a space.
-	SERVER_ENV="PORT=$SERVER_PORT HOST=127.0.0.1 HA_STATE_DIR=$STATE_DIR HA_JOINS_PER_MINUTE=$JOINS_PER_MINUTE"
+	SERVER_ENV="PORT=$SERVER_PORT HOST=127.0.0.1 HA_STATE_DIR=$STATE_DIR HA_RATINGS_DIR=$RATINGS_DIR HA_JOINS_PER_MINUTE=$JOINS_PER_MINUTE"
 
 	if [ "$inspect" -eq 1 ]; then
 		start server "$GREEN" env $SERVER_ENV node --watch --inspect="$INSPECT_PORT" dist-server/main.mjs

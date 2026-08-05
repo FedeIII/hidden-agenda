@@ -207,6 +207,18 @@ export const PlayerName = styled.div`
 	white-space: nowrap;
 `;
 
+// What the game did to a player's rating, beside their name on the sheet. Deliberately quiet: the score
+// is what the game was about, and this is the ledger afterwards.
+export const RatingDelta = styled.span`
+	font-family: var(--ha-face-data);
+	font-variant-numeric: tabular-nums;
+	font-size: 11px;
+	font-weight: normal;
+	letter-spacing: var(--ha-track-label);
+	color: var(--ha-ink-faint);
+	white-space: nowrap;
+`;
+
 export const Base = styled.div`
 	color: var(--ha-ink);
 	font-size: 15px;

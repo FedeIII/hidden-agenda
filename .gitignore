@@ -7,6 +7,11 @@ playwright-report/
 blob-report/
 
 .playwright-rooms/
+.playwright-ratings/
 
 # Rooms dev.sh persists, so a server rebuild doesn't drop the game in progress.
 .dev-rooms/
+
+# The rating log dev.sh appends to. Its own directory, never inside .dev-rooms — the room loader reads
+# every *.json in there and would choke on a stranger.
+.dev-ratings/

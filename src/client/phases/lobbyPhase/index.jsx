@@ -14,7 +14,9 @@ import {
 	ShareHint,
 	SeatList,
 	SeatRow,
+	SeatMeta,
 	SeatTag,
+	Rating,
 	Field,
 	Row,
 	Notice,
@@ -47,13 +49,31 @@ const REASONS = {
 	skin_locked: 'The style cannot be changed once the game has started.',
 	bad_skin: 'No such style.',
 	bad_room_name: 'A room name is letters, digits, spaces and hyphens.',
+	already_seated: 'You are already at a table.',
 	// Not an error, and the only thing on this list that nobody did wrong. It is here because this is
 	// where a player lands when the rest of the table walks out of a game they were in the middle of,
 	// and arriving back at the lobby with no explanation reads as a bug.
 	left_alone: 'Everybody else left, so the game ended.',
 };
 
-function explain(reason) {
+// The one refusal that comes with a number. Leaving a game in progress costs a wait before the next
+// one, and it doubles each time — so saying "later" would be no answer at all, and saying "30 seconds"
+// when it is really sixteen minutes would be worse.
+function waitOut(seconds) {
+	if (!Number.isFinite(seconds)) {
+		return 'You left a game in progress. Wait a moment before starting another.';
+	}
+
+	const minutes = Math.ceil(seconds / 60);
+
+	return `You left a game in progress. You can play again in ${seconds < 60 ? `${seconds}s` : `${minutes} min`}.`;
+}
+
+function explain(reason, seconds = null) {
+	if (reason === 'quit_timeout') {
+		return waitOut(seconds);
+	}
+
 	return REASONS[reason] || reason;
 }
 
@@ -167,11 +187,16 @@ function Finder({ rooms, total, query, onQuery, canGo, held, onEnter, unreachabl
 									data-room-host={room.host || ''}
 									data-room-players={room.players}
 									data-room-state={room.state}
+									{...(Number.isFinite(room.rating) ? { 'data-room-rating': room.rating } : {})}
 									onClick={() => onEnter(room.code)}
 								>
 									<RoomName>{room.name}</RoomName>
 									<RoomMeta>
 										<span>{room.host}</span>
+										{/* What the table averages, so somebody scanning this list can see what they
+										    would be walking into. Absent rather than zero for a room of browsers with
+										    nothing to look up. */}
+										{Number.isFinite(room.rating) && <Rating>{room.rating}</Rating>}
 										<span>
 											{room.players}/{MAX_PLAYERS}
 										</span>
@@ -230,13 +255,68 @@ function Resume({ seats, onEnter }) {
 	);
 }
 
+/**
+ * Automatch: let the server pick the table.
+ *
+ * Deliberately not a different kind of game. A match makes an ordinary private room and seats
+ * everybody in it, and the host still presses START — so what this replaces is finding a table, not
+ * playing at one.
+ */
+function Automatch({ canGo, queue, onQueue, onCancel }) {
+	const searching = Boolean(queue);
+
+	return (
+		<Section>
+			<Subtitle>Automatch</Subtitle>
+			<Row>
+				<Button id="lobby-queue" small active={canGo || searching} onClick={searching ? onCancel : onQueue}>
+					{searching ? 'CANCEL' : 'FIND ME A GAME'}
+				</Button>
+				{searching && (
+					<Hint id="lobby-queue-status" data-waiting={queue.waiting}>
+						{/* The window is what the server is currently willing to match across, and it widens
+						    on its own — so this is a push, not something the client could work out. Null is
+						    the point at which it will take anybody. */}
+						Searching — {queue.waiting} waiting
+						{Number.isFinite(queue.rating) ? `, you are on ${queue.rating}` : ''}
+						{queue.window === null ? ', any rating' : ''}
+					</Hint>
+				)}
+			</Row>
+			{!canGo && !searching && <Notice id="lobby-queue-need-name">Say who you are first.</Notice>}
+		</Section>
+	);
+}
+
+/**
+ * What the last game did to this browser's rating, on the screen the player lands on after it.
+ *
+ * Matched by the name this browser played under, because the frame carries names and the seat is gone
+ * by the time this renders. Without it a walk-out's penalty would be invisible: nothing else on this
+ * screen would mention that leaving had cost anything.
+ */
+function LastGame({ rated, playerName }) {
+	const mine = rated?.players?.find(player => player.name === playerName);
+
+	if (!mine || !mine.delta) {
+		return null;
+	}
+
+	return (
+		<Notice id="lobby-last-game" data-delta={mine.delta}>
+			Last game: {mine.delta > 0 ? '+' : '−'}
+			{Math.abs(mine.delta)} — you are on {mine.after}.
+		</Notice>
+	);
+}
+
 function JoinForm({ session, unreachable }) {
-	const { code, rooms, roomsTotal, resumable, playerName, actions } = session;
+	const { code, rooms, roomsTotal, resumable, playerName, queue, rated, actions } = session;
 	// Pulled out as plain values because they are the effects' dependencies. `actions` itself is a new
 	// object on every session update — it is spread with goOnline/goHotSeat — while the functions in it
 	// come straight off the transport and never change, so depending on the object would re-run the
 	// search on every frame the server pushes and ask for the list again each time.
-	const { createRoom, joinRoom, listRooms, stopListing } = actions;
+	const { createRoom, joinRoom, listRooms, stopListing, queueUp, cancelQueue } = actions;
 	// Filled in with whatever this browser played under last. An initialiser rather than a value prop,
 	// so it seeds the field and then gets out of the way: the player is free to type over it, and a name
 	// arriving from the server mid-edit must not overwrite what they are typing.
@@ -282,7 +362,11 @@ function JoinForm({ session, unreachable }) {
 				onChange={event => setName(event.target.value.toUpperCase())}
 			/>
 
+			<LastGame rated={rated} playerName={playerName} />
+
 			<Resume seats={resumable} onEnter={enter} />
+
+			<Automatch canGo={canGo} queue={queue} onQueue={() => canGo && queueUp(trimmed)} onCancel={cancelQueue} />
 
 			<NewRoom canGo={canGo} onCreate={create} />
 
@@ -321,15 +405,27 @@ function Seats({ seats, hostSeatId, seatId }) {
 	return (
 		<SeatList id="lobby-seats">
 			{seats.map(seat => (
-				<SeatRow key={seat.id} dim={!seat.connected} id={`lobby-seat-${seat.name}`}>
+				// The rating goes in a data attribute as well as being shown, because what the row *says*
+				// is the skin's business — `RoomMeta` next door is uppercased — while what a spec reads
+				// has to be the number. A seat with no rating id carries no attribute at all rather than
+				// an empty one, so "unrated" and "rated 0" cannot be confused.
+				<SeatRow
+					key={seat.id}
+					dim={!seat.connected}
+					id={`lobby-seat-${seat.name}`}
+					{...(Number.isFinite(seat.rating) ? { 'data-rating': seat.rating } : {})}
+				>
 					<span>
 						{seat.name}
 						{seat.id === seatId ? ' (you)' : ''}
 					</span>
-					<SeatTag>
-						{seat.id === hostSeatId ? 'host' : ''}
-						{seat.connected ? '' : ' offline'}
-					</SeatTag>
+					<SeatMeta>
+						{Number.isFinite(seat.rating) && <Rating>{seat.rating}</Rating>}
+						<SeatTag>
+							{seat.id === hostSeatId ? 'host' : ''}
+							{seat.connected ? '' : ' offline'}
+						</SeatTag>
+					</SeatMeta>
 				</SeatRow>
 			))}
 		</SeatList>
@@ -388,7 +484,7 @@ function WaitingRoom({ session }) {
 // is the difference between a dead form and a choice.
 function LobbyPhase() {
 	const session = useSession();
-	const { status, seatId, error, actions } = session;
+	const { status, seatId, error, errorSeconds, actions } = session;
 
 	// A seat in this room means the waiting room; a code without a seat means somebody followed a
 	// shared link and still has to say who they are.
@@ -406,7 +502,7 @@ function LobbyPhase() {
 			{status === 'reconnecting' && seated && <Notice id="lobby-reconnecting">Reconnecting…</Notice>}
 			{error && (
 				<Notice bad id="lobby-error">
-					{explain(error)}
+					{explain(error, errorSeconds)}
 				</Notice>
 			)}
 

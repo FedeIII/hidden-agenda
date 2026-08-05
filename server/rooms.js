@@ -23,7 +23,14 @@ const PINNED_SKIN = isSkin(process.env.HA_SKIN) ? process.env.HA_SKIN : null;
 
 export { MIN_PLAYERS, MAX_PLAYERS };
 
-export function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = null } = {}) {
+// `ratingFor` is injected rather than imported so this module stays what it is: room bookkeeping, with
+// no store, no sockets and no filesystem. It returns null for a seat with nothing to look up.
+export function createRoomStore({
+	now = () => Date.now(),
+	rng = Math.random,
+	skin = null,
+	ratingFor = () => null,
+} = {}) {
 	const rooms = new Map();
 
 	function get(code) {
@@ -67,7 +74,7 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 		return room;
 	}
 
-	function addSeat(room, name) {
+	function addSeat(room, name, playerId = null) {
 		if (room.phase !== PHASES.START) {
 			return { error: 'room_already_started' };
 		}
@@ -84,6 +91,11 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 			id: createToken(),
 			name,
 			token: createToken(),
+			// Which browser is playing this seat, for rating purposes only — never for deciding who may
+			// act, which is the seat token's job. Held on the seat so it goes to disk with the room and a
+			// game interrupted by a deploy is still rated to the right people. Null is a seat that plays
+			// unrated: a browser with no storage to mint one in.
+			playerId,
 			ready: false,
 			connected: true,
 			lastSeenAt: now(),
@@ -199,7 +211,10 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 	// way and the scores are worth reading, so pulling the last player off that screen because somebody
 	// else clicked LEAVE would be a rudeness rather than a rule. In the waiting room being alone is
 	// simply what having just opened a room looks like.
-	const PLAYABLE = [PHASES.ALIGNMENT, PHASES.PLAY];
+	//
+	// `isMidGame` is exported rather than kept local because the rating asks the same question of the
+	// same two phases — whether there was a game to walk out of — and two lists would eventually
+	// disagree about `end`.
 
 	/**
 	 * Takes a seat out of a room, and out of the game if one is running.
@@ -209,7 +224,7 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 	 */
 	function leave(room, seat) {
 		const others = room.seats.filter(other => other.id !== seat.id);
-		const stranded = PLAYABLE.includes(room.phase) && others.length === 1 ? others : [];
+		const stranded = isMidGame(room.phase) && others.length === 1 ? others : [];
 		const gone = [seat, ...stranded];
 
 		room.seats = others.filter(other => !stranded.includes(other));
@@ -263,6 +278,20 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 		return host ? host.name : null;
 	}
 
+	/**
+	 * What the table is rated, on average, so somebody scanning the finder can see what they would be
+	 * walking into.
+	 *
+	 * Averaged over the seats that have something to look up. A room of brand-new browsers averages the
+	 * starting rating rather than reading as unrated, because that is genuinely what they are on — and
+	 * an empty room has no average at all rather than a misleading 1000.
+	 */
+	function averageRating(room) {
+		const rated = room.seats.map(seat => ratingFor(seat.playerId)).filter(mmr => Number.isFinite(mmr));
+
+		return rated.length ? Math.round(rated.reduce((total, mmr) => total + mmr, 0) / rated.length) : null;
+	}
+
 	function listingFor(room) {
 		return {
 			code: room.code,
@@ -270,6 +299,7 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 			host: hostName(room),
 			players: room.seats.length,
 			state: roomStateFor(room.phase),
+			rating: averageRating(room),
 		};
 	}
 
@@ -331,6 +361,17 @@ export function createRoomStore({ now = () => Date.now(), rng = Math.random, ski
 
 export function isNameShaped(value) {
 	return typeof value === 'string' && value.trim().length > 0 && value.trim().length <= 16;
+}
+
+/**
+ * Whether there is a game in progress to be walked out of.
+ *
+ * Two callers, and they have to agree: `leave` uses it to decide whether going takes the last player
+ * with you, and the rating uses it to decide whether going costs you anything. `end` is deliberately
+ * not one of these — a finished game has already been rated, and leaving the score sheet is free.
+ */
+export function isMidGame(phase) {
+	return phase === PHASES.ALIGNMENT || phase === PHASES.PLAY;
 }
 
 export default createRoomStore;

@@ -220,6 +220,31 @@ A refresh keeps the room in the hash and the seat token in `localStorage`, so th
 
 Build with `npm run build:server` → `dist-server/main.mjs` (committed, like `docs/`). Note the **`.mjs`** extension, and that `vite.server.config.mjs` needs `publicDir: false` or the bundle acquires all 116 piece images.
 
+### Ratings
+
+Players are rated without registering for anything. Each browser mints an id into `ha:player` (`net/playerId.js`), sends it on create/join/rejoin/queue, and the server keys ratings by it. **It is a bearer credential for a rating and nothing else** — the seat token remains the only authority for who may act — and `protocol.js#ratedMessage` exists largely to strip it, because an id reaching another seat lets them play as its owner. `skins.test.js` pins the room frame's seat keys for that reason.
+
+Two consequences worth stating plainly: a rating belongs to a *browser*, not a person, so clearing storage starts again; and a seat with no id (storage disabled) plays unrated while the rest of the table is rated amongst themselves.
+
+**The log is the truth and a rating is derived from it.** `server/ratings.js` appends one line per event to `games.jsonl` and folds the whole file at boot; nothing else is stored. That is what makes the constants in `domain/rating.js` changeable — none of them is known to be right yet, and `rebuild()` re-folds rather than resetting. One `apply` serves both replay and live recording, which is the only reason a restart is guaranteed to agree with the server that wrote the file. Best-effort like `persistence.js`: unwritable means disabled and logged, never a crash.
+
+**`HA_RATINGS_DIR` must not be inside `HA_STATE_DIR`.** `persistence.loadAll()` reads every `*.json` in the rooms directory and maps `room.seats` inside its outer `try`, so one foreign file throws, the catch returns `[]`, and **every game in progress is dropped on the next restart**. Set explicitly in `dev.sh` (`.dev-ratings`), `playwright.config.mjs` (`.playwright-ratings`) and the PM2 config.
+
+The model is **Weng–Lin (Bradley–Terry, full pair)**, not Elo, because a game here is 2–6 players with a full ordering and Elo is a two-player formula. `rate({ entries, pairWeight, only })` is the whole of it, and those two knobs express every rule:
+
+- **β is 1.5σ₀, not Weng–Lin's σ₀/2.** A six-player table produces five pairwise results at once, but they are not five independent readings — everybody played the same board off the same deal. Measured: it takes a first-game 6-player swing from 1000 → 1877 down to 1000 → 1510 while leaving a thirty-game winner at 2313, so none of the separation is lost. To make the system more or less volatile, move β; leave the display scale alone.
+- **Displayed MMR is `round(60 × (μ − σ))`**, which is exactly 1000 at the start because μ₀ − σ₀ is 50/3. Conservative on purpose and the same number the leaderboard sorts by, so nobody tops it on one lucky game. The side-effect is real and intended: an average player drifts to ~1115 over thirty games as σ shrinks.
+- `pairWeight` is asked **per direction**, so the two halves of a pairing can be worth different amounts. That is what "full loss for the leaver, half a win for the player stranded" needs, and it damps the σ gain as well as the μ movement — a game that should not move a rating should not teach us much either.
+- Nothing is zero-sum, deliberately. Each player's update is computed from their own perspective, which is what lets a whole table lose rating for abandoning a game.
+
+Three moments are rated, and only three: a room reaching `END` (places from `py.getPlacings`, ties shared), a seat pressing `LEAVE` mid-game, and the sweeper evicting a room still in `alignment`/`play` — where every seat that had *disconnected* takes the leaver treatment, so closing the laptop and pressing LEAVE cost the same. A game reached with nothing on the board is a genuine **draw**: no kills means every team is worth its full survivors, so friend and foe cancel and everybody sits on 100. `rooms.js#isMidGame` is exported so the stranding rule and the rating rule cannot disagree about `end`.
+
+**Repeat pairings soften rather than cap**: `1 / (1 + n/3)` over meetings in the trailing week, applied to departures too — two browsers alone in a room, one quitting so the other collects, is otherwise the cheapest farm in the system. It needs nothing about where anybody connected from, so **no address is ever stored, hashed or compared**.
+
+Quitting repeatedly costs a cooldown before joining anything new: `30s × 2^(level−1)` capped at 64 minutes, one level decaying per day. Derived from the log by folding quit events, so nothing extra is stored. Checked in `create`, `join` and `queue`; **deliberately not in `rejoin`**, which is reclaiming a seat you already hold — blocking it would turn a refresh into a lockout.
+
+**Automatch** (`server/queue.js`) is socket-free and testable without a server. It anchors on whoever has waited longest rather than the tightest cluster in the queue, which is a fairness rule: two well-matched arrivals must not keep stepping over somebody already waiting. The window opens from 150 MMR to anybody over a minute; a table fires at four, or at two after fifteen seconds. A group must have distinct player ids (or one browser matches itself) *and* distinct names (or `addSeat` would refuse the seat). A match makes an ordinary **private** room and the host still presses `START` — what automatch replaces is finding a table, not playing at one.
+
 ### Inside the shared core
 
 `src/domain/` is the game rules — plain functions, no state container. `src/game/` is the reducer, the actions and the store built on top of them. Rules belong in `domain`; components call into it rather than re-deriving geometry or legality.
@@ -233,6 +258,7 @@ Build with `npm run build:server` → `dist-server/main.mjs` (committed, like `d
 | `domain/deal.js` | Deals the hidden friend/foe alignments. Pure and takes an `rng` because Phase 1 moves it to the server. |
 | `domain/phases.js` | The four phase names, plus `ROOM_STATES` and `roomStateFor` — what a room looks like from outside it. In `domain` because the server sends these strings. |
 | `domain/roomNames.js` | The two word lists a room's default name is drawn from, `pickRoomName(rng)`, and the shape and search rules. In `domain` because the server validates the name and the client draws it. |
+| `domain/rating.js` | Weng–Lin rating maths, the displayed-MMR scale, the repeat-pairing softening and the quit-cooldown ladder — all pure. Plus `isPlayerIdShaped`, here because both ends need it and neither may import the other's modules. |
 | `domain/utils.js` | Coord helpers, the six-direction ring, `memoize`. |
 
 `pz` and `py` import each other, which works because both go through their default-exported objects. Keep new cross-module calls doing the same.
@@ -259,7 +285,7 @@ label is also the card's only `<i>`, which is why the chip is a `span`.
 
 DOM ids the tests depend on: `pz-{pieceId}`, `hex-{row}-{cell}`, `board`, `store-{team}`, `claim-{team}`, `controlled-{team}`, `piece-count-{team}-{TYPE}`, plus `next-turn`, `snipe`, `accuse`, `reveal`, `reveal-friend`, `reveal-foe`, `start-btn`, `alignments-btn`, `player-name{n}`.
 
-The lobby's own: `lobby-name`, `lobby-code`, `lobby-join`, `lobby-create`, `lobby-room-name`, `lobby-room-reroll`, `lobby-visibility-{public,private}`, `lobby-search`, `lobby-rooms`, `lobby-room-{CODE}`, `lobby-resume-{CODE}`, `lobby-room-code`, `lobby-room-title`, `lobby-seat-{NAME}`, `lobby-start`, `lobby-leave`. Leaving from elsewhere: `leave-game` (the bar and the friend-and-foe screen), `leave-screen`, `leave-note`, `leave-cost`, `leave-confirm`, `leave-close`, `end-leave`. **A row in the finder carries its facts in `data-room-{name,host,players,state}`** rather than in its text, for the `innerText` reason above: what the row *says* is the direction's business — it is set in small caps and free to abbreviate — while the count and the state are what a player acts on.
+The lobby's own: `lobby-name`, `lobby-code`, `lobby-join`, `lobby-create`, `lobby-room-name`, `lobby-room-reroll`, `lobby-visibility-{public,private}`, `lobby-search`, `lobby-rooms`, `lobby-room-{CODE}`, `lobby-resume-{CODE}`, `lobby-room-code`, `lobby-room-title`, `lobby-seat-{NAME}`, `lobby-start`, `lobby-leave`, `lobby-queue`, `lobby-queue-status`, `lobby-queue-need-name`, `lobby-last-game`. Leaving from elsewhere: `leave-game` (the bar and the friend-and-foe screen), `leave-screen`, `leave-note`, `leave-cost`, `leave-rating-cost`, `leave-confirm`, `leave-close`, `end-leave`. **A row in the finder carries its facts in `data-room-{name,host,players,state,rating}`** rather than in its text, for the `innerText` reason above: what the row *says* is the direction's business — it is set in small caps and free to abbreviate — while the count, the state and the table's average rating are what a player acts on. A seat row carries `data-rating` for the same reason, and both are **absent rather than empty** when there is nothing to look up, so "unrated" cannot be read as "rated 0".
 
 Three of those belong to one line at the foot of an HQ card and are not interchangeable:
 

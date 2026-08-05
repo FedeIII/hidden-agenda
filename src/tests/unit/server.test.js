@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import WebSocket from 'ws';
@@ -71,22 +71,32 @@ function createClient(url) {
 }
 
 async function startServer() {
-	const server = createGameServer({ log: () => {}, stateDir: mkdtempSync(join(tmpdir(), 'ha-rooms-')) });
+	// A ratings directory of its own, and never the rooms one: the room loader reads every *.json in
+	// its directory, so a stray file there would take the rooms down with it on the next restart.
+	const ratingsDir = mkdtempSync(join(tmpdir(), 'ha-ratings-'));
+	const server = createGameServer({
+		log: () => {},
+		stateDir: mkdtempSync(join(tmpdir(), 'ha-rooms-')),
+		ratingsDir,
+	});
 	const address = await server.listen(0, '127.0.0.1');
 
-	return { server, url: `ws://127.0.0.1:${address.port}/ws`, port: address.port };
+	return { server, url: `ws://127.0.0.1:${address.port}/ws`, port: address.port, ratingsDir };
 }
 
 // Drives a room all the way to the play phase with two seats.
-async function playingRoom(url) {
+//
+// `ids` are the browsers' own rating ids. Left out by default so the specs that have nothing to do with
+// ratings stay exactly as unrated as they were.
+async function playingRoom(url, ids = {}) {
 	const ana = createClient(url);
 	await ana.opened;
-	ana.send({ type: 'create', name: 'ANA' });
+	ana.send({ type: 'create', name: 'ANA', playerId: ids.ana });
 	const anaSeat = await ana.waitFor('seat');
 
 	const bea = createClient(url);
 	await bea.opened;
-	bea.send({ type: 'join', code: anaSeat.code, name: 'BEA' });
+	bea.send({ type: 'join', code: anaSeat.code, name: 'BEA', playerId: ids.bea });
 	const beaSeat = await bea.waitFor('seat');
 
 	ana.send({ type: 'start' });
@@ -602,7 +612,12 @@ test.describe('the public room list', () => {
 			const { rooms, total } = await finder.waitFor('rooms');
 
 			expect(total).toEqual(1);
-			expect(rooms).toEqual([{ code: seat.code, name: 'secret-agent', host: 'ANA', players: 1, state: 'lobby' }]);
+			// `rating` is the table's average, and null here because this host sent no rating id at all —
+			// a browser with storage disabled, or an older client. There is nothing to average, which is a
+			// different thing from averaging to the starting number. The rated case is in rating.test.js.
+			expect(rooms).toEqual([
+				{ code: seat.code, name: 'secret-agent', host: 'ANA', players: 1, state: 'lobby', rating: null },
+			]);
 		} finally {
 			await server.close();
 		}
@@ -754,7 +769,9 @@ test.describe('the public room list', () => {
 
 			const { rooms } = await finder.waitFor('rooms');
 
-			expect(Object.keys(rooms[0]).sort()).toEqual(['code', 'host', 'name', 'players', 'state']);
+			// `rating` is an average of numbers the server derived, not anything a seat holds — no ids, no
+			// alignments, nothing about the board. It stays on the card.
+			expect(Object.keys(rooms[0]).sort()).toEqual(['code', 'host', 'name', 'players', 'rating', 'state']);
 		} finally {
 			await server.close();
 		}
@@ -990,6 +1007,587 @@ test.describe('leaving', () => {
 
 			expect(again.code).not.toEqual(anaSeat.code);
 			expect((await ana.waitFor('room')).name).toEqual('second-attempt');
+		} finally {
+			await server.close();
+		}
+	});
+});
+
+test.describe('ratings', () => {
+	const ANA = 'ana-browser-0001';
+	const BEA = 'bea-browser-0002';
+	const CAZ = 'caz-browser-0003';
+
+	function logLines(dir) {
+		return readFileSync(join(dir, 'games.jsonl'), 'utf8')
+			.split('\n')
+			.filter(Boolean)
+			.map(line => JSON.parse(line));
+	}
+
+	// Three dead CEOs is the end condition, so this is how a spec reaches it without playing a game:
+	// the same shortcut applyAction's own spec uses, reached through the room the server is holding.
+	function almostFinished(server, code) {
+		const room = server.rooms.get(code);
+
+		room.state = {
+			...room.state,
+			pieces: room.state.pieces.map(piece =>
+				['0-C', '1-C', '2-C'].includes(piece.id) ? { ...piece, killed: true } : piece,
+			),
+		};
+	}
+
+	test('a finished game rates everybody in it and says what it did', async () => {
+		const { server, url, ratingsDir } = await startServer();
+
+		try {
+			const { ana, bea, anaSeat } = await playingRoom(url, { ana: ANA, bea: BEA });
+
+			// A game reached with nothing on the board is a **draw**: no kills means every team is worth
+			// its full complement of survivors, so friend and foe cancel and both players sit on 100. To
+			// have a winner and a loser there has to be a real difference in score, and revealing is the
+			// cheapest one to make over a socket — it costs ANA fifty points by the rules.
+			ana.send({ type: 'action', seq: 1, action: { type: 'REVEAL_FRIEND' } });
+			await ana.waitFor('snapshot');
+
+			almostFinished(server, anaSeat.code);
+			ana.drain();
+			bea.drain();
+
+			// Any legal action from the seat on turn now trips the end of the game.
+			ana.send({ type: 'action', seq: 2, action: { type: 'TOGGLE_PIECE', payload: { pieceId: '0-A1' } } });
+
+			const rated = await ana.waitFor('rated');
+			// Both seats are told, and told the same thing — a score sheet everybody reads differently
+			// would be worse than none.
+			const alsoRated = await bea.waitFor('rated');
+
+			expect(rated).toEqual(alsoRated);
+			expect(rated.players.map(player => player.name).sort()).toEqual(['ANA', 'BEA']);
+			// BEA won by fifty points, so exactly one of them went up and one went down.
+			expect(rated.players.find(player => player.name === 'BEA').delta).toBeGreaterThan(0);
+			expect(rated.players.find(player => player.name === 'ANA').delta).toBeLessThan(0);
+			expect(rated.players.every(player => player.before === 1000)).toBe(true);
+			expect(rated.players.every(player => player.after === player.before + player.delta)).toBe(true);
+
+			// One line, and it is the game.
+			expect(logLines(ratingsDir)).toHaveLength(1);
+			expect(logLines(ratingsDir)[0]).toMatchObject({ t: 'game', code: anaSeat.code });
+		} finally {
+			await server.close();
+		}
+	});
+
+	// The other half of the same rule, and not a defensive case: a game that ends with nothing on the
+	// board really is a tie, and a tie must not invent a winner.
+	test('a game nobody outscored anybody in is a draw', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const { ana, bea, anaSeat } = await playingRoom(url, { ana: ANA, bea: BEA });
+
+			almostFinished(server, anaSeat.code);
+			ana.drain();
+			ana.send({ type: 'action', seq: 1, action: { type: 'TOGGLE_PIECE', payload: { pieceId: '0-A1' } } });
+
+			const rated = await ana.waitFor('rated');
+			const [first, second] = rated.players;
+
+			expect(first.delta).toEqual(second.delta);
+			// Both still move, and upward: a draw between two unknown players teaches the game how good
+			// they both are, which is what σ shrinking means.
+			expect(first.delta).toBeGreaterThan(0);
+			await bea.waitFor('rated');
+		} finally {
+			await server.close();
+		}
+	});
+
+	// The one thing about a seat that must never reach another seat. A rating id is a bearer credential:
+	// anybody holding it can play as its owner, and there is no password to fall back on.
+	test('no frame ever carries somebody else’s rating id', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const { ana, bea, anaSeat } = await playingRoom(url, { ana: ANA, bea: BEA });
+
+			almostFinished(server, anaSeat.code);
+			ana.drain();
+			ana.send({ type: 'action', seq: 1, action: { type: 'TOGGLE_PIECE', payload: { pieceId: '0-A1' } } });
+
+			const rated = await ana.waitFor('rated');
+			const beaSaw = await bea.waitFor('rated');
+			// The room frame carries the seats, and therefore the ratings — so it is the other frame that
+			// could have leaked the id they were looked up by.
+			const roomFrame = await ana.waitFor(message => message.type === 'room' && message.phase === 'end');
+
+			// Not "the field is absent" — the whole serialised frame, so a nested copy somewhere would be
+			// caught too. Checked on both the frame that carries ratings and the one that carries seats.
+			[rated, beaSaw, roomFrame].forEach(frame => {
+				expect(JSON.stringify(frame)).not.toContain(ANA);
+				expect(JSON.stringify(frame)).not.toContain(BEA);
+			});
+			expect(rated.players.every(player => !('id' in player))).toBe(true);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('the room frame carries what each seat is rated', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'create', name: 'ANA', playerId: ANA });
+			const seat = await ana.waitFor('seat');
+			const frame = await ana.waitFor('room');
+
+			// A browser that has never finished a game is on the starting rating, which is a fact about
+			// them rather than a missing value.
+			expect(frame.seats).toEqual([{ id: seat.seatId, name: 'ANA', ready: false, connected: true, rating: 1000 }]);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a seat with no rating id plays unrated rather than being refused', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			// A browser in private mode, or with storage disabled. It still gets to play.
+			ana.send({ type: 'create', name: 'ANA' });
+			await ana.waitFor('seat');
+
+			expect((await ana.waitFor('room')).seats[0].rating).toBeNull();
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('the finder shows what a table is rated', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'create', name: 'ANA', playerId: ANA, room: 'secret-agent' });
+			await ana.waitFor('seat');
+
+			const finder = createClient(url);
+			await finder.opened;
+			finder.send({ type: 'list' });
+
+			expect((await finder.waitFor('rooms')).rooms[0].rating).toEqual(1000);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('walking out of a game costs the leaver and pays the player left behind', async () => {
+		const { server, url, ratingsDir } = await startServer();
+
+		try {
+			const { ana, bea } = await playingRoom(url, { ana: ANA, bea: BEA });
+			ana.drain();
+			bea.drain();
+
+			ana.send({ type: 'leave' });
+
+			const leaverTold = await ana.waitFor('rated');
+			const strandedTold = await bea.waitFor('rated');
+
+			expect(leaverTold.players.find(player => player.name === 'ANA').delta).toBeLessThan(0);
+			// Half a win, because the game was taken away rather than lost.
+			expect(strandedTold.players.find(player => player.name === 'BEA').delta).toBeGreaterThan(0);
+			expect(logLines(ratingsDir)[0]).toMatchObject({ t: 'quit', name: 'ANA' });
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('leaving a room that has not been dealt costs nothing', async () => {
+		const { server, url, ratingsDir } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'create', name: 'ANA', playerId: ANA });
+			await ana.waitFor('seat');
+
+			ana.send({ type: 'leave' });
+			await ana.waitFor('left');
+
+			// Nothing was at stake in a waiting room, so there is nothing to record.
+			expect(server.rooms.size).toEqual(0);
+			expect(() => logLines(ratingsDir)).toThrow();
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a second walk-out inside the cooldown is refused a new game, with the wait', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const first = await playingRoom(url, { ana: ANA, bea: BEA });
+
+			first.ana.send({ type: 'leave' });
+			await first.ana.waitFor('left');
+			first.ana.drain();
+
+			// Same browser, new table. The cooldown is what turns it away, not the rate limiter.
+			first.ana.send({ type: 'join', code: 'ZZZZ', name: 'ANA', playerId: ANA });
+			const refusal = await first.ana.waitFor('error');
+
+			expect(refusal.reason).toEqual('quit_timeout');
+			// Carried so the lobby can count down rather than saying "later".
+			expect(refusal.seconds).toEqual(30);
+
+			// And opening one is refused the same way.
+			first.ana.send({ type: 'create', name: 'ANA', playerId: ANA });
+
+			expect((await first.ana.waitFor('error')).reason).toEqual('quit_timeout');
+			expect(server.rooms.size).toEqual(0);
+		} finally {
+			await server.close();
+		}
+	});
+
+	// A cooldown must never stop somebody getting back into a game they are already in. Refreshing is
+	// how a player recovers from a dropped connection, and it is not a new game.
+	test('a cooldown does not block a rejoin', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			// This browser holds two seats: one at a table it is going to walk out of, one at a table it
+			// is going to come back to. Two tabs, which nothing prevents.
+			const other = createClient(url);
+			await other.opened;
+			other.send({ type: 'create', name: 'HOST', playerId: CAZ });
+			const hostSeat = await other.waitFor('seat');
+
+			const keeping = createClient(url);
+			await keeping.opened;
+			keeping.send({ type: 'join', code: hostSeat.code, name: 'ANA', playerId: ANA });
+			const keptSeat = await keeping.waitFor('seat');
+
+			const quitting = await playingRoom(url, { ana: ANA, bea: BEA });
+			quitting.ana.send({ type: 'leave' });
+			await quitting.ana.waitFor('left');
+
+			// The penalty is real...
+			keeping.send({ type: 'join', code: hostSeat.code, name: 'AGAIN', playerId: ANA });
+			expect((await keeping.waitFor('error')).reason).toEqual('quit_timeout');
+			keeping.drain();
+
+			// ...and it does not reach the seat this browser already holds.
+			keeping.send({ type: 'rejoin', code: keptSeat.code, token: keptSeat.token, playerId: ANA });
+
+			expect((await keeping.waitFor('seat')).seatId).toEqual(keptSeat.seatId);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a refresh on the score sheet is told again what the game was worth', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const { ana, bea, anaSeat } = await playingRoom(url, { ana: ANA, bea: BEA });
+			almostFinished(server, anaSeat.code);
+			ana.send({ type: 'action', seq: 1, action: { type: 'TOGGLE_PIECE', payload: { pieceId: '0-A1' } } });
+
+			const first = await ana.waitFor('rated');
+
+			bea.close();
+			const returning = createClient(url);
+			await returning.opened;
+			returning.send({ type: 'rejoin', code: anaSeat.code, token: anaSeat.token });
+
+			expect(await returning.waitFor('rated')).toEqual(first);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a game nobody came back to costs everybody who walked away from it', async () => {
+		const { server, url, ratingsDir } = await startServer();
+
+		try {
+			const { ana, bea, anaSeat } = await playingRoom(url, { ana: ANA, bea: BEA });
+
+			// Both closed the laptop rather than pressing LEAVE, and the sweeper eventually gives up on
+			// the room. From the table's point of view those are the same thing.
+			ana.close();
+			bea.close();
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			const room = server.rooms.get(anaSeat.code);
+			room.updatedAt = 0;
+			room.createdAt = 0;
+			server.sweep();
+
+			const quits = logLines(ratingsDir);
+
+			expect(quits).toHaveLength(2);
+			expect(quits.every(event => event.t === 'quit')).toBe(true);
+			// Nobody was stranded — there was nobody left to strand — so nobody collects.
+			expect(quits.every(event => event.stranded === null)).toBe(true);
+			expect(quits.map(event => event.name).sort()).toEqual(['ANA', 'BEA']);
+		} finally {
+			await server.close();
+		}
+	});
+});
+
+test.describe('automatch', () => {
+	// The queue holds out for a fourth player for fifteen seconds, so a two-player spec would either
+	// wait that long or race it. Driving the tick by hand is neither.
+	function matchNow(server) {
+		server.queue.entries().forEach(entry => {
+			entry.at = 0;
+		});
+		server.matchmake();
+	}
+
+	test('queueing says so, and says how many are waiting', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'queue', name: 'ANA', playerId: 'ana-browser-0001' });
+
+			expect(await ana.waitFor('queued')).toMatchObject({ searching: true, waiting: 1 });
+
+			const bea = createClient(url);
+			await bea.opened;
+			bea.send({ type: 'queue', name: 'BEA', playerId: 'bea-browser-0002' });
+
+			expect(await bea.waitFor('queued')).toMatchObject({ searching: true, waiting: 2 });
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('two waiting players are seated in one room, host first', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'queue', name: 'ANA', playerId: 'ana-browser-0001' });
+			await ana.waitFor('queued');
+
+			const bea = createClient(url);
+			await bea.opened;
+			bea.send({ type: 'queue', name: 'BEA', playerId: 'bea-browser-0002' });
+			await bea.waitFor('queued');
+
+			matchNow(server);
+
+			const anaSeat = await ana.waitFor('seat');
+			const beaSeat = await bea.waitFor('seat');
+
+			// One room, and both in it.
+			expect(anaSeat.code).toEqual(beaSeat.code);
+
+			const frame = await ana.waitFor('room');
+
+			expect(frame.seats.map(seat => seat.name).sort()).toEqual(['ANA', 'BEA']);
+			// Whoever waited longest is the host, and presses START themselves.
+			expect(frame.hostSeatId).toEqual(anaSeat.seatId);
+			expect(frame.phase).toEqual('start');
+			// Absent from the finder: nobody came here by looking for it.
+			expect(frame.private).toBe(true);
+			expect(server.queue.size).toEqual(0);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a matched room is a real room, and the host can start it', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'queue', name: 'ANA', playerId: 'ana-browser-0001' });
+			await ana.waitFor('queued');
+
+			const bea = createClient(url);
+			await bea.opened;
+			bea.send({ type: 'queue', name: 'BEA', playerId: 'bea-browser-0002' });
+			await bea.waitFor('queued');
+
+			matchNow(server);
+			await ana.waitFor('seat');
+			await bea.waitFor('seat');
+
+			ana.send({ type: 'start' });
+
+			// Matched on the phase, not just the type: seating the match already broadcast a room frame,
+			// and `waitFor('room')` would happily match that one and assert nothing.
+			const dealt = await bea.waitFor(message => message.type === 'room' && message.phase === 'alignment');
+
+			expect(dealt.seats.map(seat => seat.name).sort()).toEqual(['ANA', 'BEA']);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a matched room stays out of the finder', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'queue', name: 'ANA', playerId: 'ana-browser-0001' });
+			await ana.waitFor('queued');
+
+			const bea = createClient(url);
+			await bea.opened;
+			bea.send({ type: 'queue', name: 'BEA', playerId: 'bea-browser-0002' });
+			await bea.waitFor('queued');
+
+			matchNow(server);
+			await ana.waitFor('seat');
+
+			const finder = createClient(url);
+			await finder.opened;
+			finder.send({ type: 'list' });
+
+			expect((await finder.waitFor('rooms')).rooms).toEqual([]);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('cancelling stops the search', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'queue', name: 'ANA', playerId: 'ana-browser-0001' });
+			await ana.waitFor('queued');
+
+			ana.send({ type: 'unqueue' });
+
+			expect(await ana.waitFor('queued')).toMatchObject({ searching: false });
+			expect(server.queue.size).toEqual(0);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a socket that goes away stops waiting with it', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'queue', name: 'ANA', playerId: 'ana-browser-0001' });
+			await ana.waitFor('queued');
+
+			ana.close();
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			// Otherwise a table forms around somebody who is not there, and everybody else is seated with
+			// a ghost that will never press anything.
+			expect(server.queue.size).toEqual(0);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a second tab takes over the search rather than joining it', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const first = createClient(url);
+			await first.opened;
+			first.send({ type: 'queue', name: 'ANA', playerId: 'ana-browser-0001' });
+			await first.waitFor('queued');
+
+			const second = createClient(url);
+			await second.opened;
+			second.send({ type: 'queue', name: 'ANA', playerId: 'ana-browser-0001' });
+
+			// The abandoned tab is told, rather than being left on a spinner nothing will ever resolve.
+			expect(await first.waitFor('queued')).toMatchObject({ searching: false });
+			expect(await second.waitFor('queued')).toMatchObject({ searching: true, waiting: 1 });
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('somebody already at a table cannot queue for another', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'create', name: 'ANA', playerId: 'ana-browser-0001' });
+			await ana.waitFor('seat');
+
+			ana.send({ type: 'queue', name: 'ANA', playerId: 'ana-browser-0001' });
+
+			expect((await ana.waitFor('error')).reason).toEqual('already_seated');
+			expect(server.queue.size).toEqual(0);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a walk-out cannot queue straight back in', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const { ana } = await playingRoom(url, { ana: 'ana-browser-0001', bea: 'bea-browser-0002' });
+
+			ana.send({ type: 'leave' });
+			await ana.waitFor('left');
+			ana.drain();
+
+			ana.send({ type: 'queue', name: 'ANA', playerId: 'ana-browser-0001' });
+
+			// The queue is not a way around the cooldown.
+			expect((await ana.waitFor('error')).reason).toEqual('quit_timeout');
+			expect(server.queue.size).toEqual(0);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('the queue matches on rating, not on arrival', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			// A rating far enough apart that no window this early would reach across it.
+			const strong = createClient(url);
+			await strong.opened;
+			strong.send({ type: 'queue', name: 'STRONG', playerId: 'strong-browser' });
+			await strong.waitFor('queued');
+
+			server.queue.entries().forEach(entry => {
+				entry.mmr = entry.name === 'STRONG' ? 2500 : entry.mmr;
+			});
+
+			const weak = createClient(url);
+			await weak.opened;
+			weak.send({ type: 'queue', name: 'WEAK', playerId: 'weak-browser' });
+			await weak.waitFor('queued');
+
+			server.matchmake();
+
+			// Neither is seated: the gap is real and the window has not opened yet.
+			expect(server.queue.size).toEqual(2);
+			expect(await strong.expectNothing('seat')).toBe(true);
 		} finally {
 			await server.close();
 		}

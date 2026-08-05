@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import { randomInt, randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 //#region src/domain/phases.js
 var PHASES = {
@@ -174,57 +174,146 @@ function matchesRoomQuery(name, query) {
 	return needle.length === 0 || searchable(name).includes(needle);
 }
 //#endregion
-//#region src/domain/deal.js
-var TEAMS$1 = [
-	"0",
-	"1",
-	"2",
-	"3"
-];
-var COPIES_PER_TEAM = 2;
-function createDeck() {
-	return TEAMS$1.reduce((deck, team) => deck.concat(Array(COPIES_PER_TEAM).fill(team)), []);
+//#region src/domain/rating.js
+var PLAYER_ID = /^[a-zA-Z0-9-]{8,64}$/;
+function isPlayerIdShaped(value) {
+	return typeof value === "string" && PLAYER_ID.test(value);
 }
-function draw(deck, excluded, rng) {
-	const eligible = deck.filter((card) => card !== excluded);
-	const pool = eligible.length ? eligible : deck;
-	const card = pool[Math.floor(rng() * pool.length)];
-	deck.splice(deck.indexOf(card), 1);
-	return card;
-}
-function dealAlignments(playerNames, rng = Math.random) {
-	const friends = createDeck();
-	const foes = createDeck();
-	return playerNames.map((name) => {
-		const friend = draw(friends, void 0, rng);
-		return {
-			name,
-			friend,
-			foe: draw(foes, friend, rng)
-		};
-	});
-}
-//#endregion
-//#region src/domain/skins.js
-var SKINS = {
-	DOSSIER: "dossier",
-	BLUEPRINT: "blueprint",
-	VAULT: "vault"
+var SKILL = {
+	mu: 25,
+	sigma: 25 / 3
 };
-var SKIN_NAMES = Object.values(SKINS);
-var DEFAULT_SKIN = SKINS.DOSSIER;
-function isSkin(value) {
-	return SKIN_NAMES.includes(value);
+var BETA = 1.5 * SKILL.sigma;
+var TAU = SKILL.sigma / 100;
+var KAPPA = 1e-4;
+var MMR_SCALE = 60;
+function initialSkill() {
+	return { ...SKILL };
 }
 /**
-* Picks a skin for a game.
+* The number a player actually sees.
 *
-* Takes an `rng` for the same reason `deal.js` does — the server calls it with its own, and a
-* test needs to be able to make the choice deterministic. Dossier stays in the draw: keeping the
-* style you started the menu in is one of the three outcomes, not a failure to change.
+* Conservative on purpose — `μ − σ` rather than `μ` — and this is the same number the leaderboard
+* sorts by, which is the point of it: a player three games in is genuinely not known to be good, and
+* a rating that showed only μ would let one lucky evening sit at the top of the table. The
+* side-effect is a number that drifts upward as σ shrinks even on ordinary results: a player who wins
+* exactly half of thirty games ends around 1115 rather than back at 1000. That reads as the game
+* getting to know you, which is what is happening.
 */
-function pickSkin(rng = Math.random) {
-	return SKIN_NAMES[Math.floor(rng() * SKIN_NAMES.length) % SKIN_NAMES.length];
+function toMmr({ mu, sigma } = SKILL) {
+	return Math.max(0, Math.round(MMR_SCALE * (mu - sigma)));
+}
+function outcome(myPlace, theirPlace) {
+	if (myPlace === theirPlace) return .5;
+	return myPlace < theirPlace ? 1 : 0;
+}
+function probability(myMu, theirMu, c) {
+	return 1 / (1 + Math.exp((theirMu - myMu) / c));
+}
+function withDynamics(entries) {
+	return entries.map((entry) => ({
+		...entry,
+		variance: entry.sigma * entry.sigma + TAU * TAU
+	}));
+}
+/**
+* Rates one result.
+*
+* `entries` is `[{ id, place, mu, sigma }]`. Returns `{ [id]: { mu, sigma } }` for the players it
+* updated — never a mutated input.
+*
+* Two knobs, and between them they express every rule this game has about ratings:
+*
+*   - `pairWeight(selfId, otherId)` scales what one opponent is worth. It is asked per direction
+*     rather than per pair, so the two halves of a pairing can be worth different amounts — which is
+*     what "a full loss for the player who walked out, half a win for the one left behind" needs. It
+*     damps the *confidence* gain as well as the movement, which is the right shape: a game that
+*     should not move your rating much should not teach us much about you either.
+*   - `only` restricts which ids are written back. Absent, everybody in `entries` is rated.
+*
+* Note that nothing here is zero-sum, and that is a property of the model rather than an oversight —
+* each player's update is computed from their own perspective, so all of a table can lose rating at
+* once. A game everybody abandoned should do exactly that.
+*/
+function rate({ entries, pairWeight = () => 1, only = null }) {
+	const inflated = withDynamics(entries);
+	const rated = {};
+	inflated.forEach((self) => {
+		if (only && !only.includes(self.id)) return;
+		let omega = 0;
+		let delta = 0;
+		inflated.forEach((other) => {
+			if (other.id === self.id) return;
+			const weight = pairWeight(self.id, other.id);
+			if (!weight) return;
+			const c = Math.sqrt(self.variance + other.variance + 2 * BETA * BETA);
+			const p = probability(self.mu, other.mu, c);
+			const gamma = Math.sqrt(self.variance) / c;
+			omega += weight * (self.variance / c) * (outcome(self.place, other.place) - p);
+			delta += weight * gamma * (self.variance / (c * c)) * p * (1 - p);
+		});
+		rated[self.id] = {
+			mu: self.mu + omega,
+			sigma: Math.sqrt(self.variance * Math.max(1 - delta, KAPPA))
+		};
+	});
+	return rated;
+}
+var STRANDED_WEIGHT = .5;
+var LEFT$1 = 2;
+var STAYED = 1;
+/**
+* Rates somebody walking out of a game in progress, or being swept out of one they abandoned.
+*
+* The leaver is placed last against everybody still seated, at full weight. Nobody else is touched —
+* they are still playing, and the game will rate them properly when it ends — *except* the one case
+* where the departure leaves a single player who now has nothing to play: that survivor gets a
+* softened win, and `rooms.leave` is what decides they were stranded.
+*
+* `pairWeight` is threaded through rather than defaulted away because without it this is the cheapest
+* farm in the system: two browsers alone in a room, one quits, the other collects, repeat.
+*/
+function rateDeparture({ leaver, others, strandedId = null, pairWeight = () => 1 }) {
+	return rate({
+		entries: [{
+			...leaver,
+			place: LEFT$1
+		}, ...others.map((other) => ({
+			...other,
+			place: STAYED
+		}))],
+		only: strandedId ? [leaver.id, strandedId] : [leaver.id],
+		pairWeight: (selfId, otherId) => selfId === leaver.id ? pairWeight(selfId, otherId) : STRANDED_WEIGHT * pairWeight(selfId, otherId)
+	});
+}
+var SOFTENING_HALF_LIFE = 3;
+var PAIR_WINDOW_MS = 6048e5;
+/**
+* What a pairing is worth given how many times these two have already met inside the window.
+*
+* 1 for a first meeting, ½ at three, ¼ at nine. This is the whole anti-farming story, and it is
+* deliberately the only one: it needs nothing about where a player connected from, so no address is
+* ever stored, hashed or compared.
+*/
+function pairSoftening(meetings = 0) {
+	return 1 / (1 + Math.max(0, meetings) / SOFTENING_HALF_LIFE);
+}
+var QUIT_BASE_MS = 3e4;
+var MAX_QUIT_LEVEL = 8;
+var QUIT_DECAY_MS = 864e5;
+/**
+* The level a player is on after quitting again, given the level they were on and how long ago that
+* was. Derived rather than stored: folding the log's quit events through this reproduces it exactly,
+* which is what keeps the ladder replayable when its constants change.
+*/
+function nextQuitLevel(previousLevel = 0, msSincePreviousQuit = Infinity) {
+	const decayed = Math.max(0, previousLevel - Math.floor(msSincePreviousQuit / QUIT_DECAY_MS));
+	return Math.min(MAX_QUIT_LEVEL, decayed + 1);
+}
+/** How long a player sits out after the quit that put them on this level. */
+function quitCooldownMs(level = 0) {
+	if (level < 1) return 0;
+	return QUIT_BASE_MS * 2 ** (Math.min(MAX_QUIT_LEVEL, level) - 1);
 }
 //#endregion
 //#region src/domain/pieces/constants.js
@@ -1424,6 +1513,32 @@ function getWinner(players, pieces) {
 function sortByPoints(players, pieces) {
 	return players.slice().sort((player1, player2) => getPoints(player2, pieces) - getPoints(player1, pieces));
 }
+/**
+* Who came where, as `[{ name, place }]` with the best on 1.
+*
+* Players on the same score share a place, which is a real outcome rather than a defensive case:
+* `getPoints` is an integer and two players can land on it exactly. The rating treats a shared place
+* as a draw between them, so getting this wrong would silently invent a winner.
+*
+* Here rather than in the server for the reason `getKilledCeoCount` is here: it is derived from
+* `getPoints`, and a second implementation next to the thing that consumes it is a second place for
+* the answer to drift.
+*/
+function getPlacings(players, pieces) {
+	let place = 0;
+	let previous = null;
+	return sortByPoints(players, pieces).map((player, index) => {
+		const score = getPoints(player, pieces);
+		if (score !== previous) {
+			place = index + 1;
+			previous = score;
+		}
+		return {
+			name: player.name,
+			place
+		};
+	});
+}
 var py_default = {
 	init,
 	nextTurn: nextTurn$1,
@@ -1440,8 +1555,62 @@ var py_default = {
 	getBaseScore,
 	getPoints,
 	getWinner,
-	sortByPoints
+	sortByPoints,
+	getPlacings
 };
+//#endregion
+//#region src/domain/deal.js
+var TEAMS$1 = [
+	"0",
+	"1",
+	"2",
+	"3"
+];
+var COPIES_PER_TEAM = 2;
+function createDeck() {
+	return TEAMS$1.reduce((deck, team) => deck.concat(Array(COPIES_PER_TEAM).fill(team)), []);
+}
+function draw(deck, excluded, rng) {
+	const eligible = deck.filter((card) => card !== excluded);
+	const pool = eligible.length ? eligible : deck;
+	const card = pool[Math.floor(rng() * pool.length)];
+	deck.splice(deck.indexOf(card), 1);
+	return card;
+}
+function dealAlignments(playerNames, rng = Math.random) {
+	const friends = createDeck();
+	const foes = createDeck();
+	return playerNames.map((name) => {
+		const friend = draw(friends, void 0, rng);
+		return {
+			name,
+			friend,
+			foe: draw(foes, friend, rng)
+		};
+	});
+}
+//#endregion
+//#region src/domain/skins.js
+var SKINS = {
+	DOSSIER: "dossier",
+	BLUEPRINT: "blueprint",
+	VAULT: "vault"
+};
+var SKIN_NAMES = Object.values(SKINS);
+var DEFAULT_SKIN = SKINS.DOSSIER;
+function isSkin(value) {
+	return SKIN_NAMES.includes(value);
+}
+/**
+* Picks a skin for a game.
+*
+* Takes an `rng` for the same reason `deal.js` does — the server calls it with its own, and a
+* test needs to be able to make the choice deterministic. Dossier stays in the draw: keeping the
+* style you started the menu in is one of the three outcomes, not a failure to change.
+*/
+function pickSkin(rng = Math.random) {
+	return SKIN_NAMES[Math.floor(rng() * SKIN_NAMES.length) % SKIN_NAMES.length];
+}
 //#endregion
 //#region src/game/actions.js
 var START_GAME = "START_GAME";
@@ -1732,7 +1901,7 @@ function createToken() {
 	return randomUUID();
 }
 var PINNED_SKIN = isSkin(process.env.HA_SKIN) ? process.env.HA_SKIN : null;
-function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = null } = {}) {
+function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = null, ratingFor = () => null } = {}) {
 	const rooms = /* @__PURE__ */ new Map();
 	function get(code) {
 		return rooms.get(code) || null;
@@ -1756,7 +1925,7 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = nul
 		rooms.set(code, room);
 		return room;
 	}
-	function addSeat(room, name) {
+	function addSeat(room, name, playerId = null) {
 		if (room.phase !== PHASES.START) return { error: "room_already_started" };
 		if (room.seats.length >= 6) return { error: "room_full" };
 		if (room.seats.some((seat) => seat.name === name)) return { error: "name_taken" };
@@ -1764,6 +1933,7 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = nul
 			id: createToken(),
 			name,
 			token: createToken(),
+			playerId,
 			ready: false,
 			connected: true,
 			lastSeenAt: now(),
@@ -1820,7 +1990,6 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = nul
 		advanceIfEveryoneIsReady(room);
 		return { room };
 	}
-	const PLAYABLE = [PHASES.ALIGNMENT, PHASES.PLAY];
 	/**
 	* Takes a seat out of a room, and out of the game if one is running.
 	*
@@ -1829,7 +1998,7 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = nul
 	*/
 	function leave(room, seat) {
 		const others = room.seats.filter((other) => other.id !== seat.id);
-		const stranded = PLAYABLE.includes(room.phase) && others.length === 1 ? others : [];
+		const stranded = isMidGame(room.phase) && others.length === 1 ? others : [];
 		const gone = [seat, ...stranded];
 		room.seats = others.filter((other) => !stranded.includes(other));
 		if (room.phase !== PHASES.START) {
@@ -1861,13 +2030,26 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = nul
 		const host = room.seats.find((seat) => seat.id === room.hostSeatId) || room.seats[0];
 		return host ? host.name : null;
 	}
+	/**
+	* What the table is rated, on average, so somebody scanning the finder can see what they would be
+	* walking into.
+	*
+	* Averaged over the seats that have something to look up. A room of brand-new browsers averages the
+	* starting rating rather than reading as unrated, because that is genuinely what they are on — and
+	* an empty room has no average at all rather than a misleading 1000.
+	*/
+	function averageRating(room) {
+		const rated = room.seats.map((seat) => ratingFor(seat.playerId)).filter((mmr) => Number.isFinite(mmr));
+		return rated.length ? Math.round(rated.reduce((total, mmr) => total + mmr, 0) / rated.length) : null;
+	}
 	function listingFor(room) {
 		return {
 			code: room.code,
 			name: room.name || room.code,
 			host: hostName(room),
 			players: room.seats.length,
-			state: roomStateFor(room.phase)
+			state: roomStateFor(room.phase),
+			rating: averageRating(room)
 		};
 	}
 	const STATE_ORDER = {
@@ -1919,6 +2101,16 @@ function createRoomStore({ now = () => Date.now(), rng = Math.random, skin = nul
 }
 function isNameShaped(value) {
 	return typeof value === "string" && value.trim().length > 0 && value.trim().length <= 16;
+}
+/**
+* Whether there is a game in progress to be walked out of.
+*
+* Two callers, and they have to agree: `leave` uses it to decide whether going takes the last player
+* with you, and the rating uses it to decide whether going costs you anything. `end` is deliberately
+* not one of these — a finished game has already been rated, and leaving the score sheet is free.
+*/
+function isMidGame(phase) {
+	return phase === PHASES.ALIGNMENT || phase === PHASES.PLAY;
 }
 //#endregion
 //#region server/validate.js
@@ -2125,6 +2317,325 @@ function createRoomPersistence({ dir = process.env.HA_STATE_DIR || "/var/lib/hid
 		}
 	};
 }
+var LOG_NAME = "games.jsonl";
+var EVENTS = {
+	GAME: "game",
+	QUIT: "quit"
+};
+function createRatings({ dir = process.env.HA_RATINGS_DIR || "/var/lib/hidden-agenda/ratings", now = () => Date.now(), log = () => {} } = {}) {
+	let enabled = true;
+	try {
+		mkdirSync(dir, { recursive: true });
+	} catch (error) {
+		enabled = false;
+		log(`ratings disabled (${dir}: ${error.code || error.message})`);
+	}
+	const file = join(dir, LOG_NAME);
+	const players = /* @__PURE__ */ new Map();
+	const meetings = /* @__PURE__ */ new Map();
+	let events = 0;
+	function peek(id) {
+		return players.get(id) || {
+			id,
+			name: null,
+			...initialSkill(),
+			games: 0,
+			quits: 0,
+			level: 0,
+			quitAt: 0,
+			seenAt: 0
+		};
+	}
+	function playerFor(id) {
+		const existing = players.get(id);
+		if (existing) return existing;
+		const created = { ...peek(id) };
+		players.set(id, created);
+		return created;
+	}
+	function pairKey(a, b) {
+		return a < b ? `${a}|${b}` : `${b}|${a}`;
+	}
+	function meetingsBetween(a, b, at) {
+		const times = meetings.get(pairKey(a, b));
+		return times ? times.filter((time) => at - time < PAIR_WINDOW_MS).length : 0;
+	}
+	function weightAt(at) {
+		return (selfId, otherId) => pairSoftening(meetingsBetween(selfId, otherId, at));
+	}
+	function noteMeeting(a, b, at) {
+		const key = pairKey(a, b);
+		const times = (meetings.get(key) || []).filter((time) => at - time < PAIR_WINDOW_MS);
+		times.push(at);
+		meetings.set(key, times);
+	}
+	function skillOf(id) {
+		const { mu, sigma } = playerFor(id);
+		return {
+			id,
+			mu,
+			sigma
+		};
+	}
+	function absorb(rated) {
+		Object.entries(rated).forEach(([id, { mu, sigma }]) => {
+			Object.assign(playerFor(id), {
+				mu,
+				sigma
+			});
+		});
+	}
+	function remember(id, name, at) {
+		const player = playerFor(id);
+		player.name = name || player.name;
+		player.seenAt = at;
+	}
+	function applyGame({ at, players: finishers }) {
+		absorb(rate({
+			entries: finishers.map(({ id, place }) => ({
+				...skillOf(id),
+				place
+			})),
+			pairWeight: weightAt(at)
+		}));
+		finishers.forEach(({ id, name }) => {
+			remember(id, name, at);
+			playerFor(id).games += 1;
+		});
+		finishers.forEach(({ id }, index) => finishers.slice(index + 1).forEach((other) => noteMeeting(id, other.id, at)));
+	}
+	function applyQuit({ at, id, name, others = [], stranded = null }) {
+		absorb(rateDeparture({
+			leaver: skillOf(id),
+			others: others.map((other) => skillOf(other.id)),
+			strandedId: stranded,
+			pairWeight: weightAt(at)
+		}));
+		others.forEach((other) => remember(other.id, other.name, at));
+		const player = playerFor(id);
+		player.level = nextQuitLevel(player.level, at - player.quitAt);
+		player.quits += 1;
+		player.quitAt = at;
+		remember(id, name, at);
+		others.forEach((other) => noteMeeting(id, other.id, at));
+	}
+	function apply(event) {
+		if (event.t === EVENTS.GAME) return applyGame(event);
+		if (event.t === EVENTS.QUIT) return applyQuit(event);
+	}
+	function load() {
+		if (!enabled) return;
+		let contents;
+		try {
+			contents = readFileSync(file, "utf8");
+		} catch (error) {
+			if (error.code !== "ENOENT") log(`could not read ${LOG_NAME}: ${error.message}`);
+			return;
+		}
+		let skipped = 0;
+		contents.split("\n").forEach((line) => {
+			if (!line.trim()) return;
+			try {
+				apply(JSON.parse(line));
+				events += 1;
+			} catch {
+				skipped += 1;
+			}
+		});
+		if (skipped) log(`skipped ${skipped} unreadable line(s) in ${LOG_NAME}`);
+		if (events) log(`replayed ${events} rated event(s) for ${players.size} player(s)`);
+	}
+	function mmrFor(id) {
+		return toMmr(peek(id));
+	}
+	function mmrsFor(ids = []) {
+		return ids.reduce((all, id) => id ? {
+			...all,
+			[id]: mmrFor(id)
+		} : all, {});
+	}
+	function movementOf(ids, before) {
+		return ids.map((id) => ({
+			id,
+			name: peek(id).name,
+			before: before[id],
+			after: mmrFor(id),
+			delta: mmrFor(id) - before[id]
+		}));
+	}
+	function record(event, ids) {
+		const before = mmrsFor(ids);
+		try {
+			apply(event);
+		} catch (error) {
+			log(`could not rate ${event.t}: ${error.message}`);
+			return [];
+		}
+		events += 1;
+		if (enabled) try {
+			appendFileSync(file, `${JSON.stringify(event)}\n`, "utf8");
+		} catch (error) {
+			log(`could not append to ${LOG_NAME}: ${error.message}`);
+		}
+		return movementOf(ids, before);
+	}
+	load();
+	return {
+		get enabled() {
+			return enabled;
+		},
+		mmrFor,
+		mmrsFor,
+		/**
+		* A game that reached the end. `players` is `[{ id, name, place }]`, places from
+		* `py.sortByPoints` with equal scores sharing a place.
+		*/
+		recordGame({ code, players: finishers }) {
+			return record({
+				t: EVENTS.GAME,
+				at: now(),
+				code,
+				players: finishers
+			}, finishers.map(({ id }) => id));
+		},
+		/**
+		* Somebody out of a game in progress: pressing LEAVE, or being swept out of one they walked
+		* away from. `others` are the seats still at the table as `{ id, name }`, and `stranded` is the
+		* id of the one left with nothing to play, if the departure did that.
+		*/
+		recordQuit({ code, id, name, others = [], stranded = null }) {
+			return record({
+				t: EVENTS.QUIT,
+				at: now(),
+				code,
+				id,
+				name,
+				others,
+				stranded
+			}, stranded ? [id, stranded] : [id]);
+		},
+		/** How long this player must wait before joining another game. Zero for almost everybody. */
+		cooldownFor(id) {
+			const { level, quitAt } = peek(id);
+			return Math.max(0, quitCooldownMs(level) - (now() - quitAt));
+		},
+		leaderboard(limit = 20) {
+			return [...players.values()].filter((player) => player.games > 0).map((player) => ({
+				id: player.id,
+				name: player.name,
+				mmr: toMmr(player),
+				games: player.games
+			})).sort((first, second) => second.mmr - first.mmr).slice(0, limit);
+		},
+		/** Re-folds the log from scratch. This is what a change to the rating constants is applied with. */
+		rebuild() {
+			players.clear();
+			meetings.clear();
+			events = 0;
+			load();
+		},
+		stats() {
+			return {
+				enabled,
+				players: players.size,
+				events
+			};
+		}
+	};
+}
+var WINDOW_EVERY_MS = 1e4;
+var HOLD_MS = Number(process.env.HA_MATCH_HOLD_MS) || 15e3;
+function createMatchQueue({ now = () => Date.now() } = {}) {
+	const waiting = /* @__PURE__ */ new Map();
+	function windowFor(entry, at = now()) {
+		const waited = at - entry.at;
+		if (waited >= 6e4) return null;
+		return 150 + 100 * Math.floor(waited / WINDOW_EVERY_MS);
+	}
+	function canJoin(group, candidate) {
+		return !group.some((member) => member.playerId && member.playerId === candidate.playerId || member.name === candidate.name);
+	}
+	/**
+	* Adds somebody to the queue, and returns the entry plus anybody it displaced.
+	*
+	* A browser queueing twice — two tabs — replaces its own earlier entry rather than joining itself.
+	* The displaced entries come back, carrying their clients, so the caller can tell those sockets they
+	* have stopped searching instead of leaving them on a spinner forever.
+	*/
+	function add({ key, playerId = null, name, mmr, client = null }) {
+		const displaced = playerId ? [...waiting.values()].filter((entry) => entry.playerId === playerId && entry.key !== key) : [];
+		displaced.forEach((stale) => waiting.delete(stale.key));
+		waiting.set(key, {
+			key,
+			playerId,
+			name,
+			mmr,
+			client,
+			at: now()
+		});
+		return {
+			entry: waiting.get(key),
+			displaced
+		};
+	}
+	function remove(key) {
+		return waiting.delete(key);
+	}
+	function has(key) {
+		return waiting.has(key);
+	}
+	/**
+	* The next table, or null if there is not one worth making yet.
+	*
+	* Anchored on whoever has waited longest rather than on the tightest cluster in the queue, which is
+	* a fairness decision: it means the person who has been waiting the longest is in the *next* match,
+	* always, instead of being passed over indefinitely by a well-matched pair who arrived after them.
+	*/
+	function formMatch() {
+		if (waiting.size < 2) return null;
+		const at = now();
+		const queue = [...waiting.values()];
+		const anchor = queue.reduce((oldest, entry) => entry.at < oldest.at ? entry : oldest);
+		const window = windowFor(anchor, at);
+		const group = [anchor];
+		queue.filter((entry) => entry.key !== anchor.key && (window === null || Math.abs(entry.mmr - anchor.mmr) <= window)).sort((first, second) => Math.abs(first.mmr - anchor.mmr) - Math.abs(second.mmr - anchor.mmr) || first.at - second.at).forEach((entry) => {
+			if (group.length < 6 && canJoin(group, entry)) group.push(entry);
+		});
+		if (group.length < 2) return null;
+		return group.length >= 4 || at - anchor.at >= HOLD_MS ? group : null;
+	}
+	/** Takes a formed match out of the queue. Separate from `formMatch` so a caller can decide not to. */
+	function claim(group) {
+		group.forEach((entry) => waiting.delete(entry.key));
+	}
+	/** What one waiting client is told about its own search. Null once it is no longer in the queue. */
+	function describe(key) {
+		const entry = waiting.get(key);
+		if (!entry) return null;
+		const at = now();
+		return {
+			searching: true,
+			waiting: waiting.size,
+			elapsed: at - entry.at,
+			window: windowFor(entry, at),
+			mmr: entry.mmr
+		};
+	}
+	return {
+		add,
+		remove,
+		has,
+		formMatch,
+		claim,
+		describe,
+		entries() {
+			return [...waiting.values()];
+		},
+		get size() {
+			return waiting.size;
+		}
+	};
+}
 //#endregion
 //#region server/redact.js
 function redactAlignment(player, isOwn) {
@@ -2159,14 +2670,18 @@ var CLIENT = {
 	READY: "ready",
 	SKIN: "skin",
 	ACTION: "action",
+	QUEUE: "queue",
+	UNQUEUE: "unqueue",
 	PING: "ping"
 };
 var SERVER = {
 	SEAT: "seat",
 	ROOM: "room",
 	ROOMS: "rooms",
+	QUEUED: "queued",
 	SNAPSHOT: "snapshot",
 	LEFT: "left",
+	RATED: "rated",
 	REJECTED: "rejected",
 	ERROR: "error",
 	PONG: "pong"
@@ -2201,7 +2716,17 @@ function roomsMessage({ rooms, total }) {
 		total
 	};
 }
-function roomMessage(room) {
+function queuedMessage({ searching = false, waiting = 0, elapsed = 0, window = null, mmr = null } = {}) {
+	return {
+		type: SERVER.QUEUED,
+		searching,
+		waiting,
+		elapsed,
+		window,
+		rating: mmr
+	};
+}
+function roomMessage(room, ratingFor = () => null) {
 	return {
 		type: SERVER.ROOM,
 		code: room.code,
@@ -2210,11 +2735,12 @@ function roomMessage(room) {
 		phase: room.phase,
 		hostSeatId: room.hostSeatId,
 		skin: room.skin || DEFAULT_SKIN,
-		seats: room.seats.map(({ id, name, ready, connected }) => ({
+		seats: room.seats.map(({ id, name, ready, connected, playerId }) => ({
 			id,
 			name,
 			ready,
-			connected
+			connected,
+			rating: ratingFor(playerId)
 		}))
 	};
 }
@@ -2233,6 +2759,28 @@ function leftMessage(reason) {
 		reason
 	};
 }
+/**
+* What a game did to the ratings of the people who were in it.
+*
+* Its own frame rather than fields on the room: it is the outcome of one event rather than a fact about
+* the room, and the room frame is broadcast for a dozen other reasons.
+*
+* **The playerId is dropped here, and that is the point of this function existing.** A rating id is a
+* bearer credential — anybody holding it can play as its owner — so it is the one thing about a seat
+* that must never reach another seat. `room.ratings` keeps it, because that never leaves the server.
+*/
+function ratedMessage({ code, ratings = [] }) {
+	return {
+		type: SERVER.RATED,
+		code,
+		players: ratings.map(({ name, before, after, delta }) => ({
+			name,
+			before,
+			after,
+			delta
+		}))
+	};
+}
 function rejectedMessage({ seq, reason, version }) {
 	return {
 		type: SERVER.REJECTED,
@@ -2241,10 +2789,11 @@ function rejectedMessage({ seq, reason, version }) {
 		v: version
 	};
 }
-function errorMessage(reason) {
+function errorMessage(reason, detail = null) {
 	return {
 		type: SERVER.ERROR,
-		reason
+		reason,
+		...detail
 	};
 }
 //#endregion
@@ -2256,23 +2805,34 @@ var SNAPSHOT_COALESCE_MS = 40;
 var SWEEP_INTERVAL_MS = 6e4;
 var LIST_INTERVAL_MS = 3e3;
 var LIST_MIN_INTERVAL_MS = 250;
+var MATCH_INTERVAL_MS = 1e3;
 var EVICT_AFTER_ALL_GONE_MS = 18e5;
 var EVICT_HARD_CAP_MS = 108e5;
 var JOINS_PER_IP_PER_MINUTE = Number(process.env.HA_JOINS_PER_MINUTE) || 10;
-function createGameServer({ log = console.log, now = () => Date.now(), rng = Math.random, stateDir } = {}) {
-	const rooms = createRoomStore({
-		now,
-		rng
-	});
+function playerIdOf(message) {
+	return isPlayerIdShaped(message.playerId) ? message.playerId : null;
+}
+function createGameServer({ log = console.log, now = () => Date.now(), rng = Math.random, stateDir, ratingsDir } = {}) {
 	const persistence = createRoomPersistence({
 		log,
 		...stateDir ? { dir: stateDir } : {}
+	});
+	const ratings = createRatings({
+		log,
+		now,
+		...ratingsDir ? { dir: ratingsDir } : {}
+	});
+	const rooms = createRoomStore({
+		now,
+		rng,
+		ratingFor: (id) => id ? ratings.mmrFor(id) : null
 	});
 	const allowAction = createRateLimiter({ now });
 	const sockets = /* @__PURE__ */ new Map();
 	const pendingSnapshots = /* @__PURE__ */ new Map();
 	const joinsByIp = /* @__PURE__ */ new Map();
 	const watchers = /* @__PURE__ */ new Map();
+	const queue = createMatchQueue({ now });
 	for (const room of persistence.loadAll()) rooms.load(room);
 	if (rooms.size) log(`reloaded ${rooms.size} room(s) from disk`);
 	function send(seatId, message) {
@@ -2280,7 +2840,7 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 		if (socket && socket.readyState === socket.OPEN) socket.send(JSON.stringify(message));
 	}
 	function broadcastRoom(room) {
-		const message = roomMessage(room);
+		const message = roomMessage(room, (id) => id ? ratings.mmrFor(id) : null);
 		room.seats.forEach((seat) => send(seat.id, message));
 	}
 	function sendSnapshots(room) {
@@ -2299,10 +2859,83 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 		const previous = sockets.get(seat.id);
 		if (previous && previous !== socket) previous.close(SEAT_RECLAIMED, "seat reclaimed");
 		watchers.delete(socket);
+		queue.remove(socket.queueKey);
+		socket.queueKey = void 0;
 		sockets.set(seat.id, socket);
 		socket.seatId = seat.id;
 		socket.roomCode = room.code;
 		rooms.setConnected(room, seat, true);
+	}
+	function ratedPlayersOf(room) {
+		return py_default.getPlacings(room.state.players, room.state.pieces).reduce((all, { name, place }) => {
+			const seat = room.seats.find((other) => other.name === name);
+			return seat?.playerId ? [...all, {
+				id: seat.playerId,
+				name,
+				place
+			}] : all;
+		}, []);
+	}
+	/**
+	* A game that reached its end.
+	*
+	* Cannot run twice for one room: the phase only becomes END inside `applyAction`, and
+	* `validateAction` refuses every action afterwards. `room.ratings` is stored anyway, because the
+	* score sheet reads it and it has to survive both a restart and a rejoin.
+	*/
+	function rateFinished(room) {
+		if (room.ratings) return;
+		const players = ratedPlayersOf(room);
+		room.ratings = players.length > 1 ? ratings.recordGame({
+			code: room.code,
+			players
+		}) : [];
+		const message = ratedMessage(room);
+		room.seats.forEach((seat) => send(seat.id, message));
+	}
+	/**
+	* Somebody out of a game in progress.
+	*
+	* `others` are the ids that were still at the table when they went, and `stranded` is the seat left
+	* with nothing to play, if going did that. Told to everybody involved before they are unseated,
+	* because `send` addresses by seat id — and worth telling: a penalty nobody is shown deters nobody.
+	*/
+	function rateWalkOut(room, leaver, others, stranded = null) {
+		const ids = others.filter((seat) => seat.playerId).map((seat) => ({
+			id: seat.playerId,
+			name: seat.name
+		}));
+		if (!leaver.playerId || !ids.length) return;
+		const movement = ratings.recordQuit({
+			code: room.code,
+			id: leaver.playerId,
+			name: leaver.name,
+			others: ids,
+			stranded: stranded?.playerId || null
+		});
+		const message = ratedMessage({
+			code: room.code,
+			ratings: movement
+		});
+		[leaver, ...stranded ? [stranded] : []].forEach((seat) => send(seat.id, message));
+	}
+	/**
+	* A game nobody came back to, at the moment the sweeper gives up on it.
+	*
+	* Every seat that had gone takes the walk-out treatment against everybody else who was at the table,
+	* including the others who had also gone — so a table that all closed their laptops all lose rating,
+	* which is the honest reading of it. Nobody collects a stranded bonus here: nobody was left playing.
+	*
+	* Closing the tab and pressing LEAVE are the same thing from the table's point of view. The reason
+	* this is not simply `handleLeave` is that there is nobody left to tell.
+	*/
+	function rateAbandoned(room) {
+		if (!isMidGame(room.phase)) return;
+		room.seats.filter((seat) => !seat.connected && seat.playerId).forEach((seat) => rateWalkOut(room, seat, room.seats.filter((other) => other.id !== seat.id)));
+	}
+	function cooldownOn(playerId) {
+		const remaining = playerId ? ratings.cooldownFor(playerId) : 0;
+		return remaining > 0 ? { seconds: Math.ceil(remaining / 1e3) } : null;
 	}
 	function allowJoinFrom(ip) {
 		const at = now();
@@ -2346,16 +2979,84 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 			socket.send(encoded);
 		}
 	}
+	function tell(socket, message) {
+		if (socket && socket.readyState === socket.OPEN) socket.send(JSON.stringify(message));
+	}
+	function tellQueued(socket) {
+		tell(socket, queuedMessage(queue.describe(socket.queueKey) || {}));
+	}
+	function handleQueue(socket, message, ip) {
+		if (!isNameShaped(message.name)) return tell(socket, errorMessage("bad_name"));
+		if (socket.seatId) return tell(socket, errorMessage("already_seated"));
+		const playerId = playerIdOf(message);
+		const waitingOut = cooldownOn(playerId);
+		if (waitingOut) return tell(socket, errorMessage("quit_timeout", waitingOut));
+		if (!allowJoinFrom(ip)) return tell(socket, errorMessage("slow_down"));
+		const key = socket.queueKey || createToken();
+		const { displaced } = queue.add({
+			key,
+			playerId,
+			name: message.name.trim(),
+			mmr: ratings.mmrFor(playerId),
+			client: socket
+		});
+		socket.queueKey = key;
+		displaced.forEach((stale) => {
+			stale.client.queueKey = void 0;
+			tell(stale.client, queuedMessage());
+		});
+		tellQueued(socket);
+	}
+	function handleUnqueue(socket) {
+		queue.remove(socket.queueKey);
+		socket.queueKey = void 0;
+		tell(socket, queuedMessage());
+	}
+	/**
+	* A matched table.
+	*
+	* An ordinary room in every respect but two: it is private, so it never appears in the finder that
+	* nobody used to get here, and its code was never typed. The host is whoever had been waiting
+	* longest, and they press START exactly as they would in a room they had opened themselves.
+	*/
+	function seatMatch(group) {
+		const room = rooms.create({ isPrivate: true });
+		if (!room) return group.forEach((entry) => tell(entry.client, errorMessage("server_full")));
+		const seated = group.filter((entry) => {
+			const { seat, error } = rooms.addSeat(room, entry.name, entry.playerId);
+			if (error) {
+				tell(entry.client, errorMessage(error));
+				tell(entry.client, queuedMessage());
+				return false;
+			}
+			bind(entry.client, room, seat);
+			send(seat.id, seatMessage(room, seat));
+			return true;
+		});
+		if (!seated.length) return forget(room);
+		broadcastRoom(room);
+		persistence.save(room);
+		log(`automatch seated ${seated.length} in ${room.code}`);
+	}
+	function matchmake() {
+		for (let group = queue.formMatch(); group; group = queue.formMatch()) {
+			queue.claim(group);
+			seatMatch(group);
+		}
+		queue.entries().forEach((entry) => tellQueued(entry.client));
+	}
 	function handleCreate(socket, message, ip) {
 		if (!isNameShaped(message.name)) return socket.send(JSON.stringify(errorMessage("bad_name")));
 		if (message.room !== void 0 && !isRoomNameShaped(message.room)) return socket.send(JSON.stringify(errorMessage("bad_room_name")));
+		const waiting = cooldownOn(playerIdOf(message));
+		if (waiting) return socket.send(JSON.stringify(errorMessage("quit_timeout", waiting)));
 		if (!allowJoinFrom(ip)) return socket.send(JSON.stringify(errorMessage("slow_down")));
 		const room = rooms.create({
 			name: message.room,
 			isPrivate: message.private
 		});
 		if (!room) return socket.send(JSON.stringify(errorMessage("server_full")));
-		const { seat, error } = rooms.addSeat(room, message.name.trim());
+		const { seat, error } = rooms.addSeat(room, message.name.trim(), playerIdOf(message));
 		if (error) return socket.send(JSON.stringify(errorMessage(error)));
 		bind(socket, room, seat);
 		send(seat.id, seatMessage(room, seat));
@@ -2364,10 +3065,12 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 	}
 	function handleJoin(socket, message, ip) {
 		if (!isCodeShaped(message.code) || !isNameShaped(message.name)) return socket.send(JSON.stringify(errorMessage("bad_join")));
+		const waiting = cooldownOn(playerIdOf(message));
+		if (waiting) return socket.send(JSON.stringify(errorMessage("quit_timeout", waiting)));
 		if (!allowJoinFrom(ip)) return socket.send(JSON.stringify(errorMessage("slow_down")));
 		const room = rooms.get(message.code.toUpperCase());
 		if (!room) return socket.send(JSON.stringify(errorMessage("no_such_room")));
-		const { seat, error } = rooms.addSeat(room, message.name.trim());
+		const { seat, error } = rooms.addSeat(room, message.name.trim(), playerIdOf(message));
 		if (error) return socket.send(JSON.stringify(errorMessage(error)));
 		bind(socket, room, seat);
 		send(seat.id, seatMessage(room, seat));
@@ -2380,10 +3083,12 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 		const seat = room && typeof message.token === "string" ? rooms.seatByToken(room, message.token) : null;
 		if (!seat) return socket.send(JSON.stringify(errorMessage("seat_lost")));
 		seat.ackSeq = 0;
+		seat.playerId = seat.playerId || playerIdOf(message);
 		bind(socket, room, seat);
 		send(seat.id, seatMessage(room, seat));
 		broadcastRoom(room);
 		sendSnapshots(room);
+		if (room.ratings) send(seat.id, ratedMessage(room));
 	}
 	function withSeat(socket, handler) {
 		const room = rooms.get(socket.roomCode);
@@ -2425,7 +3130,10 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 	}
 	function handleLeave(socket) {
 		return withSeat(socket, (room, seat) => {
+			const wasMidGame = isMidGame(room.phase);
+			const wereSeated = room.seats.filter((other) => other.id !== seat.id);
 			const { gone, dissolved } = rooms.leave(room, seat);
+			if (wasMidGame) rateWalkOut(room, seat, wereSeated, gone[1] || null);
 			gone.forEach((departed) => {
 				send(departed.id, leftMessage(departed.id === seat.id ? LEFT.ASKED : LEFT.ALONE));
 				unseat(departed.id);
@@ -2463,7 +3171,10 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 				version: result.version
 			}));
 			if (Number.isInteger(message.seq)) seat.ackSeq = message.seq;
-			if (room.phase === PHASES.END) broadcastRoom(room);
+			if (room.phase === PHASES.END) {
+				rateFinished(room);
+				broadcastRoom(room);
+			}
 			scheduleSnapshots(room);
 		});
 	}
@@ -2480,6 +3191,8 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 			case CLIENT.READY: return handleReady(socket);
 			case CLIENT.SKIN: return handleSkin(socket, message);
 			case CLIENT.ACTION: return handleAction(socket, message);
+			case CLIENT.QUEUE: return handleQueue(socket, message, ip);
+			case CLIENT.UNQUEUE: return handleUnqueue(socket);
 			case CLIENT.PING: return socket.send(JSON.stringify({ type: SERVER.PONG }));
 			default: return socket.send(JSON.stringify(errorMessage("unknown_message")));
 		}
@@ -2488,6 +3201,7 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 		const room = rooms.get(socket.roomCode);
 		const seat = room ? rooms.seatById(room, socket.seatId) : null;
 		watchers.delete(socket);
+		queue.remove(socket.queueKey);
 		const wasCurrent = sockets.get(socket.seatId) === socket;
 		if (wasCurrent) sockets.delete(socket.seatId);
 		if (room && seat && wasCurrent) {
@@ -2503,6 +3217,7 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 			const idleFor = at - room.updatedAt;
 			const ageFor = at - room.createdAt;
 			if (!anyoneConnected && idleFor > EVICT_AFTER_ALL_GONE_MS || ageFor > EVICT_HARD_CAP_MS) {
+				rateAbandoned(room);
 				room.seats.forEach((seat) => sockets.delete(seat.id));
 				forget(room);
 				log(`evicted room ${room.code}`);
@@ -2521,6 +3236,7 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 				maxRooms: 200,
 				connections: sockets.size,
 				persistence: persistence.enabled,
+				ratings: ratings.stats(),
 				uptime: Math.round(process.uptime())
 			}));
 		}
@@ -2566,14 +3282,18 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 	}, PING_INTERVAL_MS);
 	const sweeper = setInterval(sweep, SWEEP_INTERVAL_MS);
 	const lister = setInterval(refreshLists, LIST_INTERVAL_MS);
+	const matcher = setInterval(matchmake, MATCH_INTERVAL_MS);
 	heartbeat.unref?.();
 	sweeper.unref?.();
 	lister.unref?.();
+	matcher.unref?.();
 	return {
 		httpServer,
 		rooms,
+		queue,
 		sweep,
 		refreshLists,
+		matchmake,
 		listen(port = DEFAULT_PORT, host = "127.0.0.1") {
 			return new Promise((resolve) => httpServer.listen(port, host, () => resolve(httpServer.address())));
 		},
@@ -2581,6 +3301,7 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 			clearInterval(heartbeat);
 			clearInterval(sweeper);
 			clearInterval(lister);
+			clearInterval(matcher);
 			watchers.clear();
 			pendingSnapshots.forEach((timer) => clearTimeout(timer));
 			pendingSnapshots.clear();

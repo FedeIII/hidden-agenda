@@ -21,6 +21,11 @@ module.exports = {
 				// Loopback only. Nothing reaches this except through nginx.
 				HOST: '127.0.0.1',
 				HA_STATE_DIR: '/var/lib/hidden-agenda/rooms',
+				// Ratings, and **not** a path inside HA_STATE_DIR. The room loader reads every *.json in
+				// its own directory and hands each one to the room store, so one foreign file there throws,
+				// the catch returns an empty list, and every game in progress is dropped on the next
+				// restart. A sibling directory, which step 4 of the deploy README creates alongside it.
+				HA_RATINGS_DIR: '/var/lib/hidden-agenda/ratings',
 			},
 			out_file: '/var/log/hidden-agenda/out.log',
 			error_file: '/var/log/hidden-agenda/error.log',

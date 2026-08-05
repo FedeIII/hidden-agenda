@@ -153,6 +153,11 @@ test.describe('a room owns its skin', () => {
 		// `name` and `private` joined it with the room finder, and each is public for the same reason
 		// the skin is: they describe the room rather than anything in it. Changing this list is meant
 		// to take a deliberate edit.
+		//
+		// A seat's `rating` joined it with the ratings, and it is public for the same reason: knowing who
+		// you have drawn is half of what a rating is for. What must never appear beside it is the
+		// `playerId` it was looked up by — that is a bearer credential for somebody's rating, so this
+		// list is what stands between it and every other seat at the table.
 		const rooms = createRoomStore({ skin: SKINS.DOSSIER });
 		const room = rooms.create();
 
@@ -173,8 +178,11 @@ test.describe('a room owns its skin', () => {
 			'type',
 		]);
 		expect(frame.seats.map(seat => Object.keys(seat).sort())).toEqual([
-			['connected', 'id', 'name', 'ready'],
-			['connected', 'id', 'name', 'ready'],
+			['connected', 'id', 'name', 'rating', 'ready'],
+			['connected', 'id', 'name', 'rating', 'ready'],
 		]);
+		// No lookup was passed, so there is nothing to report — and it has to be null rather than absent,
+		// or the client cannot tell "not rated" from "field gone".
+		expect(frame.seats.map(seat => seat.rating)).toEqual([null, null]);
 	});
 });

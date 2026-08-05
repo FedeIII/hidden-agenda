@@ -288,6 +288,10 @@ test.describe('LEAVING', () => {
 			// than that it carries on.
 			await expect(host.locator('#leave-screen')).toBeVisible();
 			await expect(host.locator('#leave-note')).toContainText('the last player leaves with you');
+			// The other half of the price. This screen exists to name what leaving costs, and since it
+			// started costing rating and a wait, a screen that did not say so would be misleading rather
+			// than merely incomplete.
+			await expect(host.locator('#leave-rating-cost')).toBeVisible();
 
 			// Standing down puts the board back, unchanged.
 			await host.click('#leave-close');

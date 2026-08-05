@@ -32,7 +32,7 @@ The box side is **done and verified** — clone, `npm ci --omit=dev`, state dirs
 Verified on the box rather than assumed:
 
 - Node 18.19 runs the bundle, and **PM2 6.0.13 runs an `.mjs` entry point** — the one item that had no local equivalent.
-- `/var/lib/hidden-agenda/rooms` is writable: `/healthz` reports `persistence: true`.
+- `/var/lib/hidden-agenda/rooms` is writable: `/healthz` reports `persistence: true`. `/healthz` also reports `ratings: { enabled, players, events }`, which is how to tell from outside whether a result can actually be recorded — a state directory that is not writable is silent by design.
 - A websocket upgrades **through nginx over TLS**, creates a room and writes it to disk.
 - `index.html` is `no-store`, `/assets/` is a single `public, max-age=31536000, immutable`.
 
@@ -54,12 +54,16 @@ cd /opt/hidden-agenda
 npm ci --omit=dev          # installs ws, nothing else
 ```
 
-**4. Room state and log directories.** Games survive a deploy restart by being written here. If the path is not writable the server logs it and carries on in memory only, so this is a nice-to-have rather than a blocker.
+**4. Room state, ratings and log directories.** Games survive a deploy restart by being written here. If a path is not writable the server logs it and carries on in memory only, so this is a nice-to-have rather than a blocker.
 
 ```bash
-mkdir -p /var/lib/hidden-agenda/rooms /var/log/hidden-agenda
+mkdir -p /var/lib/hidden-agenda/rooms /var/lib/hidden-agenda/ratings /var/log/hidden-agenda
 # owned by whatever user PM2 runs as (root, on this box)
 ```
+
+**`ratings/` is a sibling of `rooms/`, and must never be inside it.** `persistence.loadAll()` reads *every* `*.json` in the rooms directory and hands each one to the room store, so a single foreign file there throws inside its outer `try`, the catch returns an empty list, and **every game in progress is silently dropped on the next restart**. Both paths are set explicitly in `deploy/pm2/ecosystem.config.cjs`.
+
+Unlike `rooms/`, this directory is not disposable: `ratings/games.jsonl` is the append-only log every player's rating is derived from, and deleting it resets the ladder. It is the one piece of state on this box worth backing up — a plain file, so `cp` or `rsync` is the whole procedure.
 
 **5. Start under PM2 and persist:**
 

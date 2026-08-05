@@ -165,6 +165,49 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.6.0
+Players have ratings, and there is a queue that uses them.
+
+* **Every browser is rated, and nobody registers for anything.** Your browser mints an id for itself the
+  first time it needs one and the server keeps a rating against it — so a game leaves a trace without
+  there being an account, a password or a database to lose
+  * The rating belongs to the *browser*, not to you: clearing your storage starts again, and your phone
+    and your laptop are two players. That is the price of not asking anybody to sign up, and it is worth
+    being straight about rather than pretending otherwise
+  * A browser with storage switched off plays unrated, and the rest of the table is rated amongst
+    themselves. Nobody is turned away for it
+* **It is not Elo.** A game here is two to six players with a full ordering, which Elo has no way to
+  express, and the friend-and-foe deal puts real luck into every result — so the model carries an
+  explicit *uncertainty* about each player and reacts to it, converging quickly while it knows nothing
+  about you and slowly once it does
+  * You start on exactly **1000**, and the number shown is deliberately conservative — it rises through
+    your first games even on ordinary results, as the game gets less unsure of you
+  * One table's five pairwise results are not five independent readings, because everybody played the
+    same board off the same deal. The noise term is set to say so: a first six-player win is worth
+    1000 → 1510 rather than 1000 → 1877, and thirty wins still reach 2313
+* **A rating is a *derived* number, and the games are what is stored.** Every finished game and every
+  walk-out is one line appended to a log, and the ratings are folded out of it on the way up. So the
+  formula can be retuned and the whole history replayed through it, instead of everybody's rating being
+  thrown away to change how it works
+* **Walking out of a game in progress costs you.** A full loss against everybody who was still at the
+  table, and if you were the last two, the player you left behind takes a partial win — the game was
+  taken away from them rather than lost
+  * Closing the laptop and pressing LEAVE cost the same. A game nobody comes back to is charged to
+    everybody who had gone when the server gives up on it
+  * Doing it repeatedly costs a wait before your next game: thirty seconds, doubling each time, capped
+    at an hour and coming back down a level a day. Refreshing is never blocked by it — that is getting
+    back into a game you are already in
+* **Playing the same person over and over counts for less each time**, smoothly rather than being cut
+  off: the fifth game against your regular opponent still counts, the fiftieth barely does. It is also
+  what stops two browsers alone in a room from feeding each other wins
+* **Automatch.** *Find me a game* puts you in a queue and the server picks the table — widening what it
+  will accept the longer you wait, and holding out about fifteen seconds for a fourth player before
+  settling for two. A match makes an ordinary private room and the host still presses START: what this
+  replaces is finding a table, not playing at one
+* **The numbers are on screen where they matter**: beside every name in the waiting room, averaged on
+  every row of the room finder so you can see what you would be walking into, and on the score sheet at
+  the end of a game next to what it did to you
+
 ### v3.5.0
 * **Everybody's score is on the table while the game is still going.** The friend-and-foe screen's
   ledger now says what each player is on: a hundred to start with, fifty once one of their alignments

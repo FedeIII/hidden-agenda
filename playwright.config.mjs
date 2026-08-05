@@ -31,7 +31,17 @@ export default defineConfig({
 			env: {
 				PORT: String(SERVER_PORT),
 				HA_STATE_DIR: '.playwright-rooms',
+				// Its own directory, never inside HA_STATE_DIR: the room loader reads every *.json in there
+				// and one foreign file makes it drop every persisted room. Pinned here rather than left to
+				// default, because the default is /var/lib — unwritable on a dev machine, so ratings would
+				// silently disable themselves and the specs would be asserting against a feature that is off.
+				HA_RATINGS_DIR: '.playwright-ratings',
 				HA_JOINS_PER_MINUTE: '400',
+				// The queue holds out fifteen seconds for a fourth player before settling for two. That is
+				// right at a real table and hopeless here: two browser contexts held open for the whole of it
+				// is enough extra parallel load that unrelated specs start failing on unstable clicks — which
+				// is what happened, in claimControl, and looked nothing like a queue.
+				HA_MATCH_HOLD_MS: '500',
 				HA_SKIN: 'dossier',
 			},
 			url: `http://127.0.0.1:${SERVER_PORT}/healthz`,

@@ -267,6 +267,35 @@ function sortByPoints(players, pieces) {
 	return players.slice().sort((player1, player2) => getPoints(player2, pieces) - getPoints(player1, pieces));
 }
 
+/**
+ * Who came where, as `[{ name, place }]` with the best on 1.
+ *
+ * Players on the same score share a place, which is a real outcome rather than a defensive case:
+ * `getPoints` is an integer and two players can land on it exactly. The rating treats a shared place
+ * as a draw between them, so getting this wrong would silently invent a winner.
+ *
+ * Here rather than in the server for the reason `getKilledCeoCount` is here: it is derived from
+ * `getPoints`, and a second implementation next to the thing that consumes it is a second place for
+ * the answer to drift.
+ */
+function getPlacings(players, pieces) {
+	let place = 0;
+	let previous = null;
+
+	return sortByPoints(players, pieces).map((player, index) => {
+		const score = getPoints(player, pieces);
+
+		if (score !== previous) {
+			// Standard competition ranking: two players tying for first are both first and the next is
+			// third, which is why this is the index rather than a counter.
+			place = index + 1;
+			previous = score;
+		}
+
+		return { name: player.name, place };
+	});
+}
+
 export default {
 	init,
 	nextTurn,
@@ -284,4 +313,5 @@ export default {
 	getPoints,
 	getWinner,
 	sortByPoints,
+	getPlacings,
 };
