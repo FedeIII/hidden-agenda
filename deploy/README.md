@@ -131,11 +131,49 @@ Rooms in progress survive it — they are reloaded from `/var/lib/hidden-agenda/
 Both of these outlived the plan that recorded them, and both are the box's business rather than this
 repo's:
 
-- **The box runs Node 18.19, EOL since April 2025.** This app targets `node18` deliberately so it does
-  not force the question, but the other five PM2 apps share that runtime. Do not raise
-  `target: 'node18'` in `vite.server.config.mjs` speculatively — there is a comment there saying so.
+- ~~**The box runs Node 18.19, EOL since April 2025.**~~ **It is on Node 24.19 / npm 11.17 as of
+  2026-08-05** — upgraded on the box, not by a deploy. `target: 'node18'` in `vite.server.config.mjs`
+  still costs nothing and still should not be raised speculatively; the bundle runs fine either way.
+  The upgrade did break one thing, below.
 - **Rotate the Cloudflare API token** used to create the DNS record. It was pasted into a chat
   transcript, which is not where API tokens should live.
+
+## The lockfile has to list every platform
+
+`npm ci --omit=dev` on the box validates the whole lockfile, devDependency binaries included, even
+though it installs one package. **npm 10 prunes optional platform binaries down to the machine that
+ran the install; npm 11 requires them all.** So a `package-lock.json` written by npm 10 on a Mac lists
+`lightningcss-darwin-arm64` and `@rolldown/binding-darwin-arm64` and nothing else, and the box — now
+on npm 11 — refuses it:
+
+```
+npm error `npm ci` can only install packages when your package.json and package-lock.json ... are in sync
+npm error Missing: lightningcss-linux-x64-gnu@1.33.0 from lock file
+```
+
+The deploy fails **after** `git pull` and before `pm2 reload`, so the box ends up with new source and
+the old process still running. Nothing is broken, and re-deploying once the lockfile is fixed picks it
+up — but the health check the script prints is the *old* build passing.
+
+The fix, and the trap: regenerate with npm 11 rather than hand-editing.
+
+```bash
+npx --yes npm@11 install --package-lock-only
+```
+
+That adds the 23 platform binaries and changes no resolved version. It also drops `@types/node`, an
+*optional peer* of vite that npm 11 does not install and nothing here consumes — `tsconfig.json` is
+`noEmit` and exists only for Playwright's path resolution.
+
+**Any `npm install` run by npm 10 prunes them straight back out**, and the next deploy fails the same
+way. Verify before deploying, from anywhere:
+
+```bash
+npx --yes npm@11 ci --omit=dev --dry-run   # must print "add ws" and nothing else
+```
+
+The durable answer is to run the same npm as the box (node 24 brings npm 11); `.nvmrc` says >= 22.12,
+which node 22 satisfies with npm 10.
 
 ## Cache trap, deliberately handled
 
