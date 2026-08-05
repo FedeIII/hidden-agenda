@@ -165,6 +165,20 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.5.0
+* **Everybody's score is on the table while the game is still going.** The friend-and-foe screen's
+  ledger now says what each player is on: a hundred to start with, fifty once one of their alignments
+  has gone public, nothing at all when both have
+  * Only the baseline, and that is the honest half rather than a simplification. The rest of a score is
+    the friend team's points less the foe team's, which needs a pair of cards this game spends its whole
+    length hiding — so it cannot be shown for anybody but yourself. What is left is public for the whole
+    table, and it is the half a player can do something about
+  * Both routes count, because both cost the same fifty. Paying to reveal and being guessed correctly
+    set the one field; the row beside the number still says which of the two it was, and guessing right
+    costs the accuser nothing
+  * One function — `py.getBaseScore`, which the final score sheet now starts from as well, so the number
+    a player is shown mid-game and the total it turns into cannot drift apart
+
 ### v3.4.1
 * **Your name is remembered.** The lobby asks on the way into every room — after a game, after leaving
   one, after a refresh at the front door — so the field opens filled in with whatever you last played

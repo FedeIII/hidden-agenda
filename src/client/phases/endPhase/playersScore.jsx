@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { StateContext } from 'State';
-import py from 'Domain/py';
+import py, { BASE_POINTS, REVEAL_COST } from 'Domain/py';
 import teams, { TEAM_NAMES } from 'Domain/teams';
 import {
 	PointsTable,
@@ -19,8 +19,9 @@ import {
 	PlayerWinner,
 } from './components';
 
-const BASE_POINTS = 100;
-const REVEAL_COST = 50;
+// Both numbers come from the rules rather than being written down again here. The breakdown on this
+// sheet and the baseline the friend-and-foe screen shows during play are the same two figures, and a
+// local copy of either is a place they can quietly stop agreeing.
 
 // A friend's team always adds and a foe's always subtracts, so the sign comes from which
 // alignment it is rather than from the number. Otherwise a foe worth zero reads as "+ 0", which

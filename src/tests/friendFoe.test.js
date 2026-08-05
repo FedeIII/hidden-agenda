@@ -106,6 +106,31 @@ test.describe('HOT SEAT', () => {
 		// Two black bars: the other player's pair is present as something withheld rather than absent.
 		await expect(ledger.locator('[aria-label="withheld"]')).toHaveCount(2);
 	});
+
+	test('says what every player is on, and takes fifty off when one goes public', async ({ page }) => {
+		// The baseline is public for the whole table — it is built out of `revealed`, the same field the
+		// bars beside it are built out of — so it is shown for everybody, not just for you.
+		await page.click('#friend-foe');
+		await page.click('#friend-foe-confirm');
+
+		// Read as a number rather than as text: the row's words are the direction's business.
+		await expect(page.locator('#ledger-score-FEDE')).toHaveAttribute('data-base', '100');
+		await expect(page.locator('#ledger-score-SARA')).toHaveAttribute('data-base', '100');
+		await expect(page.locator('#friend-foe-base-note')).toContainText('the teams are counted at the end');
+
+		await page.click('#friend-foe-close');
+
+		// FEDE pays for one alignment. Hers moves; SARA's does not.
+		await page.click('#reveal');
+		await page.click('#reveal-friend');
+		await page.click('#reveal-close');
+
+		await page.click('#friend-foe');
+		await page.click('#friend-foe-confirm');
+
+		await expect(page.locator('#ledger-score-FEDE')).toHaveAttribute('data-base', '50');
+		await expect(page.locator('#ledger-score-SARA')).toHaveAttribute('data-base', '100');
+	});
 });
 
 test.describe('ONLINE', () => {
@@ -226,6 +251,11 @@ test.describe('ONLINE', () => {
 			const ledger = guest.locator('#friend-foe-ledger');
 			await expect(ledger).toContainText('ANA');
 			await expect(ledger.locator('[aria-label="withheld"]')).toHaveCount(2);
+
+			// What the other seat is *on*, however, is public and does arrive: it is built out of
+			// `revealed`, which redaction deliberately leaves alone. A hundred each, nothing spent yet.
+			await expect(guest.locator('#ledger-score-ANA')).toHaveAttribute('data-base', '100');
+			await expect(guest.locator('#ledger-score-BEA')).toHaveAttribute('data-base', '100');
 		} finally {
 			await hostContext.close();
 			await guestContext.close();

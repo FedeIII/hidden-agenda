@@ -1386,12 +1386,30 @@ function accuse({ accuser, accusee, alignment, team }, players) {
 		return player;
 	});
 }
+/**
+* The half of a player's score that is public, and therefore the only half that can be shown while
+* the game is still going: a hundred, less fifty for each alignment of theirs that is out in the
+* open — whether they paid to reveal it or somebody guessed it correctly.
+*
+* The rest of the score is the two teams' own points, and that is not knowable mid-game for anybody
+* but yourself: it needs a pair of cards the whole game exists to keep hidden. So this is what the
+* table gets, and `getPoints` is what the score sheet gets.
+*
+* Pulled out of `getPoints` rather than counted again next to it — same reasoning as
+* `pz.getKilledCeoCount`: two places computing one number is two places that can disagree, and the
+* one on the board during play would be the one nobody checks. `revealed` is defaulted for the
+* reason `accuse` defaults `exposed`: a room persisted before a field existed, or a hand-built
+* fixture, should not throw.
+*/
+function getBaseScore(player) {
+	const { friend: isFriendRevealed, foe: isFoeRevealed } = player.revealed || {};
+	return 100 - 50 * !!isFriendRevealed - 50 * !!isFoeRevealed;
+}
 function getPoints(player, pieces) {
 	const { friend, foe } = player.alignment;
-	const { friend: isFriendRevealed, foe: isFoeRevealed } = player.revealed;
 	const friendPoints = teams_default.getPointsForTeam(friend, pieces);
 	const foePoints = teams_default.getPointsForTeam(foe, pieces);
-	return 100 - 50 * isFriendRevealed - 50 * isFoeRevealed + friendPoints - foePoints;
+	return getBaseScore(player) + friendPoints - foePoints;
 }
 function getWinner(players, pieces) {
 	return players.reduce((winner, player) => {
@@ -1419,6 +1437,7 @@ var py_default = {
 	revealFoe,
 	isPlayerTurn,
 	accuse,
+	getBaseScore,
 	getPoints,
 	getWinner,
 	sortByPoints

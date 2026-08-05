@@ -1,5 +1,6 @@
 import { useContext, useMemo, useState } from 'react';
 import { StateContext } from 'State';
+import py, { BASE_POINTS, REVEAL_COST } from 'Domain/py';
 import { TEAM_NAMES } from 'Domain/teams';
 import useSession from 'Hooks/useSession';
 import { Button, Buttons } from 'Client/components/button';
@@ -10,7 +11,10 @@ import {
 	ScreenBody,
 	Ledger,
 	LedgerRow,
+	LedgerWho,
 	LedgerName,
+	LedgerScore,
+	LedgerNote,
 	LedgerPair,
 	LedgerCell,
 	LedgerKey,
@@ -68,35 +72,66 @@ function how(player, alignment) {
 	return by ? `accused by ${by}` : 'revealed';
 }
 
+// What everyone is on, which is the same table read as a score.
+//
+// Only the baseline, and that is not a simplification: the rest of a score is the friend team's points
+// less the foe team's, which needs a pair of cards this game spends its whole length hiding. The
+// hundred and the fifties are public for everybody — `revealed` survives redaction because the ledger
+// beside it is built out of the same field — so this is exactly as much of the score as can honestly
+// be shown before the end, and it is the half a player can do something about.
+//
+// It comes from `py.getBaseScore`, the same function the final score sheet starts from, so a player
+// cannot be told one number here and find a different one behind it at the end.
+function BaseScore({ player }) {
+	const base = py.getBaseScore(player);
+
+	return (
+		<LedgerScore id={`ledger-score-${player.name}`} data-base={base} $spent={base < BASE_POINTS}>
+			<LedgerKey>on</LedgerKey>
+			{base}
+		</LedgerScore>
+	);
+}
+
 function TableLedger({ players, own }) {
 	return (
-		<Ledger id="friend-foe-ledger">
-			{players.map(player => {
-				const isOwn = !!own && player.name === own.name;
-				const { friend, foe } = player.alignment;
+		<>
+			<Ledger id="friend-foe-ledger">
+				{players.map(player => {
+					const isOwn = !!own && player.name === own.name;
+					const { friend, foe } = player.alignment;
 
-				return (
-					<LedgerRow key={player.name} $own={isOwn}>
-						<LedgerName>
-							{player.name}
-							{isOwn ? ' (you)' : ''}
-						</LedgerName>
-						<LedgerPair>
-							<LedgerCell $alignment="friend">
-								<LedgerKey>friend</LedgerKey>
-								{isOwn || player.revealed.friend ? TEAM_NAMES[friend] : <Redacted aria-label="withheld" />}
-								{player.revealed.friend && <LedgerHow>{how(player, 'friend')}</LedgerHow>}
-							</LedgerCell>
-							<LedgerCell $alignment="foe">
-								<LedgerKey>foe</LedgerKey>
-								{isOwn || player.revealed.foe ? TEAM_NAMES[foe] : <Redacted aria-label="withheld" />}
-								{player.revealed.foe && <LedgerHow>{how(player, 'foe')}</LedgerHow>}
-							</LedgerCell>
-						</LedgerPair>
-					</LedgerRow>
-				);
-			})}
-		</Ledger>
+					return (
+						<LedgerRow key={player.name} $own={isOwn}>
+							<LedgerWho>
+								<LedgerName>
+									{player.name}
+									{isOwn ? ' (you)' : ''}
+								</LedgerName>
+								<BaseScore player={player} />
+							</LedgerWho>
+							<LedgerPair>
+								<LedgerCell $alignment="friend">
+									<LedgerKey>friend</LedgerKey>
+									{isOwn || player.revealed.friend ? TEAM_NAMES[friend] : <Redacted aria-label="withheld" />}
+									{player.revealed.friend && <LedgerHow>{how(player, 'friend')}</LedgerHow>}
+								</LedgerCell>
+								<LedgerCell $alignment="foe">
+									<LedgerKey>foe</LedgerKey>
+									{isOwn || player.revealed.foe ? TEAM_NAMES[foe] : <Redacted aria-label="withheld" />}
+									{player.revealed.foe && <LedgerHow>{how(player, 'foe')}</LedgerHow>}
+								</LedgerCell>
+							</LedgerPair>
+						</LedgerRow>
+					);
+				})}
+			</Ledger>
+
+			<LedgerNote id="friend-foe-base-note">
+				everyone is on {BASE_POINTS} · an alignment becoming public costs its owner {REVEAL_COST} · the teams are
+				counted at the end
+			</LedgerNote>
+		</>
 	);
 }
 

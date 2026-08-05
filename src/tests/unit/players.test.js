@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import py from 'Domain/py';
+import py, { BASE_POINTS } from 'Domain/py';
 import { dealAlignments } from 'Domain/deal';
 
 function player(name, friend, foe, overrides = {}) {
@@ -43,6 +43,45 @@ test.describe('py.accuse', () => {
 
 		expect(result[1].revealed.friend).toBe(false);
 		expect(result[0].allowedToAccuse.friend).toBe(false);
+	});
+});
+
+test.describe('py.getBaseScore', () => {
+	// The number the friend-and-foe screen shows for every player at the table, and the number the
+	// final score sheet starts from. One function so those two can never disagree.
+	test('is a hundred until an alignment goes public, then fifty, then nothing', () => {
+		expect(py.getBaseScore(player('ANA', '1', '0'))).toEqual(BASE_POINTS);
+
+		expect(py.getBaseScore(player('ANA', '1', '0', { revealed: { friend: true, foe: false } }))).toEqual(50);
+		expect(py.getBaseScore(player('ANA', '1', '0', { revealed: { friend: false, foe: true } }))).toEqual(50);
+
+		expect(py.getBaseScore(player('ANA', '1', '0', { revealed: { friend: true, foe: true } }))).toEqual(0);
+	});
+
+	// Revealing and being accused correctly set the same field, and they cost the same. The ledger
+	// tells them apart for the story; the score does not care which it was.
+	test('charges an accusation exactly what a reveal costs', () => {
+		const players = [player('ANA', '1', '0', { turn: true }), player('BEA', '0', '3')];
+
+		const accused = py.accuse({ accuser: 'ANA', accusee: 'BEA', alignment: 'friend', team: '0' }, players);
+		const revealed = py.revealFriend([player('BEA', '0', '3', { turn: true })]);
+
+		expect(py.getBaseScore(accused[1])).toEqual(py.getBaseScore(revealed[0]));
+		expect(py.getBaseScore(accused[0])).toEqual(BASE_POINTS);
+	});
+
+	// A room persisted before `revealed` was a field, or a fixture built by hand: the screen this
+	// feeds renders for every player on every frame of the play phase, so it may not throw.
+	test('survives a player with no revealed field at all', () => {
+		expect(py.getBaseScore({ name: 'ANA', alignment: { friend: '1', foe: '0' } })).toEqual(BASE_POINTS);
+	});
+
+	test('is the whole of the score when neither team has anything on the board', () => {
+		// No pieces, so no kills and no survivors on either side: the score is the baseline and nothing
+		// else, which is what makes it the honest half to show mid-game.
+		const revealed = player('ANA', '1', '0', { revealed: { friend: true, foe: false } });
+
+		expect(py.getPoints(revealed, [])).toEqual(py.getBaseScore(revealed));
 	});
 });
 

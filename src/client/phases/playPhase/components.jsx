@@ -250,11 +250,52 @@ export const LedgerRow = styled.div`
 	border-radius: var(--ha-panel-radius);
 `;
 
+/* A player, and what they are on. Grouped so the pair of alignments stays on the right of the row
+   however long a name is, and so the two facts about the same person wrap together. */
+export const LedgerWho = styled.span`
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+`;
+
 export const LedgerName = styled.span`
 	font-size: 13px;
 	letter-spacing: var(--ha-track-label);
 	color: var(--ha-ink);
 	white-space: nowrap;
+`;
+
+/* What a player is on before the teams are counted — a hundred, less fifty for each alignment of
+   theirs that is public. Tinted with the accent once some of it has gone, because the interesting
+   thing about the number is that it has moved.
+
+   Small caps rather than `text-transform`, which is the rule for anything a spec reads: innerText
+   applies a transform and textContent does not, so uppercasing here would make the row's own text
+   depend on which of the two a helper happened to use. The number a spec acts on is `data-base`. */
+export const LedgerScore = styled.span`
+	display: inline-flex;
+	align-items: baseline;
+	gap: 5px;
+	font-family: var(--ha-face-data);
+	font-size: 11px;
+	font-variant-caps: all-small-caps;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: var(--ha-track-label);
+	white-space: nowrap;
+	color: ${({ $spent }) => ($spent ? 'var(--ha-accent)' : 'var(--ha-ink)')};
+`;
+
+/* Where the number comes from and what it is not, said once under the table rather than left for a
+   player to infer from a figure that only ever goes down. */
+export const LedgerNote = styled.p`
+	margin: 0;
+	max-width: 460px;
+	text-align: center;
+	font-family: var(--ha-face-data);
+	font-size: 9px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	color: var(--ha-ink-faint);
 `;
 
 export const LedgerPair = styled.span`

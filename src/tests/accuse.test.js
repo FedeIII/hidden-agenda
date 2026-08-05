@@ -131,6 +131,46 @@ test.describe('ACCUSE', () => {
 		// One bar left, not two: SARA's friend is out and her foe is not.
 		await expect(ledger.locator('[aria-label="withheld"]')).toHaveCount(1);
 	});
+
+	test('costs the player who was guessed fifty, and the one who guessed nothing', async ({ page, goToPlay }) => {
+		// Being accused correctly and revealing set the same field and cost the same. Guessing right is
+		// free, which is what makes accusing worth the risk of never being able to do it again.
+		const alignments = await goToPlay(2);
+
+		await page.click('#accuse');
+		await page.click('#accuse-player-1');
+		await page.click('#accuse-friend');
+		await page.click(`#accuse-team-${alignments[1].friend}`);
+		await page.click('#accuse-close');
+
+		await page.click('#friend-foe');
+		await page.click('#friend-foe-confirm');
+
+		await expect(page.locator('#ledger-score-SARA')).toHaveAttribute('data-base', '50');
+		await expect(page.locator('#ledger-score-FEDE')).toHaveAttribute('data-base', '100');
+	});
+
+	test('a wrong guess costs the accuser nothing off their score, only the right to guess again', async ({
+		page,
+		goToPlay,
+	}) => {
+		const alignments = await goToPlay(2);
+		const wrong = ['0', '1', '2', '3'].find(team => team !== alignments[1].friend);
+
+		await page.click('#accuse');
+		await page.click('#accuse-player-1');
+		await page.click('#accuse-friend');
+		await page.click(`#accuse-team-${wrong}`);
+		await page.click('#accuse-close');
+
+		await page.click('#friend-foe');
+		await page.click('#friend-foe-confirm');
+
+		// Nobody has paid anything: the price of a wrong guess is the accusation itself, and the baseline
+		// is the wrong place to look for it.
+		await expect(page.locator('#ledger-score-FEDE')).toHaveAttribute('data-base', '100');
+		await expect(page.locator('#ledger-score-SARA')).toHaveAttribute('data-base', '100');
+	});
 });
 
 test.describe('REVEAL', () => {
