@@ -171,9 +171,19 @@ export const GroupHeading = styled.div`
 `;
 
 // The index itself: a stack of file-tab cards, one per topic, each just a door to open.
+//
+// The groups are deliberately uneven — five pieces, two ways to win — and a grid divides the row
+// it is given between however many cards are in it, so *Winning*'s two doors came out nearly three
+// times the width of *The Pieces*' five: the same kind of thing twice, reading as two different
+// offers. A card sizes itself instead. It takes its share of the row, but no more than a little
+// over its own basis, so every group widens together and a short one centres its cards at the
+// width the long one arrived at rather than inflating to fill. The gap between those two numbers
+// is the whole of the room to expand — widen it and the two-card groups start drifting apart from
+// the five again.
 export const RuleCardList = styled.div`
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
 	gap: 10px;
 	width: 100%;
 `;
@@ -183,6 +193,8 @@ export const RuleCard = styled.button`
 	flex-direction: column;
 	align-items: flex-start;
 	gap: 4px;
+	flex: 1 1 220px;
+	max-width: 250px;
 	text-align: left;
 	padding: 10px 12px;
 	background: var(--ha-panel);
@@ -199,6 +211,14 @@ export const RuleCard = styled.button`
 	&:focus-visible {
 		outline: 2px solid var(--ha-accent);
 		outline-offset: 2px;
+	}
+
+	/* A phone fits one card a row whatever the numbers say, and there the cap only insets it from
+	   the panel it is the only thing in — so it is lifted rather than leaving a card narrower than
+	   the cheat-sheet button above it for no reason a reader could see. */
+	${narrow} {
+		flex-basis: 100%;
+		max-width: none;
 	}
 `;
 

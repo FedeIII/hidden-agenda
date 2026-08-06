@@ -469,8 +469,9 @@ Error generating stack: `+e.message+`
 	color: var(--ha-ink);
 	text-align: center;
 `,rl=G.div`
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
 	gap: 10px;
 	width: 100%;
 `,il=G.button`
@@ -478,6 +479,8 @@ Error generating stack: `+e.message+`
 	flex-direction: column;
 	align-items: flex-start;
 	gap: 4px;
+	flex: 1 1 220px;
+	max-width: 250px;
 	text-align: left;
 	padding: 10px 12px;
 	background: var(--ha-panel);
@@ -494,6 +497,14 @@ Error generating stack: `+e.message+`
 	&:focus-visible {
 		outline: 2px solid var(--ha-accent);
 		outline-offset: 2px;
+	}
+
+	/* A phone fits one card a row whatever the numbers say, and there the cap only insets it from
+	   the panel it is the only thing in — so it is lifted rather than leaving a card narrower than
+	   the cheat-sheet button above it for no reason a reader could see. */
+	${hc} {
+		flex-basis: 100%;
+		max-width: none;
 	}
 `,al=G.span`
 	font-weight: bold;
@@ -6446,4 +6457,4 @@ void main() {
 	white-space: nowrap;
 	min-width: 56px;
 `;function FO({type:e}){let t=`img/0-${e}.png`;return(0,q.jsx)(np,{src:t,killed:!0})}function IO(){return(0,q.jsxs)(gO,{children:[(0,q.jsxs)(_O,{children:[(0,q.jsxs)(vO,{children:[(0,q.jsx)(FO,{type:`A`}),` 5 pts`]}),(0,q.jsxs)(vO,{children:[(0,q.jsx)(FO,{type:`S`}),` 10 pts`]})]}),(0,q.jsxs)(_O,{children:[(0,q.jsxs)(vO,{children:[(0,q.jsx)(FO,{type:`N`}),` 10 pts`]}),(0,q.jsxs)(vO,{children:[(0,q.jsx)(FO,{type:`C`}),` 20 pts`]})]})]})}function LO(e,t){return`${e===`friend`?`+`:`−`} ${t}`}function RO({alignment:e,team:t,points:n,revealed:r}){return(0,q.jsxs)(AO,{alignment:e,"data-alignment":e,children:[(0,q.jsx)(jO,{team:t,children:Xn[t]}),(0,q.jsx)(MO,{"data-term":e===`friend`?n:-n,children:LO(e,n)}),r&&(0,q.jsxs)(NO,{"data-term":-50,children:[`− `,50]})]})}function zO({name:e}){let{rated:t}=Ws(),n=t?.players?.find(t=>t.name===e);return n?(0,q.jsxs)(OO,{"data-delta":n.delta,"data-rating":n.after,children:[n.delta>=0?`+`:`−`,Math.abs(n.delta),` → `,n.after]}):null}function BO({player:e}){let[{pieces:t}]=(0,v.useContext)(Rs),n=fr.getPointsForTeam(e.alignment.friend,t),r=fr.getPointsForTeam(e.alignment.foe,t);return(0,q.jsxs)(wO,{"data-player":e.name,children:[(0,q.jsxs)(TO,{children:[(0,q.jsxs)(EO,{children:[(0,q.jsx)(DO,{children:e.name}),(0,q.jsx)(zO,{name:e.name}),(0,q.jsx)(kO,{"data-term":100,children:100})]}),(0,q.jsx)(RO,{alignment:`friend`,team:e.alignment.friend,points:n,revealed:e.revealed.friend}),(0,q.jsx)(RO,{alignment:`foe`,team:e.alignment.foe,points:r,revealed:e.revealed.foe})]}),(0,q.jsx)(PO,{"data-total":jr.getPoints(e,t),children:jr.getPoints(e,t)})]})}function VO(){let[{players:e,pieces:t}]=(0,v.useContext)(Rs);return(0,q.jsxs)(bO,{children:[(0,q.jsx)(CO,{children:jr.sortByPoints(e,t).map(e=>(0,q.jsx)(BO,{player:e},e.name))}),(0,q.jsx)(xO,{big:!0,children:`Winner: `}),(0,q.jsx)(SO,{big:!0,children:jr.getWinner(e,t).name})]})}function HO({team:e}){let[{pieces:t}]=(0,v.useContext)(Rs);return(0,q.jsxs)(dO,{children:[fr.getPointsForTeam(e,t),(0,q.jsx)(fO,{children:`pts`})]})}function UO({team:e}){return(0,q.jsxs)(tp,{team:e,children:[(0,q.jsx)(HO,{team:e}),(0,q.jsxs)(pO,{children:[(0,q.jsx)(mO,{children:`Killed:`}),(0,q.jsx)(up,{team:e})]}),(0,q.jsxs)(pO,{children:[(0,q.jsx)(mO,{children:`Survivors:`}),(0,q.jsx)(fp,{team:e})]})]})}function WO(){return(0,q.jsxs)(uO,{children:[(0,q.jsxs)(Cd,{children:[(0,q.jsx)(UO,{team:`0`}),(0,q.jsx)(UO,{team:`1`})]}),(0,q.jsxs)(yO,{children:[(0,q.jsx)(IO,{}),(0,q.jsx)(VO,{})]}),(0,q.jsxs)(Cd,{children:[(0,q.jsx)(UO,{team:`2`}),(0,q.jsx)(UO,{team:`3`})]}),(0,q.jsx)(Tc,{children:(0,q.jsx)(Lc,{id:`end-leave`,label:`LEAVE GAME`})})]})}var{START:GO,ALIGNMENT:KO,PLAY:qO,END:JO}=fn,YO=[KO,qO,JO];function XO(){let[{pieces:e}]=(0,v.useContext)(Rs),t=Ws(),n=t.mode===`online`;fc(dc());let r=(n?t.phase===JO:K.hasGameFinished(e))?JO:t.phase,i=YO.includes(r)&&!t.synced;return(0,q.jsxs)(uc,{children:[(0,q.jsx)(dn,{}),(0,q.jsx)(xc,{}),i?(0,q.jsx)(_c,{children:`Loading the game…`}):(0,q.jsxs)(q.Fragment,{children:[(r===GO||r===null)&&(n?(0,q.jsx)(Du,{}):(0,q.jsx)(Uu,{onReady:()=>t.actions.advance(KO)})),r===KO&&(0,q.jsx)(Sd,{online:n,onReady:()=>n?t.actions.ready():t.actions.advance(qO)}),r===qO&&(0,q.jsx)(lO,{}),r===JO&&(0,q.jsx)(WO,{})]})]})}var ZO=Us(XO);(0,y.createRoot)(document.querySelector(`.game`)).render((0,q.jsx)(v.StrictMode,{children:(0,q.jsx)(ZO,{})}));
-//# sourceMappingURL=index-DO3oaoBs.js.map
+//# sourceMappingURL=index-VYNGAPuG.js.map

@@ -165,6 +165,14 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.10.2
+* **Every door on the How to Play index is the same size now.** The cards were laid out as a grid,
+  which hands each row entirely to whatever is in it — so *Winning*'s two doors came out nearly three
+  times the width of *The Pieces*' five, and the same kind of thing read as two different offers. A
+  card takes its share of the row but stops a little over its own minimum instead, so every group
+  widens together and a short one centres its cards rather than inflating them to fill
+* **The favicon carries its own manila ground** instead of being drawn on transparency
+
 ### v3.10.1
 A handful of fixes to the rules pages shipped in v3.10.0.
 
