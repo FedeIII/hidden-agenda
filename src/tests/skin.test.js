@@ -20,7 +20,7 @@ test.describe('the main menu', () => {
 	// that is where it gets a look of its own.
 	test('is always the file room, and the index is the lobby', async ({ page }) => {
 		await page.goto('/');
-		await expect(page.locator('#lobby-create')).toBeVisible();
+		await expect(page.locator('#lobby-name')).toBeVisible();
 
 		expect(await skinOf(page)).toBe(DEFAULT_SKIN);
 	});
@@ -34,7 +34,7 @@ test.describe('the main menu', () => {
 
 		// And the way back, so neither is a dead end.
 		await page.click('#play-online-btn');
-		await expect(page.locator('#lobby-create')).toBeVisible();
+		await expect(page.locator('#lobby-name')).toBeVisible();
 	});
 
 	test('is still the file room after the names are filled in', async ({ page }) => {
@@ -524,6 +524,7 @@ test.describe('an online room', () => {
 	test('shows the host its own skin in the waiting room', async ({ page }) => {
 		await page.goto('/');
 		await page.fill('#lobby-name', 'ANA');
+		await page.click('#lobby-menu-start');
 		await page.click('#lobby-create');
 		await expect(page.locator('#lobby-room-code')).toBeVisible();
 
@@ -538,12 +539,14 @@ test.describe('an online room', () => {
 
 		await host.goto('/');
 		await host.fill('#lobby-name', 'ANA');
+		await host.click('#lobby-menu-start');
 		await host.click('#lobby-create');
 		await expect(host.locator('#lobby-room-code')).toBeVisible();
 		const code = await host.locator('#lobby-room-code').innerText();
 
 		await guest.goto(`/#/r/${code}`);
 		await guest.fill('#lobby-name', 'BEA');
+		await guest.click('#lobby-menu-join');
 		await guest.fill('#lobby-code', code);
 		await guest.click('#lobby-join');
 		await expect(guest.locator('#lobby-room-code')).toBeVisible();
@@ -595,6 +598,7 @@ test.describe('an online room', () => {
 
 		await host.goto('/');
 		await host.fill('#lobby-name', 'ANA');
+		await host.click('#lobby-menu-start');
 		await host.click('#lobby-create');
 		await expect(host.locator('#lobby-room-code')).toBeVisible();
 		const code = await host.locator('#lobby-room-code').innerText();
@@ -605,6 +609,7 @@ test.describe('an online room', () => {
 		// The guest asks for vault in their own URL, and gets the room's blueprint.
 		await guest.goto(`/?skin=vault#/r/${code}`);
 		await guest.fill('#lobby-name', 'BEA');
+		await guest.click('#lobby-menu-join');
 		await guest.fill('#lobby-code', code);
 		await guest.click('#lobby-join');
 		await expect(guest.locator('#lobby-room-code')).toBeVisible();
@@ -677,12 +682,14 @@ test.describe('changing the style', () => {
 
 		await host.goto('/');
 		await host.fill('#lobby-name', 'ANA');
+		await host.click('#lobby-menu-start');
 		await host.click('#lobby-create');
 		await expect(host.locator('#lobby-room-code')).toBeVisible();
 		const code = await host.locator('#lobby-room-code').innerText();
 
 		await guest.goto(`/#/r/${code}`);
 		await guest.fill('#lobby-name', 'BEA');
+		await guest.click('#lobby-menu-join');
 		await guest.fill('#lobby-code', code);
 		await guest.click('#lobby-join');
 		await expect(guest.locator('#lobby-room-code')).toBeVisible();

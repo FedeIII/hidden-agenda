@@ -165,6 +165,20 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.9.0
+The lobby is a menu now rather than everything on one screen: your name, the bot check, a resume
+list when you have one, and three doors — start a game, join one, or hot-seat instead. Each door is
+its own page, carrying what used to sit in one long column.
+
+* **Both doors are real paths, `#/start` and `#/join`**, not only React state — so the browser's own
+  back button leaves a submenu the way it leaves anything else
+* **A link straight into either one still works.** A bookmark or a shared URL with no earlier page
+  in this tab's history gets one synthesised underneath it, so the first press of back reaches the
+  menu instead of leaving the app
+* **Escape is the keyboard's own back**, doing the exact same thing the button and the browser's
+  back both do, rather than a lookalike of it — and it is a no-op on the main menu, which has
+  nowhere within this screen to leave
+
 ### v3.8.0
 Creating or joining an online room now passes a Cloudflare Turnstile check first — a bot filter with
 no puzzle to solve for a real visitor, sitting in front of the lobby's `create`/`join`/automatch

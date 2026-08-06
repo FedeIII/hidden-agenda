@@ -8,9 +8,16 @@ import { test, expect } from './fixtures';
 // Every spec here is online, so none of them carries `?hotseat`: the index *is* the lobby, and the test
 // server's HA_SKIN covers the skin the shared fixture would otherwise have to pin.
 
-async function openLobby(page, name) {
+// `into` opens the submenu the caller is about to act in — 'start' for automatch/new room, 'join'
+// for the finder/join-by-code — since the index itself is only the name, the bot check and the
+// three doors out of it now.
+async function openLobby(page, name, into) {
 	await page.goto('/');
 	await page.fill('#lobby-name', name);
+
+	if (into) {
+		await page.click(`#lobby-menu-${into}`);
+	}
 }
 
 // The test server keeps rooms between runs and the suite is fullyParallel, so anything that reads the
@@ -39,12 +46,12 @@ test.describe('RATINGS ON SCREEN', () => {
 		const { hostContext, guestContext, host, guest } = await twoContexts(browser);
 
 		try {
-			await openLobby(host, 'ANA');
+			await openLobby(host, 'ANA', 'start');
 			await host.click('#lobby-create');
 
 			const code = await host.locator('#lobby-room-code').innerText();
 
-			await openLobby(guest, 'BEA');
+			await openLobby(guest, 'BEA', 'join');
 			await guest.fill('#lobby-code', code);
 			await guest.click('#lobby-join');
 
@@ -73,12 +80,12 @@ test.describe('RATINGS ON SCREEN', () => {
 		const room = uniqueRoomName('rated');
 
 		try {
-			await openLobby(host, 'ANA');
+			await openLobby(host, 'ANA', 'start');
 			await host.fill('#lobby-room-name', room);
 			await host.click('#lobby-create');
 			await expect(host.locator('#lobby-room-code')).toBeVisible();
 
-			await openLobby(guest, 'BEA');
+			await openLobby(guest, 'BEA', 'join');
 			await guest.fill('#lobby-search', room);
 
 			const row = guest.locator(`#lobby-rooms [data-room-name="${room}"]`);
@@ -127,7 +134,7 @@ test.describe('AUTOMATCH', () => {
 		const { hostContext, guestContext, host, guest } = await twoContexts(browser);
 
 		try {
-			await openLobby(host, 'ANA');
+			await openLobby(host, 'ANA', 'start');
 			await host.click('#lobby-queue');
 
 			// Searching, and saying so — a button that changed nothing visible would be indistinguishable
@@ -136,7 +143,7 @@ test.describe('AUTOMATCH', () => {
 			await expect(host.locator('#lobby-queue')).toContainText('CANCEL');
 			await expect(host.locator('#lobby-queue-status')).toHaveAttribute('data-waiting', '1');
 
-			await openLobby(guest, 'BEA');
+			await openLobby(guest, 'BEA', 'start');
 			await guest.click('#lobby-queue');
 
 			// And then they are seated. A matched table is an ordinary room: the waiting room, with both
@@ -160,7 +167,7 @@ test.describe('AUTOMATCH', () => {
 	});
 
 	test('cancelling puts the lobby back', async ({ page }) => {
-		await openLobby(page, 'ANA');
+		await openLobby(page, 'ANA', 'start');
 		await page.click('#lobby-queue');
 		await expect(page.locator('#lobby-queue-status')).toBeVisible();
 
@@ -174,6 +181,7 @@ test.describe('AUTOMATCH', () => {
 	// the button says so rather than failing silently when pressed.
 	test('it asks who you are first', async ({ page }) => {
 		await page.goto('/');
+		await page.click('#lobby-menu-start');
 
 		await expect(page.locator('#lobby-queue-need-name')).toBeVisible();
 		await expect(page.locator('#lobby-queue')).toBeDisabled();

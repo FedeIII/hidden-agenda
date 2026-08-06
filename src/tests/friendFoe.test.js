@@ -144,12 +144,14 @@ test.describe('ONLINE', () => {
 
 		await host.goto('/');
 		await host.fill('#lobby-name', 'ANA');
+		await host.click('#lobby-menu-start');
 		await host.click('#lobby-create');
 		await expect(host.locator('#lobby-room-code')).toBeVisible();
 		const code = await host.locator('#lobby-room-code').innerText();
 
 		await guest.goto(`/#/r/${code}`);
 		await guest.fill('#lobby-name', 'BEA');
+		await guest.click('#lobby-menu-join');
 		await guest.fill('#lobby-code', code);
 		await guest.click('#lobby-join');
 		await expect(guest.locator('#lobby-room-code')).toBeVisible();

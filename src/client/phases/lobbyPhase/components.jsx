@@ -253,6 +253,19 @@ export const Hint = styled.span`
 	color: var(--ha-ink-faint);
 `;
 
+// The index's own menu: three doors — start, join, hot-seat — stacked and stretched to the panel's
+// width, so the choice reads as one list rather than a row of buttons sized to their own text.
+export const MenuList = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: 100%;
+
+	& > button {
+		width: 100%;
+	}
+`;
+
 // Where Turnstile's own iframe is mounted. Centred rather than stretched: the widget renders at a
 // fixed size of its own, and a stretched container would just leave empty space either side of it.
 export const TurnstileBox = styled.div`

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Buttons } from 'Client/components/button';
 import { Title, Subtitle } from 'Client/components/title';
 import Logo from 'Client/components/logo';
@@ -12,6 +12,7 @@ import { isRoomNameShaped, MAX_ROOM_NAME_LENGTH, pickRoomName } from 'Domain/roo
 import {
 	LobbyContainer,
 	Panel,
+	MenuList,
 	RoomCode,
 	ShareHint,
 	SeatList,
@@ -314,19 +315,51 @@ function LastGame({ rated, playerName }) {
 	);
 }
 
+// Where in the join screen this browser currently is. A plain three-way local state rather than
+// anything in the session: the server has no opinion on it, and it is exactly the kind of thing that
+// should reset to the front door the next time `JoinForm` mounts fresh — leaving a game, or arriving
+// at the index for the first time — rather than survive across it.
+const MENU = 'menu';
+const START = 'start';
+const JOIN = 'join';
+
+// Each submenu gets a real path rather than being pure React state, so the browser's own back
+// button — and a bookmark or a shared link straight into one — both work. `#/r/CODE` is the only
+// other hash this app writes, and neither of these can ever collide with its four-character code.
+const VIEW_HASH = {
+	[START]: '#/start',
+	[JOIN]: '#/join',
+};
+
+function readMenuView() {
+	if (window.location.hash === VIEW_HASH[START]) {
+		return START;
+	}
+
+	if (window.location.hash === VIEW_HASH[JOIN]) {
+		return JOIN;
+	}
+
+	return MENU;
+}
+
 function JoinForm({ session, unreachable }) {
 	const { code, rooms, roomsTotal, resumable, playerName, queue, rated, error, turnstileRequired, actions } = session;
 	// Pulled out as plain values because they are the effects' dependencies. `actions` itself is a new
 	// object on every session update — it is spread with goOnline/goHotSeat — while the functions in it
 	// come straight off the transport and never change, so depending on the object would re-run the
 	// search on every frame the server pushes and ask for the list again each time.
-	const { createRoom, joinRoom, listRooms, stopListing, queueUp, cancelQueue } = actions;
+	const { createRoom, joinRoom, listRooms, stopListing, queueUp, cancelQueue, goHotSeat } = actions;
 	// Filled in with whatever this browser played under last. An initialiser rather than a value prop,
 	// so it seeds the field and then gets out of the way: the player is free to type over it, and a name
 	// arriving from the server mid-edit must not overwrite what they are typing.
 	const [name, setName] = useState(() => playerName || '');
 	const [roomCode, setRoomCode] = useState(code || '');
 	const [query, setQuery] = useState('');
+	// Read from the hash rather than always starting on MENU, so a reload or a shared link straight
+	// into "Start a game" opens on it directly instead of bouncing through the front door first.
+	const [view, setView] = useState(readMenuView);
+	const settledHistory = useRef(false);
 
 	// Absent entirely when the server is not enforcing one — a build with no server at all, or the
 	// test server, which deliberately runs with none configured — so canGo below never waits on a
@@ -338,7 +371,8 @@ function JoinForm({ session, unreachable }) {
 	const held = new Set(resumable.map(seat => seat.code));
 
 	// Debounced, and re-run on every change to the query — including the empty one on the way in,
-	// which is what first opens the socket.
+	// which is what first opens the socket. Kept running regardless of which page is on screen: the
+	// finder's own results should already be waiting the moment "Join a game" is opened.
 	useEffect(() => {
 		const timer = setTimeout(() => listRooms(query), SEARCH_DEBOUNCE_MS);
 
@@ -357,6 +391,55 @@ function JoinForm({ session, unreachable }) {
 		}
 	}, [error, resetTurnstile]);
 
+	// Gives "back" somewhere to land even when this tab has no history of its own to fall back on —
+	// a bookmark or a shared link opened straight into a submenu. Guarded by a ref rather than run
+	// unconditionally: StrictMode mounts every effect twice in development, and pushState has no
+	// cleanup that could undo a duplicate the way removing an event listener does, so an unguarded
+	// version would leave two "start" entries in history and take two presses of back to clear.
+	useEffect(() => {
+		if (settledHistory.current) {
+			return;
+		}
+
+		settledHistory.current = true;
+
+		const initial = readMenuView();
+
+		if (initial !== MENU) {
+			window.history.replaceState(null, '', '#/');
+			window.history.pushState(null, '', VIEW_HASH[initial]);
+		}
+	}, []);
+
+	// The browser's own back/forward buttons, which the pushes below make real history entries for.
+	useEffect(() => {
+		function onPopState() {
+			setView(readMenuView());
+		}
+
+		window.addEventListener('popstate', onPopState);
+
+		return () => window.removeEventListener('popstate', onPopState);
+	}, []);
+
+	// Escape is the keyboard's own "back", and only means something once there is somewhere to go
+	// back to — the main menu has no parent within this screen for it to leave.
+	useEffect(() => {
+		if (view === MENU) {
+			return undefined;
+		}
+
+		function onKeyDown(event) {
+			if (event.key === 'Escape') {
+				window.history.back();
+			}
+		}
+
+		window.addEventListener('keydown', onKeyDown);
+
+		return () => window.removeEventListener('keydown', onKeyDown);
+	}, [view]);
+
 	// One door for the finder, the resume list and the code field alike. The store turns it into a
 	// rejoin when this browser holds a token for that room, which is what makes selecting a game you
 	// are already in put you back in your seat instead of refusing you as a latecomer.
@@ -371,6 +454,75 @@ function JoinForm({ session, unreachable }) {
 		() => canGo && roomCode.trim().length === 4 && enter(roomCode.trim().toUpperCase()),
 		[canGo, enter, roomCode],
 	);
+
+	// A real navigation each way, so the browser's own back button, this button and Escape are all
+	// the same action rather than three that have to be kept in step by hand.
+	const enterView = useCallback(next => {
+		setView(next);
+		window.history.pushState(null, '', VIEW_HASH[next]);
+	}, []);
+
+	const backToMenu = useCallback(() => window.history.back(), []);
+
+	if (view === START) {
+		return (
+			<Panel>
+				<Buttons>
+					<Button id="lobby-back" small active onClick={backToMenu}>
+						‹ Back
+					</Button>
+				</Buttons>
+				<Subtitle>Start a game</Subtitle>
+				<Automatch
+					canGo={canGo}
+					queue={queue}
+					onQueue={() => canGo && queueUp(trimmed, turnstileToken)}
+					onCancel={cancelQueue}
+				/>
+				<NewRoom canGo={canGo} onCreate={create} />
+			</Panel>
+		);
+	}
+
+	if (view === JOIN) {
+		return (
+			<Panel>
+				<Buttons>
+					<Button id="lobby-back" small active onClick={backToMenu}>
+						‹ Back
+					</Button>
+				</Buttons>
+				<Subtitle>Join a game</Subtitle>
+				<Finder
+					rooms={rooms}
+					total={roomsTotal}
+					query={query}
+					onQuery={setQuery}
+					canGo={canGo}
+					held={held}
+					onEnter={enter}
+					unreachable={unreachable}
+				/>
+
+				<Section>
+					<Subtitle>Or join by code</Subtitle>
+					<Row>
+						<Field
+							id="lobby-code"
+							code
+							value={roomCode}
+							maxLength={4}
+							placeholder="CODE"
+							onChange={event => setRoomCode(event.target.value.toUpperCase())}
+						/>
+						<Button id="lobby-join" small active={canGo && roomCode.trim().length === 4} onClick={joinByCode}>
+							JOIN
+						</Button>
+					</Row>
+				</Section>
+			</Panel>
+		);
+	}
 
 	return (
 		<Panel>
@@ -395,41 +547,25 @@ function JoinForm({ session, unreachable }) {
 
 			<Resume seats={resumable} onEnter={enter} />
 
-			<Automatch
-				canGo={canGo}
-				queue={queue}
-				onQueue={() => canGo && queueUp(trimmed, turnstileToken)}
-				onCancel={cancelQueue}
-			/>
-
-			<NewRoom canGo={canGo} onCreate={create} />
-
-			<Finder
-				rooms={rooms}
-				total={roomsTotal}
-				query={query}
-				onQuery={setQuery}
-				canGo={canGo}
-				held={held}
-				onEnter={enter}
-				unreachable={unreachable}
-			/>
-
 			<Section>
-				<Subtitle>Or join by code</Subtitle>
-				<Row>
-					<Field
-						id="lobby-code"
-						code
-						value={roomCode}
-						maxLength={4}
-						placeholder="CODE"
-						onChange={event => setRoomCode(event.target.value.toUpperCase())}
-					/>
-					<Button id="lobby-join" small active={canGo && roomCode.trim().length === 4} onClick={joinByCode}>
-						JOIN
+				<MenuList>
+					<Button id="lobby-menu-start" active onClick={() => enterView(START)}>
+						START A GAME
 					</Button>
-				</Row>
+					<Button id="lobby-menu-join" active onClick={() => enterView(JOIN)}>
+						JOIN A GAME
+					</Button>
+					{/* A room is the game this is for. One screen passed around a table is the other way
+					    to play it, and it needs nothing but this tab — which is also the answer when no
+					    server answers. */}
+					<Button id="play-hotseat-btn" small active onClick={goHotSeat}>
+						PLAY HOT-SEAT INSTEAD
+					</Button>
+				</MenuList>
+
+				{unreachable && (
+					<Notice id="lobby-no-server">No server answered. Hot-seat plays in this tab and needs none.</Notice>
+				)}
 			</Section>
 		</Panel>
 	);
@@ -518,7 +654,7 @@ function WaitingRoom({ session }) {
 // is the difference between a dead form and a choice.
 function LobbyPhase() {
 	const session = useSession();
-	const { status, seatId, error, errorSeconds, actions } = session;
+	const { status, seatId, error, errorSeconds } = session;
 
 	// A seat in this room means the waiting room; a code without a seat means somebody followed a
 	// shared link and still has to say who they are.
@@ -535,7 +671,8 @@ function LobbyPhase() {
 			{status === 'connecting' && <Notice id="lobby-connecting">Connecting…</Notice>}
 			{/* Only worth saying to somebody who has a seat to get back to. Unseated, the socket is open
 			    for the room list alone, and "reconnecting" would be the first thing a player reads on a
-			    build that has no server at all — where the useful sentence is the one below. */}
+			    build that has no server at all — where the useful sentence is the one below (moved into
+			    JoinForm's own menu, alongside the hot-seat door it explains). */}
 			{status === 'reconnecting' && seated && <Notice id="lobby-reconnecting">Reconnecting…</Notice>}
 			{error && (
 				<Notice bad id="lobby-error">
@@ -544,22 +681,6 @@ function LobbyPhase() {
 			)}
 
 			{seated ? <WaitingRoom session={session} /> : <JoinForm session={session} unreachable={unreachable} />}
-
-			{/* A room is the game this is for. One screen passed around a table is the other way to play
-			    it, and it needs nothing but this tab — which is also the answer when no server answers. */}
-			{!seated && (
-				<>
-					<Buttons>
-						<Button id="play-hotseat-btn" small active onClick={actions.goHotSeat}>
-							PLAY HOT-SEAT INSTEAD
-						</Button>
-					</Buttons>
-
-					{unreachable && (
-						<Notice id="lobby-no-server">No server answered. Hot-seat plays in this tab and needs none.</Notice>
-					)}
-				</>
-			)}
 		</LobbyContainer>
 	);
 }
