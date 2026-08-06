@@ -502,9 +502,13 @@ function JoinForm({ session, unreachable }) {
 	}, []);
 
 	const backToMenu = useCallback(() => window.history.back(), []);
+	// Unlike the plain "back" everything else in this menu uses, the rules pages jump straight to
+	// the main menu regardless of how many pages deep the reader has clicked through — leaving the
+	// book behind is a bigger decision than stepping back one page, which Index already covers.
+	const goToMainMenu = useCallback(() => enterView(MENU), [enterView]);
 
 	if (view === RULES) {
-		return <RulesIndex onOpen={slug => enterView(`${RULE_PREFIX}${slug}`)} onBack={backToMenu} />;
+		return <RulesIndex onOpen={slug => enterView(`${RULE_PREFIX}${slug}`)} onBack={goToMainMenu} />;
 	}
 
 	if (view.startsWith(RULE_PREFIX)) {
@@ -512,7 +516,7 @@ function JoinForm({ session, unreachable }) {
 			<RulePage
 				slug={view.slice(RULE_PREFIX.length)}
 				onOpen={slug => enterView(`${RULE_PREFIX}${slug}`)}
-				onBack={backToMenu}
+				onBack={goToMainMenu}
 				onIndex={() => enterView(RULES)}
 			/>
 		);

@@ -486,8 +486,8 @@ export const RULES_PAGES = [
 		teaser: 'Land on them, and they’re gone — to the cemetery.',
 		image: {
 			file: 'killing-hq.png',
-			alt: 'The HQ card of the team that just made a kill',
-			caption: 'The credit for a kill goes to whoever’s HQ this is',
+			alt: 'The HQ card of the team that just made a kill, its cemetery tally reading one agent',
+			caption: 'The tally at the foot of the card — the credit for a kill lands on the killer’s HQ',
 		},
 		body: [
 			{
@@ -609,37 +609,41 @@ export const RULES_PAGES = [
 		title: 'Taking Control of a Team',
 		teaser: 'Only the person who controls a team may bring its pieces onto the board.',
 		imagesAtEnd: true,
-		images: [
-			{
-				file: 'control-claim-click.png',
-				label: 'Claim',
-				alt: 'An unclaimed team’s HQ, with its CLAIM button',
-				caption: 'Press CLAIM',
-			},
-			{
-				file: 'control-place-ceo.png',
-				label: 'Place CEO',
-				alt: 'That team’s CEO landing on the board',
-				caption: 'Bring its CEO onto the board',
-			},
-			{
-				file: 'control-alice.png',
-				label: 'Control: Alice',
-				alt: 'The HQ card now reading CONTROL: ALICE',
-				caption: 'The team is really hers',
-			},
-			{
-				file: 'control-reveal-click.png',
-				label: 'Reveal',
-				alt: 'A Friend card turned face up, naming Yellow',
-				caption: 'Or reveal a card naming the team',
-			},
-			{
-				file: 'control-bob.png',
-				label: 'Control: Bob',
-				alt: 'That team’s HQ card now reading CONTROL: BOB',
-				caption: 'His at once — no CEO required',
-			},
+		imageGroups: [
+			[
+				{
+					file: 'control-claim-click.png',
+					label: 'Claim',
+					alt: 'An unclaimed team’s HQ, with its CLAIM button',
+					caption: 'Press CLAIM',
+				},
+				{
+					file: 'control-place-ceo.png',
+					label: 'Place CEO',
+					alt: 'That team’s CEO landing on the board',
+					caption: 'Bring its CEO onto the board',
+				},
+				{
+					file: 'control-alice.png',
+					label: 'Control: Alice',
+					alt: 'The HQ card now reading CONTROL: ALICE',
+					caption: 'The team is really hers',
+				},
+			],
+			[
+				{
+					file: 'control-reveal-click.png',
+					label: 'Reveal',
+					alt: 'A Friend card turned face up, naming Yellow',
+					caption: 'Turning one of your own cards face up',
+				},
+				{
+					file: 'control-bob.png',
+					label: 'Control: Bob',
+					alt: 'That team’s HQ card now reading CONTROL: BOB',
+					caption: 'His at once — no CEO required',
+				},
+			],
 		],
 		body: [
 			{ p: 'You can hold control of **one team at a time**. Taking a second team lets go of the first.' },

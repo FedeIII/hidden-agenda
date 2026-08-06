@@ -271,12 +271,17 @@ export const RuleNote = styled.div`
 	   only its *inline* content (text) actually narrows to avoid one. \`clear: both\` fixed the
 	   overlap that fell out of that (the coloured band painting straight across the exhibit) but
 	   overcorrected: it forced the note below the float even when there was room beside it, so it
-	   stopped reading as part of the same page. \`overflow: hidden\` is the same "establish a new
-	   block formatting context" fix without that side effect — a BFC box shrinks to fit the space
-	   beside a float rather than ignoring the float's width outright, so the note sits alongside
-	   the exhibit exactly the way a paragraph's *text* does, just as a rectangle instead of a
-	   reflowing line, and only drops below once there is genuinely no room left beside it. */
-	overflow: hidden;
+	   stopped reading as part of the same page. \`display: flow-root\` is the same "establish a
+	   new block formatting context" fix — a BFC box shrinks to fit the space beside a float
+	   rather than ignoring the float's width outright, so the note sits alongside the exhibit
+	   exactly the way a paragraph's *text* does — but unlike \`overflow: hidden\`, a BFC from
+	   \`flow-root\` is not also a clipping box, so it does not cut off the CEO Buff badge, which
+	   deliberately pokes above the note's own top edge.
+	   Stacked explicitly above the exhibit rather than left to \`z-index: auto\`: a positioned
+	   box like this one paints after a float by default regardless of DOM order, so without this
+	   the badge's overhang could still end up drawn on top of an exhibit it happens to sit near. */
+	z-index: 0;
+	display: flow-root;
 	padding: 8px 12px;
 	background: var(--ha-accent-wash);
 	border-left: 2px solid var(--ha-accent);
@@ -352,6 +357,10 @@ export const RuleTable = styled.table`
 // page rather than sitting boxed off in a column of their own.
 export const ExhibitFrame = styled.figure`
 	position: relative;
+	/* Above a note's own z-index: 0 on purpose — a photograph is the page's primary content, and
+	   if the two ever end up close enough to touch (a badge's overhang, a narrow viewport), the
+	   exhibit should be the thing left intact rather than whatever happened to paint last. */
+	z-index: 1;
 	float: ${({ $reverse }) => ($reverse ? 'right' : 'left')};
 	width: 380px;
 	max-width: 100%;
@@ -443,7 +452,7 @@ export const LightboxHint = styled.div`
 // reads as a filmstrip, and a filmstrip that leans is just crooked.
 export const ExhibitPairFrame = styled(ExhibitFrame)`
 	width: ${({ $count, $full }) => {
-		if ($full) return '100%';
+		if ($full) return 'auto';
 		if ($count === 3) return '660px';
 		if ($count >= 4) return '560px';
 		return '460px';
@@ -453,9 +462,31 @@ export const ExhibitPairFrame = styled(ExhibitFrame)`
 		$full &&
 		css`
 			float: none;
+			/* \`auto\` rather than a fixed 100% — a lone full-width exhibit still fills its block
+			   container the way any block-level \`<figure>\` does with no width set, but this is
+			   also what lets several of them share a row: inside \`ExhibitGroupRow\`'s flex context,
+			   \`flex: 1\` divides the space evenly instead of every one of them claiming 100% and
+			   wrapping onto its own line. */
+			flex: 1 1 0;
+			min-width: 0;
 			margin: 16px 0 4px;
 			transform: none;
 		`}
+`;
+
+// Several full-width exhibits sharing one row instead of stacking — Taking Control's claim-and-
+// deploy beat and its reveal beat are two independent stories, not one long filmstrip, so they
+// read better side by side than one on top of the other. Narrow screens still stack: two halved
+// board photographs would otherwise be too small to read.
+export const ExhibitGroupRow = styled.div`
+	display: flex;
+	align-items: flex-start;
+	gap: 16px;
+	width: 100%;
+
+	${narrow} {
+		flex-direction: column;
+	}
 `;
 
 // Three sits in one row, same as two — it is four that wants a 2×2 block instead of a strip too

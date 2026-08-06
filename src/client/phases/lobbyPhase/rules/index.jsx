@@ -34,6 +34,7 @@ import {
 	ExhibitPairRow,
 	ExhibitPairColumn,
 	ExhibitPairLabel,
+	ExhibitGroupRow,
 	LightboxOverlay,
 	LightboxImage,
 	LightboxHint,
@@ -180,8 +181,8 @@ export function RulesIndex({ onOpen, onBack }) {
 	return (
 		<RulesPanel>
 			<Buttons>
-				<Button id="lobby-back" small active onClick={onBack}>
-					‹ Back
+				<Button id="rules-main-menu" small active onClick={onBack}>
+					Main Menu
 				</Button>
 			</Buttons>
 
@@ -223,8 +224,8 @@ export function RulePage({ slug, onOpen, onBack, onIndex }) {
 		return (
 			<RulesPanel>
 				<Buttons>
-					<Button id="lobby-back" small active onClick={onBack}>
-						‹ Back
+					<Button id="rules-main-menu" small active onClick={onBack}>
+						Main Menu
 					</Button>
 					<Button id="rules-index" small active onClick={onIndex}>
 						Index
@@ -245,8 +246,8 @@ export function RulePage({ slug, onOpen, onBack, onIndex }) {
 		return (
 			<RulesPanel>
 				<Buttons>
-					<Button id="lobby-back" small active onClick={onBack}>
-						‹ Back
+					<Button id="rules-main-menu" small active onClick={onBack}>
+						Main Menu
 					</Button>
 					<Button id="rules-index" small active onClick={onIndex}>
 						Index
@@ -283,8 +284,8 @@ export function RulePage({ slug, onOpen, onBack, onIndex }) {
 	return (
 		<RulesPanel>
 			<Buttons>
-				<Button id="lobby-back" small active onClick={onBack}>
-					‹ Back
+				<Button id="rules-main-menu" small active onClick={onBack}>
+					Main Menu
 				</Button>
 				<Button id="rules-index" small active onClick={onIndex}>
 					Index
@@ -325,6 +326,19 @@ export function RulePage({ slug, onOpen, onBack, onIndex }) {
 					)}
 				</RuleBody>
 				{page.imagesAtEnd && page.images && <ExhibitPair images={page.images} index={pageIndex} onZoom={setZoomed} full />}
+				{page.imagesAtEnd && page.imageGroups && (
+					<ExhibitGroupRow>
+						{page.imageGroups.map((group, groupIndex) => (
+							<ExhibitPair
+								key={group[0].file}
+								images={group}
+								index={pageIndex + groupIndex}
+								onZoom={setZoomed}
+								full
+							/>
+						))}
+					</ExhibitGroupRow>
+				)}
 				{page.imagesAtEnd && page.image && <Exhibit image={page.image} index={pageIndex} onZoom={setZoomed} />}
 			</RuleContent>
 

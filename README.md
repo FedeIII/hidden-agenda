@@ -165,6 +165,21 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.10.1
+A handful of fixes to the rules pages shipped in v3.10.0.
+
+* **The CEO Buff badge was clipped by its own note.** \`overflow: hidden\` (added to stop a note's
+  background painting across a floated image) was also a clipping box, and the badge deliberately
+  pokes above the note's own top edge. \`display: flow-root\` gives the same float-avoidance without
+  clipping anything, and the note and the exhibit now carry explicit \`z-index\`s so a photograph
+  wins if the two ever get close enough to touch
+* **The Killing page's photo cropped out the point of it** — the cemetery tally is at the foot of
+  the HQ card, below where the crop ended. It shows the whole card now
+* **Taking Control of a Team's two ways to take control are two exhibits now**, side by side in one
+  row on a wide screen and stacked on a narrow one, rather than five photographs in a single strip
+* **"Back" is "Main Menu"** on the rules pages, and goes straight there regardless of how many pages
+  deep the reader has clicked — Index is already the one-step-back door
+
 ### v3.10.0
 How to Play is a real menu item now, not a markdown file a player was unlikely to open mid-game. Twenty
 pages plus a cheat sheet, grouped by topic, in the Dossier voice rather than the developer notes' —
