@@ -249,10 +249,14 @@ if [ "$run_server" -eq 1 ]; then
 	# assignments is what `env` wants, and none of these values contain a space.
 	SERVER_ENV="PORT=$SERVER_PORT HOST=127.0.0.1 HA_STATE_DIR=$STATE_DIR HA_RATINGS_DIR=$RATINGS_DIR HA_JOINS_PER_MINUTE=$JOINS_PER_MINUTE"
 
+	# --env-file-if-exists rather than --env-file: this repo's .env is gitignored and optional, only
+	# there at all for TURNSTILE_SECRET, and a dev machine without one should start exactly as it did
+	# before that file existed — not fail to find it. Node >= 20.12 has the flag; this toolchain
+	# already requires >= 22.
 	if [ "$inspect" -eq 1 ]; then
-		start server "$GREEN" env $SERVER_ENV node --watch --inspect="$INSPECT_PORT" dist-server/main.mjs
+		start server "$GREEN" env $SERVER_ENV node --env-file-if-exists=.env --watch --inspect="$INSPECT_PORT" dist-server/main.mjs
 	else
-		start server "$GREEN" env $SERVER_ENV node --watch dist-server/main.mjs
+		start server "$GREEN" env $SERVER_ENV node --env-file-if-exists=.env --watch dist-server/main.mjs
 	fi
 
 	start rebuild "$YELLOW" "$VITE" build -c vite.server.config.mjs --watch --logLevel warn

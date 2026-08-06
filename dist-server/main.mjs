@@ -2637,6 +2637,36 @@ function createMatchQueue({ now = () => Date.now() } = {}) {
 	};
 }
 //#endregion
+//#region server/turnstile.js
+var SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+function createTurnstileGuard({ secret = process.env.TURNSTILE_SECRET, log = console.log, fetchImpl = fetch } = {}) {
+	const enabled = Boolean(secret);
+	if (!enabled) log("TURNSTILE_SECRET not set — bot check disabled for room creation/joining");
+	async function verify(token, ip) {
+		if (typeof token !== "string" || !token) return false;
+		try {
+			const response = await fetchImpl(SITEVERIFY_URL, {
+				method: "POST",
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+				body: new URLSearchParams({
+					secret,
+					response: token,
+					...ip && ip !== "unknown" ? { remoteip: ip } : {}
+				})
+			});
+			if (!response.ok) return false;
+			return (await response.json()).success === true;
+		} catch (error) {
+			log(`turnstile siteverify failed: ${error.stack || error.message}`);
+			return false;
+		}
+	}
+	return {
+		enabled,
+		verify
+	};
+}
+//#endregion
 //#region server/redact.js
 function redactAlignment(player, isOwn) {
 	const { friend, foe } = player.alignment;
@@ -2684,7 +2714,8 @@ var SERVER = {
 	RATED: "rated",
 	REJECTED: "rejected",
 	ERROR: "error",
-	PONG: "pong"
+	PONG: "pong",
+	CONFIG: "config"
 };
 var LEFT = {
 	ASKED: "you_left",
@@ -2796,6 +2827,12 @@ function errorMessage(reason, detail = null) {
 		...detail
 	};
 }
+function configMessage({ turnstileRequired }) {
+	return {
+		type: SERVER.CONFIG,
+		turnstileRequired
+	};
+}
 //#endregion
 //#region server/index.js
 var DEFAULT_PORT = 3007;
@@ -2812,7 +2849,7 @@ var JOINS_PER_IP_PER_MINUTE = Number(process.env.HA_JOINS_PER_MINUTE) || 10;
 function playerIdOf(message) {
 	return isPlayerIdShaped(message.playerId) ? message.playerId : null;
 }
-function createGameServer({ log = console.log, now = () => Date.now(), rng = Math.random, stateDir, ratingsDir } = {}) {
+function createGameServer({ log = console.log, now = () => Date.now(), rng = Math.random, stateDir, ratingsDir, turnstileSecret, turnstileFetch } = {}) {
 	const persistence = createRoomPersistence({
 		log,
 		...stateDir ? { dir: stateDir } : {}
@@ -2828,6 +2865,11 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 		ratingFor: (id) => id ? ratings.mmrFor(id) : null
 	});
 	const allowAction = createRateLimiter({ now });
+	const turnstile = createTurnstileGuard({
+		log,
+		...turnstileSecret !== void 0 ? { secret: turnstileSecret } : {},
+		...turnstileFetch ? { fetchImpl: turnstileFetch } : {}
+	});
 	const sockets = /* @__PURE__ */ new Map();
 	const pendingSnapshots = /* @__PURE__ */ new Map();
 	const joinsByIp = /* @__PURE__ */ new Map();
@@ -2985,13 +3027,14 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 	function tellQueued(socket) {
 		tell(socket, queuedMessage(queue.describe(socket.queueKey) || {}));
 	}
-	function handleQueue(socket, message, ip) {
+	async function handleQueue(socket, message, ip) {
 		if (!isNameShaped(message.name)) return tell(socket, errorMessage("bad_name"));
 		if (socket.seatId) return tell(socket, errorMessage("already_seated"));
 		const playerId = playerIdOf(message);
 		const waitingOut = cooldownOn(playerId);
 		if (waitingOut) return tell(socket, errorMessage("quit_timeout", waitingOut));
 		if (!allowJoinFrom(ip)) return tell(socket, errorMessage("slow_down"));
+		if (turnstile.enabled && !await turnstile.verify(message.turnstileToken, ip)) return tell(socket, errorMessage("bad_turnstile"));
 		const key = socket.queueKey || createToken();
 		const { displaced } = queue.add({
 			key,
@@ -3045,12 +3088,13 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 		}
 		queue.entries().forEach((entry) => tellQueued(entry.client));
 	}
-	function handleCreate(socket, message, ip) {
+	async function handleCreate(socket, message, ip) {
 		if (!isNameShaped(message.name)) return socket.send(JSON.stringify(errorMessage("bad_name")));
 		if (message.room !== void 0 && !isRoomNameShaped(message.room)) return socket.send(JSON.stringify(errorMessage("bad_room_name")));
 		const waiting = cooldownOn(playerIdOf(message));
 		if (waiting) return socket.send(JSON.stringify(errorMessage("quit_timeout", waiting)));
 		if (!allowJoinFrom(ip)) return socket.send(JSON.stringify(errorMessage("slow_down")));
+		if (turnstile.enabled && !await turnstile.verify(message.turnstileToken, ip)) return socket.send(JSON.stringify(errorMessage("bad_turnstile")));
 		const room = rooms.create({
 			name: message.room,
 			isPrivate: message.private
@@ -3063,11 +3107,12 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 		broadcastRoom(room);
 		persistence.save(room);
 	}
-	function handleJoin(socket, message, ip) {
+	async function handleJoin(socket, message, ip) {
 		if (!isCodeShaped(message.code) || !isNameShaped(message.name)) return socket.send(JSON.stringify(errorMessage("bad_join")));
 		const waiting = cooldownOn(playerIdOf(message));
 		if (waiting) return socket.send(JSON.stringify(errorMessage("quit_timeout", waiting)));
 		if (!allowJoinFrom(ip)) return socket.send(JSON.stringify(errorMessage("slow_down")));
+		if (turnstile.enabled && !await turnstile.verify(message.turnstileToken, ip)) return socket.send(JSON.stringify(errorMessage("bad_turnstile")));
 		const room = rooms.get(message.code.toUpperCase());
 		if (!room) return socket.send(JSON.stringify(errorMessage("no_such_room")));
 		const { seat, error } = rooms.addSeat(room, message.name.trim(), playerIdOf(message));
@@ -3178,7 +3223,7 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 			scheduleSnapshots(room);
 		});
 	}
-	function handleMessage(socket, raw, ip) {
+	async function handleMessage(socket, raw, ip) {
 		const { message, error } = parseMessage(typeof raw === "string" ? raw : raw.toString());
 		if (error) return socket.send(JSON.stringify(errorMessage(error)));
 		switch (message.type) {
@@ -3262,9 +3307,10 @@ function createGameServer({ log = console.log, now = () => Date.now(), rng = Mat
 		socket.on("pong", () => {
 			socket.isAlive = true;
 		});
-		socket.on("message", (raw) => {
+		socket.send(JSON.stringify(configMessage({ turnstileRequired: turnstile.enabled })));
+		socket.on("message", async (raw) => {
 			try {
-				handleMessage(socket, raw, ip);
+				await handleMessage(socket, raw, ip);
 			} catch (error) {
 				log(`error handling message: ${error.stack || error.message}`);
 				socket.send(JSON.stringify(errorMessage("internal_error")));

@@ -15,3 +15,6 @@ blob-report/
 # The rating log dev.sh appends to. Its own directory, never inside .dev-rooms — the room loader reads
 # every *.json in there and would choke on a stranger.
 .dev-ratings/
+
+
+.env

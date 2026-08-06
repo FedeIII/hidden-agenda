@@ -252,3 +252,11 @@ export const Hint = styled.span`
 	text-transform: uppercase;
 	color: var(--ha-ink-faint);
 `;
+
+// Where Turnstile's own iframe is mounted. Centred rather than stretched: the widget renders at a
+// fixed size of its own, and a stretched container would just leave empty space either side of it.
+export const TurnstileBox = styled.div`
+	display: flex;
+	justify-content: center;
+	width: 100%;
+`;

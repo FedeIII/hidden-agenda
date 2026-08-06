@@ -34,6 +34,11 @@
 			content="A hex board game of hidden loyalties, for 2-6 players. Everyone moves everyone's pieces."
 		/>
 		<meta name="twitter:image" content="https://hidden-agenda.azyr.io/og-image.png" />
+
+		<!-- Bot check for creating/joining an online room. No sitekey here: the widget is rendered
+		     explicitly from src/client/hooks/useTurnstile.js, which is what lets it stay absent
+		     entirely when the server it connects to is not enforcing one. -->
+		<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 	</head>
 	<body>
 		<div class="game"></div>

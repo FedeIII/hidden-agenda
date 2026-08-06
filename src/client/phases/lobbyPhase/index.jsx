@@ -3,6 +3,7 @@ import { Button, Buttons } from 'Client/components/button';
 import { Title, Subtitle } from 'Client/components/title';
 import Logo from 'Client/components/logo';
 import useSession from 'Hooks/useSession';
+import useTurnstile from 'Hooks/useTurnstile';
 import SkinPicker from 'Client/components/skinPicker';
 import LeaveGame from 'Client/components/leaveGame';
 import { MIN_PLAYERS, MAX_PLAYERS } from 'Domain/py';
@@ -31,6 +32,7 @@ import {
 	Choices,
 	Choice,
 	Hint,
+	TurnstileBox,
 } from './components';
 
 // Long enough that typing a word is one request rather than six, short enough that the list has
@@ -51,6 +53,7 @@ const REASONS = {
 	bad_skin: 'No such style.',
 	bad_room_name: 'A room name is letters, digits, spaces and hyphens.',
 	already_seated: 'You are already at a table.',
+	bad_turnstile: 'Bot check failed. Try again.',
 	// Not an error, and the only thing on this list that nobody did wrong. It is here because this is
 	// where a player lands when the rest of the table walks out of a game they were in the middle of,
 	// and arriving back at the lobby with no explanation reads as a bug.
@@ -312,7 +315,7 @@ function LastGame({ rated, playerName }) {
 }
 
 function JoinForm({ session, unreachable }) {
-	const { code, rooms, roomsTotal, resumable, playerName, queue, rated, actions } = session;
+	const { code, rooms, roomsTotal, resumable, playerName, queue, rated, error, turnstileRequired, actions } = session;
 	// Pulled out as plain values because they are the effects' dependencies. `actions` itself is a new
 	// object on every session update — it is spread with goOnline/goHotSeat — while the functions in it
 	// come straight off the transport and never change, so depending on the object would re-run the
@@ -325,8 +328,13 @@ function JoinForm({ session, unreachable }) {
 	const [roomCode, setRoomCode] = useState(code || '');
 	const [query, setQuery] = useState('');
 
+	// Absent entirely when the server is not enforcing one — a build with no server at all, or the
+	// test server, which deliberately runs with none configured — so canGo below never waits on a
+	// widget that would never be checked.
+	const { containerRef: turnstileRef, token: turnstileToken, reset: resetTurnstile } = useTurnstile(turnstileRequired);
+
 	const trimmed = name.trim();
-	const canGo = trimmed.length > 0;
+	const canGo = trimmed.length > 0 && (!turnstileRequired || Boolean(turnstileToken));
 	const held = new Set(resumable.map(seat => seat.code));
 
 	// Debounced, and re-run on every change to the query — including the empty one on the way in,
@@ -340,12 +348,24 @@ function JoinForm({ session, unreachable }) {
 	// Nobody is looking at the list once this screen is gone, so a reconnect should not re-ask for it.
 	useEffect(() => stopListing, [stopListing]);
 
+	// A token is redeemed the moment the server accepts *or* refuses a create/join/queue that carried
+	// it — every error on this screen follows an attempt that spent it, whatever it says — so any
+	// refusal here means the next try needs a fresh solve, not just `bad_turnstile` itself.
+	useEffect(() => {
+		if (error) {
+			resetTurnstile();
+		}
+	}, [error, resetTurnstile]);
+
 	// One door for the finder, the resume list and the code field alike. The store turns it into a
 	// rejoin when this browser holds a token for that room, which is what makes selecting a game you
 	// are already in put you back in your seat instead of refusing you as a latecomer.
-	const enter = useCallback(target => joinRoom(target, trimmed), [joinRoom, trimmed]);
+	const enter = useCallback(target => joinRoom(target, trimmed, turnstileToken), [joinRoom, trimmed, turnstileToken]);
 
-	const create = useCallback(options => canGo && createRoom(trimmed, options), [canGo, createRoom, trimmed]);
+	const create = useCallback(
+		options => canGo && createRoom(trimmed, { ...options, turnstileToken }),
+		[canGo, createRoom, trimmed, turnstileToken],
+	);
 
 	const joinByCode = useCallback(
 		() => canGo && roomCode.trim().length === 4 && enter(roomCode.trim().toUpperCase()),
@@ -363,11 +383,24 @@ function JoinForm({ session, unreachable }) {
 				onChange={event => setName(event.target.value.toUpperCase())}
 			/>
 
+			{turnstileRequired && (
+				<Section>
+					<Subtitle>Verify you're human</Subtitle>
+					<TurnstileBox id="lobby-turnstile" ref={turnstileRef} />
+					{!turnstileToken && <Notice id="lobby-turnstile-hint">Complete the check to continue.</Notice>}
+				</Section>
+			)}
+
 			<LastGame rated={rated} playerName={playerName} />
 
 			<Resume seats={resumable} onEnter={enter} />
 
-			<Automatch canGo={canGo} queue={queue} onQueue={() => canGo && queueUp(trimmed)} onCancel={cancelQueue} />
+			<Automatch
+				canGo={canGo}
+				queue={queue}
+				onQueue={() => canGo && queueUp(trimmed, turnstileToken)}
+				onCancel={cancelQueue}
+			/>
 
 			<NewRoom canGo={canGo} onCreate={create} />
 

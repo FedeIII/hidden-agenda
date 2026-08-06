@@ -55,7 +55,15 @@ echo "--> installing runtime dependencies (ws only)"
 npm ci --omit=dev
 
 echo "--> reloading"
-pm2 reload hidden-agenda --update-env
+# By the ecosystem file, not by app name: \`pm2 reload <name>\` restarts the process with whatever
+# PM2 already has stored for it (from the last \`pm2 start\`/\`pm2 save\`) and --update-env only
+# overlays *this shell's* environment on top — it does not re-read node_args, cwd, or anything else
+# structural from the file on disk. Reloading by path is what makes an ecosystem.config.cjs edit
+# (the TURNSTILE_SECRET node_args, for one) actually take effect on a deploy rather than silently not.
+pm2 reload deploy/pm2/ecosystem.config.cjs --update-env
+# So a reboot resurrects this config rather than whatever was last saved — otherwise the process
+# comes back on the old definition until the next deploy happens to run this again.
+pm2 save
 
 echo "--> waiting for health"
 for attempt in \$(seq 1 20); do

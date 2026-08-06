@@ -91,6 +91,42 @@ nginx -t && systemctl reload nginx
 
 **Do not copy that snippet into this site's server block.** `real_ip_header` is single-value, so a second copy is a hard `[emerg] directive is duplicate` and nginx will not start. Two existing configs carry warning comments about exactly this.
 
+## Turnstile bot check
+
+Room creation, joining and automatch are gated on a Cloudflare Turnstile solve — best-effort, the
+same shape as persistence and ratings: with no secret in place, `server/turnstile.js` logs that the
+check is disabled and lets every request through unchecked, rather than refusing everything a client
+cannot possibly satisfy.
+
+**The secret lives in `/opt/hidden-agenda/.env` on the box, and nowhere else** — gitignored, never
+committed, never known to `ecosystem.config.cjs`. One-time setup:
+
+```bash
+# from the laptop, using the same key deploy-remote.sh does
+scp -i ~/.ssh/id_rsa .env root@100.82.16.46:/opt/hidden-agenda/.env
+ssh -i ~/.ssh/id_rsa root@100.82.16.46 'chmod 600 /opt/hidden-agenda/.env'
+```
+
+`ecosystem.config.cjs` sets `node_args: '--env-file-if-exists=.env'`, so **node itself** reads that
+file fresh at every process start — this is what makes it survive an ordinary `pm2 reload`/restart/
+reboot with no further action, unlike forwarding the value through PM2's own `env` block (which
+depends on `--update-env` re-reading whatever shell issued the `pm2` command, not the file on disk;
+tried first, replaced for exactly that fragility). `-if-exists` rather than `--env-file`: a box, or a
+developer's machine, with no such file starts exactly as it did before this existed.
+
+**This does need node ≥ 20.12** for the flag itself — true of the box's actual node (24.19 as of
+2026-08-05, see "Open, and not blocking" below) but not of `vite.server.config.mjs`'s `node18`
+build target, which only constrains what syntax the *bundle* may use, not what runs it.
+
+Because `ecosystem.config.cjs` changed shape (`node_args` is new), the config has to be re-parsed by
+PM2 at least once for it to take — `pm2 reload <name>` alone does not do this, only reloading by the
+file itself does. `scripts/deploy-remote.sh` now reloads via `deploy/pm2/ecosystem.config.cjs` (not
+`hidden-agenda`) and calls `pm2 save` afterwards for exactly this reason, so every future deploy
+re-applies the file on disk and a reboot resurrects the same config rather than an older saved one.
+
+The site key is public and lives in the client bundle (`src/client/net/turnstile.js`); only the
+secret is server-side state, and only ever on the box.
+
 ## Smoke tests
 
 ```bash

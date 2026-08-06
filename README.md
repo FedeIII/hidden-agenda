@@ -165,6 +165,22 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.8.0
+Creating or joining an online room now passes a Cloudflare Turnstile check first — a bot filter with
+no puzzle to solve for a real visitor, sitting in front of the lobby's `create`/`join`/automatch
+rather than in front of the game itself.
+
+* **Best-effort, the same shape as persistence and ratings.** With no secret configured — a laptop
+  with no `.env`, or the test server, which deliberately runs one — the check disables itself and
+  says so in the log, rather than refusing every request a client cannot possibly satisfy
+* **The server decides, not the client.** A new frame tells every socket whether the check is
+  actually active before it has asked for anything, so the widget only ever appears when something
+  is really going to check it — and the browser suite needed no changes at all
+* **A token is single-use.** Any refusal on the lobby screen resets the widget, because reaching the
+  server already spent the solve whether what came back was `bad_turnstile` or something else
+* **Reclaiming a seat you already hold asks nothing.** Same reasoning as the cooldown it already
+  skips: a refresh is not a new arrival
+
 ### v3.7.0
 The game has a mark: a seal cut from the board's own pointy-top hexagon, with the name inked into a
 plain logotype beside it.

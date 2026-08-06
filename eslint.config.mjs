@@ -14,7 +14,7 @@ export default [
 	reactHooks.configs.flat['recommended-latest'],
 
 	{
-		files: ['**/*.{js,jsx,mjs}'],
+		files: ['**/*.{js,jsx,mjs,cjs}'],
 		languageOptions: {
 			ecmaVersion: 2023,
 			sourceType: 'module',

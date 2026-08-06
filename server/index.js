@@ -12,6 +12,7 @@ import { createRoomPersistence } from './persistence';
 import { createRatings } from './ratings';
 import { createMatchQueue } from './queue';
 import { createToken } from './codes';
+import { createTurnstileGuard } from './turnstile';
 import {
 	CLIENT,
 	SERVER,
@@ -26,6 +27,7 @@ import {
 	ratedMessage,
 	rejectedMessage,
 	errorMessage,
+	configMessage,
 	MAX_MESSAGE_BYTES,
 } from './protocol';
 
@@ -71,6 +73,10 @@ export function createGameServer({
 	rng = Math.random,
 	stateDir,
 	ratingsDir,
+	// Both overridable for tests: the real thing reads process.env.TURNSTILE_SECRET and calls the
+	// real Cloudflare endpoint, and neither is available (or wanted) inside the test suite.
+	turnstileSecret,
+	turnstileFetch,
 } = {}) {
 	const persistence = createRoomPersistence({ log, ...(stateDir ? { dir: stateDir } : {}) });
 	// Its own directory, never the rooms one — see the note at the top of ratings.js. Built before the
@@ -78,6 +84,11 @@ export function createGameServer({
 	const ratings = createRatings({ log, now, ...(ratingsDir ? { dir: ratingsDir } : {}) });
 	const rooms = createRoomStore({ now, rng, ratingFor: id => (id ? ratings.mmrFor(id) : null) });
 	const allowAction = createRateLimiter({ now });
+	const turnstile = createTurnstileGuard({
+		log,
+		...(turnstileSecret !== undefined ? { secret: turnstileSecret } : {}),
+		...(turnstileFetch ? { fetchImpl: turnstileFetch } : {}),
+	});
 
 	// Live sockets live here, not on the room: a room has to stay JSON to be persistable.
 	const sockets = new Map();
@@ -327,7 +338,7 @@ export function createGameServer({
 		tell(socket, queuedMessage(queue.describe(socket.queueKey) || {}));
 	}
 
-	function handleQueue(socket, message, ip) {
+	async function handleQueue(socket, message, ip) {
 		if (!isNameShaped(message.name)) {
 			return tell(socket, errorMessage('bad_name'));
 		}
@@ -349,6 +360,12 @@ export function createGameServer({
 		// hand does. Otherwise the queue would be the way around the limit.
 		if (!allowJoinFrom(ip)) {
 			return tell(socket, errorMessage('slow_down'));
+		}
+
+		// Checked last, after every cheap and deterministic refusal: a captcha token is single-use, so
+		// a shape error or a cooldown must not spend the one the player just solved.
+		if (turnstile.enabled && !(await turnstile.verify(message.turnstileToken, ip))) {
+			return tell(socket, errorMessage('bad_turnstile'));
 		}
 
 		const key = socket.queueKey || createToken();
@@ -432,7 +449,7 @@ export function createGameServer({
 		queue.entries().forEach(entry => tellQueued(entry.client));
 	}
 
-	function handleCreate(socket, message, ip) {
+	async function handleCreate(socket, message, ip) {
 		if (!isNameShaped(message.name)) {
 			// socket.send, not send(socket.seatId, …): a socket asking to create a room has no seat
 			// yet, so addressing the reply by seat id sent it to nobody and a bad name failed in
@@ -457,6 +474,12 @@ export function createGameServer({
 			return socket.send(JSON.stringify(errorMessage('slow_down')));
 		}
 
+		// Checked last, after every cheap and deterministic refusal: a captcha token is single-use, so
+		// a shape error or a cooldown must not spend the one the player just solved.
+		if (turnstile.enabled && !(await turnstile.verify(message.turnstileToken, ip))) {
+			return socket.send(JSON.stringify(errorMessage('bad_turnstile')));
+		}
+
 		const room = rooms.create({ name: message.room, isPrivate: message.private });
 
 		if (!room) {
@@ -475,7 +498,7 @@ export function createGameServer({
 		persistence.save(room);
 	}
 
-	function handleJoin(socket, message, ip) {
+	async function handleJoin(socket, message, ip) {
 		if (!isCodeShaped(message.code) || !isNameShaped(message.name)) {
 			return socket.send(JSON.stringify(errorMessage('bad_join')));
 		}
@@ -491,6 +514,13 @@ export function createGameServer({
 
 		if (!allowJoinFrom(ip)) {
 			return socket.send(JSON.stringify(errorMessage('slow_down')));
+		}
+
+		// Checked last, and — like `rejoin` skipping the cooldown above — deliberately absent from
+		// `handleRejoin`: reclaiming a seat this browser already holds is not a new arrival, and a
+		// captcha is single-use, so a shape error or a cooldown must not spend the one already solved.
+		if (turnstile.enabled && !(await turnstile.verify(message.turnstileToken, ip))) {
+			return socket.send(JSON.stringify(errorMessage('bad_turnstile')));
 		}
 
 		const room = rooms.get(message.code.toUpperCase());
@@ -690,7 +720,7 @@ export function createGameServer({
 		});
 	}
 
-	function handleMessage(socket, raw, ip) {
+	async function handleMessage(socket, raw, ip) {
 		const { message, error } = parseMessage(typeof raw === 'string' ? raw : raw.toString());
 
 		if (error) {
@@ -824,9 +854,15 @@ export function createGameServer({
 			socket.isAlive = true;
 		});
 
-		socket.on('message', raw => {
+		// Whether the bot check is even active, so the client knows whether to render a widget at
+		// all — sent before this socket has asked for anything, and the same for every connection.
+		socket.send(JSON.stringify(configMessage({ turnstileRequired: turnstile.enabled })));
+
+		socket.on('message', async raw => {
 			try {
-				handleMessage(socket, raw, ip);
+				// handleMessage is async now that create/join/queue may call out to siteverify, so a
+				// throw inside it — sync or from a rejected await — has to be caught here either way.
+				await handleMessage(socket, raw, ip);
 			} catch (error) {
 				log(`error handling message: ${error.stack || error.message}`);
 				socket.send(JSON.stringify(errorMessage('internal_error')));

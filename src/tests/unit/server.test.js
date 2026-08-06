@@ -70,7 +70,7 @@ function createClient(url) {
 	};
 }
 
-async function startServer() {
+async function startServer({ turnstileSecret = null, turnstileFetch } = {}) {
 	// A ratings directory of its own, and never the rooms one: the room loader reads every *.json in
 	// its directory, so a stray file there would take the rooms down with it on the next restart.
 	const ratingsDir = mkdtempSync(join(tmpdir(), 'ha-ratings-'));
@@ -78,6 +78,11 @@ async function startServer() {
 		log: () => {},
 		stateDir: mkdtempSync(join(tmpdir(), 'ha-rooms-')),
 		ratingsDir,
+		// Explicitly disabled by default — `null`, not merely omitted — so every spec that does not
+		// ask for the bot check stays deterministic regardless of whatever is in this shell's own
+		// environment. Only the 'turnstile bot check' specs below pass something else.
+		turnstileSecret,
+		turnstileFetch,
 	});
 	const address = await server.listen(0, '127.0.0.1');
 
@@ -431,6 +436,154 @@ test.describe('join rate limiting', () => {
 
 			expect(outcomes.slice(0, 10)).toEqual(Array(10).fill('seat'));
 			expect(outcomes.slice(10)).toEqual(['slow_down', 'slow_down', 'slow_down']);
+		} finally {
+			await server.close();
+		}
+	});
+});
+
+test.describe('turnstile bot check', () => {
+	// The real siteverify call is server/turnstile.js's job and lives behind `fetchImpl`, so these
+	// specs stub it rather than reaching challenges.cloudflare.com — same reason nothing here reaches
+	// a real Cloudflare API for rooms or ratings either.
+	function stubFetch(result) {
+		return async () => ({ ok: true, json: async () => result });
+	}
+
+	test('off by default: the config frame says so, and no token is needed', async () => {
+		const { server, url } = await startServer();
+
+		try {
+			const client = createClient(url);
+			await client.opened;
+
+			expect((await client.waitFor('config')).turnstileRequired).toBe(false);
+
+			client.send({ type: 'create', name: 'ANA' });
+			expect((await client.waitFor('seat')).name).toEqual('ANA');
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('the config frame says the check is on once a secret is configured', async () => {
+		const { server, url } = await startServer({
+			turnstileSecret: 'test-secret',
+			turnstileFetch: stubFetch({ success: true }),
+		});
+
+		try {
+			const client = createClient(url);
+			await client.opened;
+
+			expect((await client.waitFor('config')).turnstileRequired).toBe(true);
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a create is refused without a valid token once the check is on', async () => {
+		const { server, url } = await startServer({
+			turnstileSecret: 'test-secret',
+			turnstileFetch: stubFetch({ success: false, 'error-codes': ['invalid-input-response'] }),
+		});
+
+		try {
+			const client = createClient(url);
+			await client.opened;
+			client.send({ type: 'create', name: 'ANA', turnstileToken: 'not-a-real-token' });
+
+			expect((await client.waitFor('error')).reason).toEqual('bad_turnstile');
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a create with no token at all is refused without ever calling out to siteverify', async () => {
+		const { server, url } = await startServer({
+			turnstileSecret: 'test-secret',
+			turnstileFetch: () => {
+				throw new Error('siteverify must not be called for a request that carries no token at all');
+			},
+		});
+
+		try {
+			const client = createClient(url);
+			await client.opened;
+			client.send({ type: 'create', name: 'ANA' });
+
+			expect((await client.waitFor('error')).reason).toEqual('bad_turnstile');
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('a create succeeds once siteverify confirms the token', async () => {
+		const { server, url } = await startServer({
+			turnstileSecret: 'test-secret',
+			turnstileFetch: stubFetch({ success: true }),
+		});
+
+		try {
+			const client = createClient(url);
+			await client.opened;
+			client.send({ type: 'create', name: 'ANA', turnstileToken: 'a-real-token' });
+
+			expect((await client.waitFor('seat')).name).toEqual('ANA');
+		} finally {
+			await server.close();
+		}
+	});
+
+	test('join and queue are refused and accepted the same way', async () => {
+		const { server, url } = await startServer({
+			turnstileSecret: 'test-secret',
+			turnstileFetch: stubFetch({ success: true }),
+		});
+
+		try {
+			const host = createClient(url);
+			await host.opened;
+			host.send({ type: 'create', name: 'ANA', turnstileToken: 'token' });
+			const seat = await host.waitFor('seat');
+
+			const joiner = createClient(url);
+			await joiner.opened;
+			joiner.send({ type: 'join', code: seat.code, name: 'BEA' });
+			expect((await joiner.waitFor('error')).reason).toEqual('bad_turnstile');
+
+			joiner.send({ type: 'join', code: seat.code, name: 'BEA', turnstileToken: 'token' });
+			expect((await joiner.waitFor('seat')).name).toEqual('BEA');
+
+			const queuer = createClient(url);
+			await queuer.opened;
+			queuer.send({ type: 'queue', name: 'CARA' });
+			expect((await queuer.waitFor('error')).reason).toEqual('bad_turnstile');
+		} finally {
+			await server.close();
+		}
+	});
+
+	// Reclaiming a seat this browser already holds is not a new arrival — same reasoning as the
+	// cooldown it already skips — so a refresh must not suddenly demand a fresh solve mid-game.
+	test('a rejoin needs no token, even with the check on', async () => {
+		const { server, url } = await startServer({
+			turnstileSecret: 'test-secret',
+			turnstileFetch: stubFetch({ success: true }),
+		});
+
+		try {
+			const ana = createClient(url);
+			await ana.opened;
+			ana.send({ type: 'create', name: 'ANA', turnstileToken: 'token' });
+			const seat = await ana.waitFor('seat');
+			ana.close();
+
+			const returning = createClient(url);
+			await returning.opened;
+			returning.send({ type: 'rejoin', code: seat.code, token: seat.token });
+
+			expect((await returning.waitFor('seat')).name).toEqual('ANA');
 		} finally {
 			await server.close();
 		}

@@ -205,6 +205,10 @@ function unseatedSession({ code = null, error = null, rated = null } = {}) {
 		// as separate frames, so there is a window where the phase says "play" but the state is
 		// still the empty initial one — and rendering the board against no players throws.
 		synced: false,
+		// Whether the server is actually enforcing the bot check, told once on connection before
+		// this client has asked for anything. False until it says otherwise — a lobby that never
+		// hears from a server (Pages, or a laptop with no `./dev.sh`) has nothing to gate anyway.
+		turnstileRequired: false,
 	};
 }
 
@@ -228,6 +232,8 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 	// `listQuery` is: the server drops a queue entry with the socket, so a reconnect has to ask again or
 	// the player waits forever for a match that nothing is looking for.
 	let queueName = null;
+	// The captcha token that went with it, so a reconnect's re-ask carries the same one `queueUp` sent.
+	let queueToken = null;
 
 	let socket = null;
 	let reconnectDelay = RECONNECT_MIN_MS;
@@ -279,11 +285,24 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		const playerId = readPlayerId();
 
 		if (intent.kind === 'create') {
-			return send({ type: 'create', name: intent.name, room: intent.room, private: intent.private, playerId });
+			return send({
+				type: 'create',
+				name: intent.name,
+				room: intent.room,
+				private: intent.private,
+				playerId,
+				turnstileToken: intent.turnstileToken,
+			});
 		}
 
 		if (intent.kind === 'join') {
-			return send({ type: 'join', code: intent.code, name: intent.name, playerId });
+			return send({
+				type: 'join',
+				code: intent.code,
+				name: intent.name,
+				playerId,
+				turnstileToken: intent.turnstileToken,
+			});
 		}
 
 		if (intent.kind === 'rejoin') {
@@ -378,6 +397,13 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 
 			case 'rooms':
 				session.update({ rooms: message.rooms || [], roomsTotal: message.total || 0 });
+				break;
+
+			// Whether the bot check is active, told once right on connection. Read here rather than
+			// assumed, so the lobby only ever asks for a Turnstile solve when the server is actually
+			// going to check it — the test server deliberately runs with none configured.
+			case 'config':
+				session.update({ turnstileRequired: Boolean(message.turnstileRequired) });
 				break;
 
 			// How the automatch search is going. `searching: false` is the server saying to stop waiting —
@@ -524,7 +550,7 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 
 			// Same again for the queue, which the server also tracks per socket.
 			if (queueName !== null) {
-				send({ type: 'queue', name: queueName, playerId: readPlayerId() });
+				send({ type: 'queue', name: queueName, playerId: readPlayerId(), turnstileToken: queueToken });
 			}
 
 			pingTimer = setInterval(() => send({ type: 'ping' }), PING_MS);
@@ -585,8 +611,8 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 		send({ type: 'action', seq, action });
 	}
 
-	function createRoom(name, { room = null, isPrivate = false } = {}) {
-		intent = { kind: 'create', name, room: room || undefined, private: isPrivate };
+	function createRoom(name, { room = null, isPrivate = false, turnstileToken = null } = {}) {
+		intent = { kind: 'create', name, room: room || undefined, private: isPrivate, turnstileToken };
 		// The last game's ratings go here rather than on the way out of it: they are worth reading in the
 		// lobby, and starting something new is the moment they stop being.
 		session.update({ status: 'connecting', error: null, errorSeconds: null, rated: null });
@@ -600,10 +626,10 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 	 * already in put you back in your seat rather than fail with `room_already_started`. The name is
 	 * carried along even then, so an expired token can fall back to joining as somebody new.
 	 */
-	function joinRoom(code, name) {
+	function joinRoom(code, name, turnstileToken = null) {
 		const stored = readToken(code);
 
-		intent = stored ? { kind: 'rejoin', code, token: stored, name } : { kind: 'join', code, name };
+		intent = stored ? { kind: 'rejoin', code, token: stored, name } : { kind: 'join', code, name, turnstileToken };
 		session.update({ status: 'connecting', error: null, errorSeconds: null, rated: null });
 		sendIntent() || connect();
 	}
@@ -624,14 +650,16 @@ export function createSocketStore({ url = socketUrl(), roomCode = null } = {}) {
 	 * so a reconnect has to re-queue or the player waits for a match nothing is looking for. Same shape
 	 * as `listRooms`, and for the same reason.
 	 */
-	function queueUp(name) {
+	function queueUp(name, turnstileToken = null) {
 		queueName = name;
+		queueToken = turnstileToken;
 		session.update({ error: null, errorSeconds: null, rated: null });
-		send({ type: 'queue', name, playerId: readPlayerId() }) || connect();
+		send({ type: 'queue', name, playerId: readPlayerId(), turnstileToken }) || connect();
 	}
 
 	function cancelQueue() {
 		queueName = null;
+		queueToken = null;
 		// Optimistic, deliberately: the button has to stop saying "searching" the moment it is pressed,
 		// and the server's own `queued` frame confirms it a moment later.
 		session.update({ queue: null });

@@ -32,6 +32,7 @@ export const SERVER = {
 	REJECTED: 'rejected',
 	ERROR: 'error',
 	PONG: 'pong',
+	CONFIG: 'config',
 };
 
 // Why a seat is no longer in a room. Two ways, and they need different words on screen: `you_left` is
@@ -163,4 +164,11 @@ export function rejectedMessage({ seq, reason, version }) {
 // say — so the client can say something better than the reason string.
 export function errorMessage(reason, detail = null) {
 	return { type: SERVER.ERROR, reason, ...detail };
+}
+
+// Told once, right on connection, before the client has asked for anything. Its own frame rather
+// than a field folded into `rooms` or `seat`: whether the bot check is active is true or false for
+// the whole server, not a fact about a room or a seat, and every socket gets it — seated or not.
+export function configMessage({ turnstileRequired }) {
+	return { type: SERVER.CONFIG, turnstileRequired };
 }

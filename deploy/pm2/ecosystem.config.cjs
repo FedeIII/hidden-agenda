@@ -2,8 +2,9 @@
 //
 //   cd /opt/hidden-agenda && pm2 start deploy/pm2/ecosystem.config.cjs && pm2 save
 //
-// The bundle is committed, so there is nothing to build on the box. It runs on the box's node 18:
-// vite.server.config.mjs targets node18 deliberately, even though the toolchain needs 22 to build.
+// The bundle is committed, so there is nothing to build on the box. Originally deployed against the
+// box's node 18 (vite.server.config.mjs still targets node18 for that reason, even though the
+// toolchain needs 22 to build); the box itself is on node 24.19 as of 2026-08-05 (see deploy/README.md).
 module.exports = {
 	apps: [
 		{
@@ -14,6 +15,15 @@ module.exports = {
 			instances: 1,
 			autorestart: true,
 			max_memory_restart: '200M',
+			// TURNSTILE_SECRET lives in /opt/hidden-agenda/.env on the box only — never committed, never
+			// known to this file — and node reads it itself at every start/reload/restart. Deliberately
+			// not forwarded through PM2's own `env` block: that would depend on --update-env re-reading
+			// *this process's* environment at the moment `pm2 reload` runs, which is exactly the kind of
+			// thing a non-interactive deploy script cannot guarantee. `-if-exists` so a box (or a
+			// developer's machine reusing this file) with no such file starts exactly as before — the
+			// same best-effort shape as persistence and ratings: server/turnstile.js reads an absent
+			// secret as "disabled" and logs it, rather than refusing every request.
+			node_args: '--env-file-if-exists=.env',
 			// Rooms are small and in memory; if this grows unbounded something is leaking.
 			env: {
 				NODE_ENV: 'production',
