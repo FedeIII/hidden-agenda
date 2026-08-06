@@ -19,6 +19,9 @@ export const Panel = styled.div`
 	gap: 10px;
 	width: 100%;
 	max-width: 420px;
+	/* Room for the fixed turnstile footer below, so it never lands on top of the last button
+	   instead of below it. Opt-in: every other Panel is unaffected. */
+	${({ $footerGap }) => ($footerGap ? 'padding-bottom: 96px;' : '')}
 `;
 
 export const RoomCode = styled.div`
@@ -253,6 +256,69 @@ export const Hint = styled.span`
 	color: var(--ha-ink-faint);
 `;
 
+// The rules link, standing apart from the ordinary stamped buttons below it — a manila index tab,
+// clipped the same way an HQ card's own team tab is (`--ha-hq-label-clip`), rather than one more
+// rectangle in the list. A player deciding whether to learn the game before playing it is making a
+// different kind of choice than picking start-or-join, and the shape says so before the words do.
+export const RulesTabButton = styled.button`
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	align-self: center;
+	width: auto;
+	margin: 2px 0 8px;
+	padding: 7px 26px 6px 18px;
+	background: var(--ha-accent);
+	border: 1px solid var(--ha-panel-edge);
+	clip-path: var(--ha-hq-label-clip, polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%));
+	transform: rotate(-1.4deg);
+	box-shadow:
+		var(--ha-panel-shadow),
+		2px 4px 8px rgba(20, 15, 5, 0.35);
+	cursor: pointer;
+	transition: transform 0.1s ease-out;
+
+	&:hover {
+		transform: rotate(0deg) scale(1.03);
+	}
+
+	&:active {
+		transform: rotate(0deg) scale(0.98);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--ha-ink-on-accent);
+		outline-offset: 2px;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		&,
+		&:hover,
+		&:active {
+			transition: none;
+		}
+	}
+`;
+
+export const RulesTabEyebrow = styled.span`
+	font-family: var(--ha-face-data);
+	font-size: 9px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	color: var(--ha-ink-on-accent);
+	opacity: 0.8;
+`;
+
+export const RulesTabTitle = styled.span`
+	font-family: var(--ha-face);
+	font-weight: var(--ha-weight);
+	font-size: 17px;
+	letter-spacing: var(--ha-track);
+	text-transform: uppercase;
+	color: var(--ha-ink-on-accent);
+`;
+
 // The index's own menu: three doors — start, join, hot-seat — stacked and stretched to the panel's
 // width, so the choice reads as one list rather than a row of buttons sized to their own text.
 export const MenuList = styled.div`
@@ -264,6 +330,26 @@ export const MenuList = styled.div`
 	& > button {
 		width: 100%;
 	}
+`;
+
+// The bot check, pinned to the foot of the screen rather than sitting inline in the form — it is
+// a gate the visitor has to clear, not a field they fill in, so it reads as a fixed strip anyone
+// can find without hunting for it, the same way a signature line sits at the bottom of a form
+// rather than wherever it was typeset.
+export const TurnstileFooter = styled.div`
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 20;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+	background: var(--ha-panel);
+	border-top: 1px solid var(--ha-panel-edge);
+	box-shadow: 0 -4px 14px rgba(20, 15, 5, 0.3);
 `;
 
 // Where Turnstile's own iframe is mounted. Centred rather than stretched: the widget renders at a

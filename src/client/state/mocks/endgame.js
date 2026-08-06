@@ -1,14 +1,14 @@
 export default {
 	players: [
 		{
-			name: 'FEDE',
+			name: 'ALICE',
 			turn: false,
 			alignment: { friend: '1', foe: '0' },
 			revealed: { foe: true, friend: true },
 			allowedToAccuse: { friend: true, foe: true },
 		},
 		{
-			name: 'SARA',
+			name: 'BOB',
 			turn: true,
 			alignment: { friend: '0', foe: '3' },
 			revealed: { friend: true, foe: false },

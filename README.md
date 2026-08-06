@@ -165,6 +165,28 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.10.0
+How to Play is a real menu item now, not a markdown file a player was unlikely to open mid-game. Twenty
+pages plus a cheat sheet, grouped by topic, in the Dossier voice rather than the developer notes' —
+told the same way the game itself talks to a player.
+
+* **The screenshots are an actual game**, not diagrams — a real hot-seat session, cropped tight to
+  just the play being illustrated, click-to-fullscreen since a crop this small is exactly the thing
+  worth seeing at full size
+* **Piece pages show the move and the kill side by side**, and the CEO, Sniper and Taking Control
+  pages show the *effect* of what they describe — a buffed agent with both its cells lit, a sniper's
+  line running dark through the board and stopping at whatever blocks it (or not, once buffed), a
+  four-beat sniper kill from before the crossing to the board after
+* **A cheat sheet page** — every rule as bullets, sized to fit one screen with no scrolling on a
+  desktop, one door away from the index
+* **"How to Play" is its own case-file tab in the main menu**, apart from Start/Join/Hot-seat, because
+  learning the game is a different kind of choice than picking one of those
+* Fixed a note's own highlighted background painting straight across a floated image next to it —
+  it narrows to sit beside one now, the way a paragraph already did, rather than either overlapping
+  it or dropping below regardless of the room available
+* The Turnstile bot check is a fixed strip at the foot of the screen now, rather than sitting inline
+  in the name form
+
 ### v3.9.0
 The lobby is a menu now rather than everything on one screen: your name, the bot check, a resume
 list when you have one, and three doors — start a game, join one, or hot-seat instead. Each door is

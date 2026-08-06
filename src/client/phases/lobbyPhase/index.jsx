@@ -9,6 +9,8 @@ import LeaveGame from 'Client/components/leaveGame';
 import { MIN_PLAYERS, MAX_PLAYERS } from 'Domain/py';
 import { ROOM_STATES } from 'Domain/phases';
 import { isRoomNameShaped, MAX_ROOM_NAME_LENGTH, pickRoomName } from 'Domain/roomNames';
+import { RulesIndex, RulePage } from './rules';
+import { findRulePage } from './rules/content';
 import {
 	LobbyContainer,
 	Panel,
@@ -34,6 +36,10 @@ import {
 	Choice,
 	Hint,
 	TurnstileBox,
+	TurnstileFooter,
+	RulesTabButton,
+	RulesTabEyebrow,
+	RulesTabTitle,
 } from './components';
 
 // Long enough that typing a word is one request rather than six, short enough that the list has
@@ -322,22 +328,55 @@ function LastGame({ rated, playerName }) {
 const MENU = 'menu';
 const START = 'start';
 const JOIN = 'join';
+const RULES = 'rules';
+// A rule page is `rules:<slug>` — one string, so the rest of the component still only ever
+// juggles a single piece of state, the same as it did with three fixed values.
+const RULE_PREFIX = 'rules:';
 
 // Each submenu gets a real path rather than being pure React state, so the browser's own back
 // button — and a bookmark or a shared link straight into one — both work. `#/r/CODE` is the only
-// other hash this app writes, and neither of these can ever collide with its four-character code.
-const VIEW_HASH = {
-	[START]: '#/start',
-	[JOIN]: '#/join',
-};
+// other hash this app writes, and none of these can ever collide with its four-character code.
+function hashFor(view) {
+	if (view === START) {
+		return '#/start';
+	}
+
+	if (view === JOIN) {
+		return '#/join';
+	}
+
+	if (view === RULES) {
+		return '#/rules';
+	}
+
+	if (view.startsWith(RULE_PREFIX)) {
+		return `#/rules/${view.slice(RULE_PREFIX.length)}`;
+	}
+
+	return '#/';
+}
 
 function readMenuView() {
-	if (window.location.hash === VIEW_HASH[START]) {
+	const hash = window.location.hash;
+
+	if (hash === '#/start') {
 		return START;
 	}
 
-	if (window.location.hash === VIEW_HASH[JOIN]) {
+	if (hash === '#/join') {
 		return JOIN;
+	}
+
+	if (hash === '#/rules') {
+		return RULES;
+	}
+
+	const ruleMatch = /^#\/rules\/([a-z-]+)$/.exec(hash);
+
+	// A slug that doesn't exist (an old link, a typo) is not a page — the front door is the
+	// honest answer, not a page that renders nothing.
+	if (ruleMatch && findRulePage(ruleMatch[1])) {
+		return `${RULE_PREFIX}${ruleMatch[1]}`;
 	}
 
 	return MENU;
@@ -407,7 +446,7 @@ function JoinForm({ session, unreachable }) {
 
 		if (initial !== MENU) {
 			window.history.replaceState(null, '', '#/');
-			window.history.pushState(null, '', VIEW_HASH[initial]);
+			window.history.pushState(null, '', hashFor(initial));
 		}
 	}, []);
 
@@ -459,10 +498,25 @@ function JoinForm({ session, unreachable }) {
 	// the same action rather than three that have to be kept in step by hand.
 	const enterView = useCallback(next => {
 		setView(next);
-		window.history.pushState(null, '', VIEW_HASH[next]);
+		window.history.pushState(null, '', hashFor(next));
 	}, []);
 
 	const backToMenu = useCallback(() => window.history.back(), []);
+
+	if (view === RULES) {
+		return <RulesIndex onOpen={slug => enterView(`${RULE_PREFIX}${slug}`)} onBack={backToMenu} />;
+	}
+
+	if (view.startsWith(RULE_PREFIX)) {
+		return (
+			<RulePage
+				slug={view.slice(RULE_PREFIX.length)}
+				onOpen={slug => enterView(`${RULE_PREFIX}${slug}`)}
+				onBack={backToMenu}
+				onIndex={() => enterView(RULES)}
+			/>
+		);
+	}
 
 	if (view === START) {
 		return (
@@ -525,7 +579,7 @@ function JoinForm({ session, unreachable }) {
 	}
 
 	return (
-		<Panel>
+		<Panel $footerGap={turnstileRequired}>
 			<Subtitle>Your name</Subtitle>
 			<Field
 				id="lobby-name"
@@ -536,16 +590,23 @@ function JoinForm({ session, unreachable }) {
 			/>
 
 			{turnstileRequired && (
-				<Section>
+				<TurnstileFooter>
 					<Subtitle>Verify you're human</Subtitle>
 					<TurnstileBox id="lobby-turnstile" ref={turnstileRef} />
 					{!turnstileToken && <Notice id="lobby-turnstile-hint">Complete the check to continue.</Notice>}
-				</Section>
+				</TurnstileFooter>
 			)}
 
 			<LastGame rated={rated} playerName={playerName} />
 
 			<Resume seats={resumable} onEnter={enter} />
+
+			{/* Its own tab rather than a fourth stamp in the list below — learning the game is a
+			    different kind of choice than picking start-or-join, made before either. */}
+			<RulesTabButton id="lobby-menu-rules" type="button" onClick={() => enterView(RULES)}>
+				<RulesTabEyebrow>Case File</RulesTabEyebrow>
+				<RulesTabTitle>How to Play</RulesTabTitle>
+			</RulesTabButton>
 
 			<Section>
 				<MenuList>
