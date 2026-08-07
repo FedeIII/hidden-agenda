@@ -356,6 +356,20 @@ function hashFor(view) {
 	return '#/';
 }
 
+// `.game` is the scrollport, not the document. It is absolutely positioned over the whole viewport
+// with `overflow-y: auto` (globalStyle.js), so the page behind it never scrolls at all and
+// `window.scrollTo` — the obvious thing to reach for — does nothing whatsoever here.
+//
+// `scrollTop` rather than `scrollTo`, so it lands at the top rather than travelling there: a view
+// change is not a movement within a page, and a skin is free to ask for smooth scrolling.
+function scrollToTop() {
+	const scrollport = document.querySelector('.game');
+
+	if (scrollport) {
+		scrollport.scrollTop = 0;
+	}
+}
+
 function readMenuView() {
 	const hash = window.location.hash;
 
@@ -496,9 +510,15 @@ function JoinForm({ session, unreachable }) {
 
 	// A real navigation each way, so the browser's own back button, this button and Escape are all
 	// the same action rather than three that have to be kept in step by hand.
+	//
+	// And it starts at the top, which a browser does for free on a real page load and not at all
+	// here: every view is the same mounted component with different props, so nothing touches the
+	// scroll. Turning the page halfway down a rule left the reader at that same offset in the next
+	// one — past its title, often past its picture, and on a phone that is most of the screen.
 	const enterView = useCallback(next => {
 		setView(next);
 		window.history.pushState(null, '', hashFor(next));
+		scrollToTop();
 	}, []);
 
 	const backToMenu = useCallback(() => window.history.back(), []);

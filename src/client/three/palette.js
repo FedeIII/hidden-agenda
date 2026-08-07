@@ -134,6 +134,30 @@ export const HQ_TRAY = {
 // Legal destinations are red in the flat board and stay red here: it is the one piece of visual
 // vocabulary a returning player already knows.
 export const HIGHLIGHT = '#ff3b30';
+
+// Where a spy's LATER steps could land, a colour per move away: teal for the second step, gold for
+// the third a CEO buff adds. A colour rather than a quieter red, because which move a cell belongs
+// to is a fact about the walk and not a degree of anything — three shades of one hue read as one
+// thing seen through fog, and the ordering has to survive the palest tile and the darkest alike.
+//
+// Red is not in the list on purpose: it stays exactly what it was, the move you may make right now.
+// The fade is what keeps that reading first when all three are on the board at once.
+//
+// This lives beside the colours rather than in either renderer because both draw it: the flat board
+// puts the colour in a border, the tile rings take it as their own.
+// The gold is brighter and more saturated than the teal, and carries the same weight rather than
+// less: it sits two rings out on a board of mid-value cool greys, where a softer amber goes muddy
+// exactly where it is furthest from the eye. Value separation is what makes it a mark and not a
+// tint, so it is the one step where the hue is doing the work on its own.
+export const PREVIEW_STEPS = [
+	{ color: '#1fbfae', fade: 0.85 },
+	{ color: '#ffc400', fade: 0.9 },
+];
+
+// Past the end of the table a step keeps the last colour rather than losing its mark — nothing in
+// the game has that many moves today, and a piece that grew one should still be drawn.
+export const previewStep = level => PREVIEW_STEPS[Math.min(level, PREVIEW_STEPS.length) - 1];
+
 export const SELECTED = '#ffe9b0';
 export const SNIPE = '#ff2d20';
 export const BUFF = '#ffd77a';

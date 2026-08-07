@@ -26,6 +26,12 @@ const BOARD_CELLS = Math.max(...CELLS_BY_ROW);
 // Spelled out for the callout, because "A" is a fine id and a poor label.
 const TYPE_NAMES = { A: 'AGENT', C: 'CEO', S: 'SPY', N: 'SNIPER' };
 
+// How many moves past the current one this cell is, or 0 when it is not one of them. The levels
+// come back disjoint and nearest first, so the first match is the answer.
+function previewLevel(position, previewPositions) {
+	return previewPositions.findIndex(positions => areCoordsInList(position, positions)) + 1;
+}
+
 function renderRow(row, numberOfCells, board) {
 	const hexagons = [];
 
@@ -38,6 +44,7 @@ function renderRow(row, numberOfCells, board) {
 				edge={cell === -1 || cell === numberOfCells || row < 0 || row >= ROW_NUMBERS.length}
 				piece={pz.getPieceAtPosition([row, cell], board.pieces)}
 				highlighted={areCoordsInList([row, cell], board.highlightedPositions)}
+				preview={previewLevel([row, cell], board.previewPositions)}
 				aim={board.aim}
 				onHover={board.onHover}
 				// Where the renderer put this cell's tile, in pixels across and down the board.
@@ -161,6 +168,10 @@ function TableBoard() {
 	// the 53 cells, which recomputed the highlights every time and — because that function also
 	// held useContext and useCallback — called hooks in a loop.
 	const highlightedPositions = useMemo(() => pz.getHighlightedPositions(pieces, pieceState), [pieces, pieceState]);
+
+	// Where the moves after this one could land, a level per move away. Empty for everything but a
+	// spy mid-walk, and never a legal destination — see pz.getPreviewPositions.
+	const previewPositions = useMemo(() => pz.getPreviewPositions(pieces, pieceState), [pieces, pieceState]);
 	const selectedPiece = pz.getSelectedPiece(pieces);
 
 	// Pointing is only offered once the selected piece has nowhere left to move, which is what
@@ -183,8 +194,8 @@ function TableBoard() {
 	// The renderer is a view of the same state the hexagons are drawn from, never a second copy
 	// of it. Everything it needs arrives here and nothing else does.
 	const scene = useMemo(
-		() => ({ pieces, highlightedPositions, snipe, aim, hovered }),
-		[pieces, highlightedPositions, snipe, aim, hovered],
+		() => ({ pieces, highlightedPositions, previewPositions, snipe, aim, hovered }),
+		[pieces, highlightedPositions, previewPositions, snipe, aim, hovered],
 	);
 
 	// Bound to the skin so a change rebuilds the scene, which only ever happens once per game —
@@ -192,7 +203,14 @@ function TableBoard() {
 	const createScene = useCallback(element => createBoardScene(element, skin), [skin]);
 	const layout = useThreeView(boardRef, createScene, scene);
 
-	const board = { pieces, highlightedPositions, layout, aim, onHover: layout ? onHover : undefined };
+	const board = {
+		pieces,
+		highlightedPositions,
+		previewPositions,
+		layout,
+		aim,
+		onHover: layout ? onHover : undefined,
+	};
 
 	return (
 		<TableBoardStyled id="board" ref={boardRef} dimensional={!!layout} onMouseLeave={onLeave}>

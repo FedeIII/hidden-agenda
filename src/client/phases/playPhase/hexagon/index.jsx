@@ -21,7 +21,7 @@ import HexagonStyled from './styled';
 // its own hit target and clicking there would reach the row behind it.
 const TOKEN_BOX = { left: '6%', top: '-6%', width: '88%', height: '96%' };
 
-function Hexagon({ row, cell, piece, highlighted, edge, aim, box, onHover }) {
+function Hexagon({ row, cell, piece, highlighted, preview, edge, aim, box, onHover }) {
 	const [_state, dispatch] = useContext(StateContext);
 	const cellAction = useCellAction();
 	const { isClickSuppressed } = useDragController();
@@ -64,6 +64,9 @@ function Hexagon({ row, cell, piece, highlighted, edge, aim, box, onHover }) {
 		<HexagonStyled
 			id={`hex-${row}-${cell}`}
 			highlighted={highlighted}
+			// How many moves away this cell is, when it is one the selected piece could only reach
+			// later. 0 or undefined when it is not.
+			preview={preview}
 			row={row}
 			cell={cell}
 			edge={edge}

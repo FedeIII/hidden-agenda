@@ -1,5 +1,7 @@
 import styled, { css } from 'styled-components';
+import { rgba } from 'polished';
 import { ROW_NUMBERS, CELLS_BY_ROW } from 'Domain/cells';
+import { previewStep } from 'Client/three/palette';
 import { getHexGradient } from './styledHelpers';
 
 const HEX_MARGIN = 4;
@@ -13,35 +15,58 @@ const CELL_HOVER = 3;
 const CELL_HOVER_BEFORE = 4;
 const CELL_HOVER_AFTER = 5;
 
-const onHighlighted = ({ highlighted }) => {
-	if (highlighted) {
+// A legal cell is `red`, exactly and literally: the suite reads that computed string, and it is the
+// one piece of vocabulary a returning player owns.
+//
+// A cell a spy could only reach on a LATER move takes that step's own colour instead — teal for the
+// second, gold for the third — so which move a cell belongs to is legible on its own rather than by
+// comparison with the cell next to it, and no shade of red means anything but "you may go here".
+// Only the colour changes: the width stays 2px, because these boxes are what the 3D board is
+// clicked through and box-sizing keeps the border out of the layout either way.
+const highlightColor = preview => {
+	if (!preview) {
+		return 'red';
+	}
+
+	const { color, fade } = previewStep(preview);
+
+	return rgba(color, fade);
+};
+
+// The pointer is the other half of the difference: a preview cell says where the walk could get to
+// and is not somewhere you may click yet, so it does not offer itself as a target.
+const onHighlighted = ({ highlighted, preview }) => {
+	if (highlighted || preview) {
+		const color = highlightColor(highlighted ? 0 : preview);
+		const cursor = highlighted
+			? css`
+					&:hover {
+						cursor: pointer;
+					}
+				`
+			: '';
+
 		return css`
 			box-sizing: border-box;
-			border-left: 2px solid red;
-			border-right: 2px solid red;
+			border-left: 2px solid ${color};
+			border-right: 2px solid ${color};
 
-			&:hover {
-				cursor: pointer;
-			}
+			${cursor}
 
 			&:before {
 				box-sizing: border-box;
-				border-left: 2px solid red;
-				border-right: 2px solid red;
+				border-left: 2px solid ${color};
+				border-right: 2px solid ${color};
 
-				&:hover {
-					cursor: pointer;
-				}
+				${cursor}
 			}
 
 			&:after {
 				box-sizing: border-box;
-				border-left: 2px solid red;
-				border-right: 2px solid red;
+				border-left: 2px solid ${color};
+				border-right: 2px solid ${color};
 
-				&:hover {
-					cursor: pointer;
-				}
+				${cursor}
 			}
 		`;
 	}

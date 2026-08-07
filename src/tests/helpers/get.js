@@ -56,6 +56,18 @@ export default function createGet(page) {
 						.locator(`#hex-${row}-${cell}`)
 						.evaluate(el => getComputedStyle(el)['border-left'] === '2px solid rgb(255, 0, 0)');
 				},
+				// The mark a cell is carrying, as its computed border, or '' for a cell with none.
+				// `2px solid rgb(255, 0, 0)` is a legal destination; a spy's later steps each get a
+				// colour of their own. Returned raw so a spec can say "distinct from red, and from
+				// each other" — which is the rule — rather than pinning down which teal it is,
+				// which is a look.
+				get highlightMark() {
+					return page.locator(`#hex-${row}-${cell}`).evaluate(el => {
+						const border = getComputedStyle(el)['border-left'];
+
+						return border.startsWith('2px solid ') ? border : '';
+					});
+				},
 				get isEmpty() {
 					return page
 						.locator(`#hex-${row}-${cell} > *`)

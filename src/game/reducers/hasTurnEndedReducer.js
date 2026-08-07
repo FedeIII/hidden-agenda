@@ -2,7 +2,7 @@ import { START_GAME, NEXT_TURN, TOGGLE_PIECE, MOVE_PIECE, SNIPE } from 'Game/act
 import { pz, TYPES, STATES } from 'Domain/pieces';
 
 const { AGENT, CEO, SPY, SNIPER } = TYPES;
-const { MOVEMENT, MOVEMENT2, MOVEMENT3, PLACEMENT } = STATES;
+const { MOVEMENT, PLACEMENT } = STATES;
 
 function hasPieceEndedTurn(pieces, pieceState, toggledPieceId) {
 	const selectedPiece = pz.getSelectedPiece(pieces);
@@ -13,10 +13,12 @@ function hasPieceEndedTurn(pieces, pieceState, toggledPieceId) {
 				return pieceState === PLACEMENT || pieceState === MOVEMENT;
 			case CEO:
 				return pieceState === PLACEMENT || pieceState === MOVEMENT;
+			// Placement only. A spy walking on the board settles itself on its last step and is
+			// never in hand at MOVEMENT2 or MOVEMENT3 to be dropped — see isPieceSettledByMove.
+			// It is only ever put down by hand coming out of an HQ, where it lands with no facing
+			// of its own and has to be pointed like everything else.
 			case SPY:
-				return selectedPiece.buffed
-					? pieceState === PLACEMENT || pieceState === MOVEMENT3
-					: pieceState === PLACEMENT || pieceState === MOVEMENT2;
+				return pieceState === PLACEMENT;
 			case SNIPER:
 				return pieceState === PLACEMENT || pieceState === MOVEMENT;
 			default:
@@ -50,6 +52,22 @@ function isPieceBeingDropped(state, toggledPieceId) {
 	return (
 		hasPieceEndedTurn(state.pieces, state.pieceState, toggledPieceId) && hasTurnChangedTheBoard(state, toggledPieceId)
 	);
+}
+
+// The other way a turn ends, and the reason the rule above is stated once rather than twice: a spy
+// has no turning step, so its last step both points it and puts it down, and there is no drop left
+// to end the turn on. The board still has to have changed — a spy that walks out and back onto the
+// facing it left with has spent its steps and settled exactly where it started, so it is simply
+// back on the board unselected and can be picked up and walked again.
+function isPieceSettledByMove(state, { pieceId, coords }) {
+	if (!pz.isSettledByMove(pz.getPieceById(pieceId, state.pieces), state.pieceState)) {
+		return false;
+	}
+
+	// The very move piecesReducer is about to apply, for the same reason the drop is toggled
+	// first: it is the move that commits the facing, so the board this turn leaves behind does
+	// not exist until it has run.
+	return pz.hasBoardChanged(pz.move(state.pieces, pieceId, coords, state.pieceState), state.piecesPrevState);
 }
 
 function isSniperSelectedForSnipe(snipe, pieceId) {
@@ -93,7 +111,7 @@ function hasTurnEndedReducer(state, action) {
 		case TOGGLE_PIECE:
 			return togglePieceState(state, action.payload.pieceId);
 		case MOVE_PIECE:
-			return false;
+			return isPieceSettledByMove(state, action.payload);
 		case SNIPE:
 			return snipeState(state);
 		default:

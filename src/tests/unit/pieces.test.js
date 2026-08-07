@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { pz, STATES } from 'Domain/pieces';
 
-const { SELECTION, MOVEMENT } = STATES;
+const { SELECTION, MOVEMENT, MOVEMENT2 } = STATES;
 
 function withPiece(pieces, id, patch) {
 	return pieces.map(piece => (piece.id === id ? { ...piece, ...patch } : piece));
@@ -37,6 +37,143 @@ test.describe('spy movement', () => {
 		const second = pz.move(first, '0-S', [2, 2], MOVEMENT);
 
 		expect(pz.getPieceById('0-S', second).showMoveCells).toBe(false);
+	});
+
+	// A spy takes its facing from the step it just took, so there is no turning step to hand it to
+	// and its last move puts it down as well. Everything else lands and is then aimed by hand.
+	test('puts itself down on its last move, and stays in hand before it', () => {
+		let pieces = pz.init();
+		pieces = onBoard(pieces, '0-S', [3, 3]);
+		pieces = withPiece(pieces, '0-S', { selected: true, showMoveCells: true });
+
+		const first = pz.move(pieces, '0-S', [2, 3], SELECTION);
+		expect(pz.getPieceById('0-S', first).selected).toBe(true);
+
+		const second = pz.move(first, '0-S', [2, 2], MOVEMENT);
+		expect(pz.getPieceById('0-S', second).selected).toBe(false);
+		expect(pz.getPieceById('0-S', second).direction).toEqual(pz.getPieceById('0-S', second).selectedDirection);
+	});
+
+	test('a buffed spy settles on the third move rather than the second', () => {
+		let pieces = pz.init();
+		pieces = onBoard(pieces, '0-S', [3, 3]);
+		pieces = withPiece(pieces, '0-S', { selected: true, showMoveCells: true, buffed: true });
+
+		const second = pz.move(pz.move(pieces, '0-S', [2, 3], SELECTION), '0-S', [2, 2], MOVEMENT);
+		expect(pz.getPieceById('0-S', second).selected).toBe(true);
+
+		const third = pz.move(second, '0-S', [3, 2], MOVEMENT2);
+		expect(pz.getPieceById('0-S', third).selected).toBe(false);
+	});
+
+	test('is still put down by hand when it comes out of an HQ', () => {
+		const pieces = withPiece(pz.init(), '0-S', { selected: true, showMoveCells: true });
+		const placed = pz.getPieceById('0-S', pz.move(pieces, '0-S', [3, 3], SELECTION));
+
+		// No position to have come from means no direction of its own, so the aiming step stands.
+		expect(placed.selected).toBe(true);
+		expect(placed.direction).toBeUndefined();
+	});
+
+	test('isSettledByMove is the one place that decides it', () => {
+		const onTheBoard = pz.getPieceById('0-S', onBoard(pz.init(), '0-S', [3, 3]));
+		const inTheHq = pz.getPieceById('0-S', pz.init());
+		const agent = pz.getPieceById('0-A1', onBoard(pz.init(), '0-A1', [3, 3]));
+
+		expect(pz.isSettledByMove(onTheBoard, SELECTION)).toBe(false);
+		expect(pz.isSettledByMove(onTheBoard, MOVEMENT)).toBe(true);
+		expect(pz.isSettledByMove({ ...onTheBoard, buffed: true }, MOVEMENT)).toBe(false);
+		expect(pz.isSettledByMove({ ...onTheBoard, buffed: true }, MOVEMENT2)).toBe(true);
+		expect(pz.isSettledByMove(inTheHq, SELECTION)).toBe(false);
+		expect(pz.isSettledByMove(agent, MOVEMENT)).toBe(false);
+	});
+});
+
+// The board says where the rest of the walk could get to, a level per move away. A spy is the only
+// piece that has one, and none of it is a legal move — see pz.getPreviewPositions.
+test.describe('the spy walk preview', () => {
+	function walkingSpy(extra = {}) {
+		let pieces = pz.init();
+		pieces = onBoard(pieces, '0-S', [3, 3]);
+
+		return withPiece(pieces, '0-S', { selected: true, showMoveCells: true, ...extra });
+	}
+
+	function contains(positions, position) {
+		return positions.some(([row, cell]) => row === position[0] && cell === position[1]);
+	}
+
+	test('shows the cells the second move could reach, one level of them', () => {
+		const preview = pz.getPreviewPositions(walkingSpy(), SELECTION);
+
+		// The two rings around the middle cell: six now, twelve one move further out.
+		expect(preview).toHaveLength(1);
+		expect(preview[0]).toHaveLength(12);
+		expect(contains(preview[0], [1, 3])).toBe(true);
+	});
+
+	test('leaves a cell it can reach right now in the red it already has', () => {
+		const pieces = walkingSpy();
+		const now = pz.getHighlightedPositions(pieces, SELECTION);
+		const later = pz.getPreviewPositions(pieces, SELECTION);
+
+		// Every neighbour is reachable in two moves as well — out and back round — so this is the
+		// rule that the nearer reading wins, not an accident of the geometry.
+		expect(now).toHaveLength(6);
+		for (const position of now) {
+			expect(contains(later[0], position)).toBe(false);
+		}
+	});
+
+	test('does not offer the cell the spy is standing on', () => {
+		const preview = pz.getPreviewPositions(walkingSpy(), SELECTION);
+
+		expect(contains(preview[0], [3, 3])).toBe(false);
+	});
+
+	test('has nothing left to show on the last move', () => {
+		expect(pz.getPreviewPositions(walkingSpy(), MOVEMENT)).toEqual([]);
+	});
+
+	test('shows two levels for a buffed spy, and one after it has moved once', () => {
+		const buffed = walkingSpy({ buffed: true });
+
+		const fromTheStart = pz.getPreviewPositions(buffed, SELECTION);
+		expect(fromTheStart.map(level => level.length)).toEqual([12, 18]);
+
+		expect(pz.getPreviewPositions(buffed, MOVEMENT).map(level => level.length)).toEqual([12]);
+		expect(pz.getPreviewPositions(buffed, MOVEMENT2)).toEqual([]);
+	});
+
+	test('cannot walk through an occupied cell', () => {
+		// A middle move may not land on a piece, so the cell straight beyond one drops off the
+		// walk while the rest of the ring, reachable round the other side, stays on it.
+		const pieces = onBoard(walkingSpy(), '1-A1', [2, 3]);
+		const blocked = pz.getPreviewPositions(pieces, SELECTION);
+
+		expect(contains(pz.getHighlightedPositions(pieces, SELECTION), [2, 3])).toBe(false);
+		expect(contains(blocked[0], [1, 3])).toBe(false);
+		expect(contains(blocked[0], [1, 2])).toBe(true);
+
+		// The last step of the walk is the one that may take a piece, so the cell it is standing on
+		// is where the spy could get to next — which is the whole point of showing the walk.
+		expect(contains(blocked[0], [2, 3])).toBe(true);
+	});
+
+	test('is empty for every piece that does not walk', () => {
+		let pieces = pz.init();
+		pieces = onBoard(pieces, '0-A1', [3, 3]);
+		pieces = withPiece(pieces, '0-A1', { selected: true, showMoveCells: true });
+
+		expect(pz.getPreviewPositions(pieces, SELECTION)).toEqual([]);
+		expect(pz.getPreviewPositions(pz.init(), SELECTION)).toEqual([]);
+	});
+
+	test('is not a legal move', () => {
+		const pieces = walkingSpy();
+		const [twoAway] = pz.getPreviewPositions(pieces, SELECTION)[0];
+
+		expect(pz.isMovePieceOnCellClick(false, twoAway, pieces, SELECTION)).toBe(false);
 	});
 });
 

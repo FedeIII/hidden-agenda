@@ -10,8 +10,12 @@ import { TOGGLE_PIECE, MOVE_PIECE, CLAIM_CONTROL, CANCEL_CONTROL } from 'Game/ac
  *
  * SPY: SELECTION => DESELECTION
  *                => PLACEMENT => COLLOCATION
- *                => MOVEMENT => MOVEMENT2 => COLLOCATION
- *                                (buffed) => MOVEMENT3 => COLLOCATION
+ *                => MOVEMENT => MOVEMENT2
+ *                                (buffed) => MOVEMENT3
+ *
+ * The spy is the one piece whose walk does not end in a COLLOCATION. Its last step sets its facing,
+ * so there is nothing left to point and it puts itself down — pz.isSettledByMove. Coming out of an
+ * HQ it goes through PLACEMENT like everything else, because it lands there with no facing at all.
  *
  * CEO: SELECTION => DESELECTION
  *                => PLACEMENT => COLLOCATION

@@ -5,7 +5,7 @@ import hexPrismGeometry, { ORIENTATION } from './geometry';
 import addLights from './lighting';
 import { allRenderedCells, cellToWorld, COLUMN_PITCH, directionToAngle, isPlayableCell, R, ROW_PITCH } from './layout';
 import { lastScreenPosition, noteScreenPosition, setHand } from './flight';
-import { AIM, BOARD, boardColors, HIGHLIGHT, HOVER, KEYLINE } from './palette';
+import { AIM, BOARD, boardColors, HIGHLIGHT, HOVER, KEYLINE, previewStep } from './palette';
 import getStage, { prefersReducedMotion } from './stage';
 import createProjector, { boxStyle } from './view';
 import createToken, { CARRY_LIFT } from './token';
@@ -95,27 +95,87 @@ function createPlinth(skin) {
 // cell a player is also trying to see a piece on. The dark shoulder outside the red is what makes
 // one ring work on the palest tile and the darkest alike — red on #a1abb7 is about 1.5:1 on its
 // own, which is not a signal.
+//
+// The wash is faint. Deploying a piece out of an HQ makes every empty cell legal, so it is the wash
+// on thirty-seven tiles at once as often as it is the wash on two — and at anything heavier the
+// board stops being a board and becomes a red rectangle.
+//
+// `signal` marks the two rings that carry the meaning, and therefore the two a spy's later steps
+// recolour. The keyline is not one of them: it is the dark shoulder that makes any of these hues
+// legible against both ends of the board, so it keeps its own colour whatever is inside it.
+const HIGHLIGHT_RINGS = [
+	{
+		key: 'wash',
+		inner: 0,
+		outer: SIZES.tileRadius * 0.84,
+		color: HIGHLIGHT,
+		signal: true,
+		opacity: 0.09,
+		lift: 0.006,
+		order: 1,
+	},
+	{
+		key: 'rim',
+		inner: SIZES.tileRadius * 0.855,
+		outer: SIZES.tileRadius * 0.9,
+		color: HIGHLIGHT,
+		signal: true,
+		opacity: 0.8,
+		lift: 0.008,
+		order: 2,
+	},
+	{
+		key: 'keyline',
+		inner: SIZES.tileRadius * 0.9,
+		outer: SIZES.tileRadius * 0.912,
+		color: KEYLINE,
+		opacity: 0.85,
+		lift: 0.008,
+		order: 3,
+	},
+];
+
+// A cell a spy could only reach on a later move is the same three rings in that step's own colour.
+// Materials rather than a second set of meshes: they are shared and cached per level, so a preview
+// costs one assignment per ring and the board still holds thirty-seven highlight groups in all.
+function ringMaterial(ring, level) {
+	return sharedAsset(`ringMaterial-${ring.key}-${level}`, () => {
+		const step = level && previewStep(level);
+
+		return new MeshBasicMaterial({
+			color: step && ring.signal ? step.color : ring.color,
+			transparent: true,
+			opacity: step ? ring.opacity * step.fade : ring.opacity,
+			depthWrite: false,
+		});
+	});
+}
+
 function createHighlight() {
 	const group = new Group();
 
-	// Faint. Deploying a piece out of an HQ makes every empty cell legal, so this is the wash on
-	// thirty-seven tiles at once as often as it is the wash on two — and at anything heavier the
-	// board stops being a board and becomes a red rectangle.
-	const wash = flat('wash', 0, SIZES.tileRadius * 0.84, HIGHLIGHT, 0.09);
-	const rim = flat('rim', SIZES.tileRadius * 0.855, SIZES.tileRadius * 0.9, HIGHLIGHT, 0.8);
-	const keyline = flat('keyline', SIZES.tileRadius * 0.9, SIZES.tileRadius * 0.912, KEYLINE, 0.85);
+	const rings = HIGHLIGHT_RINGS.map(ring => {
+		const mesh = new Mesh(
+			sharedAsset(`ring-${ring.key}`, () => hexRing(ring.inner, ring.outer)),
+			ringMaterial(ring, 0),
+		);
 
-	wash.position.y = TILE_TOP + 0.006;
-	rim.position.y = TILE_TOP + 0.008;
-	keyline.position.y = TILE_TOP + 0.008;
-	wash.renderOrder = 1;
-	rim.renderOrder = 2;
-	keyline.renderOrder = 3;
+		mesh.position.y = TILE_TOP + ring.lift;
+		mesh.renderOrder = ring.order;
 
-	group.add(wash, rim, keyline);
+		return mesh;
+	});
+
+	group.add(...rings);
 	group.visible = false;
 
-	return group;
+	return Object.assign(group, {
+		setLevel(level) {
+			rings.forEach((mesh, at) => {
+				mesh.material = ringMaterial(HIGHLIGHT_RINGS[at], level);
+			});
+		},
+	});
 }
 
 // Where a piece may be POINTED, which is never the same colour as where it may go. Six of them,
@@ -397,7 +457,7 @@ export default function createBoardScene(element, skin) {
 		},
 
 		/** @returns whether anything visible changed, which decides whether the board repaints. */
-		setState({ pieces, highlightedPositions, snipe, aim, hovered }) {
+		setState({ pieces, highlightedPositions, previewPositions = [], snipe, aim, hovered }) {
 			const next = [
 				pieces
 					.filter(piece => piece.position && !piece.killed)
@@ -409,6 +469,7 @@ export default function createBoardScene(element, skin) {
 					)
 					.join(),
 				highlightedPositions.join(';'),
+				previewPositions.map(positions => positions.join(';')).join('+'),
 				snipe ? 'snipe' : '',
 				aim ? `${aim.from}>${aim.directions.join(';')}` : '',
 			].join('|');
@@ -426,11 +487,27 @@ export default function createBoardScene(element, skin) {
 				entry.wanted = 0;
 			}
 
+			// Where a spy's later steps could land, a colour per move away. Drawn before the legal
+			// cells and without the rise: the tile standing up out of the tray is what "you may go
+			// here" means, and a cell reachable both now and later has to end up saying the nearer
+			// of the two. The domain hands these back disjoint, so the order is a belt as well.
+			previewPositions.forEach((positions, level) => {
+				for (const [row, cell] of positions) {
+					const highlight = highlights.get(`${row}-${cell}`);
+
+					if (highlight) {
+						highlight.setLevel(level + 1);
+						highlight.visible = true;
+					}
+				}
+			});
+
 			for (const [row, cell] of highlightedPositions) {
 				const key = `${row}-${cell}`;
 				const highlight = highlights.get(key);
 
 				if (highlight) {
+					highlight.setLevel(0);
 					highlight.visible = true;
 					tiles.get(key).wanted = TILE_RISE;
 				}

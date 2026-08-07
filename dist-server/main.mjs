@@ -548,7 +548,7 @@ var cells_default = {
 //#endregion
 //#region src/domain/pieces/pz.js
 var { AGENT: AGENT$2, CEO: CEO$2, SPY: SPY$2, SNIPER: SNIPER$2 } = TYPES;
-var { SELECTION, MOVEMENT: MOVEMENT$1, MOVEMENT2: MOVEMENT2$1, MOVEMENT3: MOVEMENT3$1, DESELECTION, COLLOCATION: COLLOCATION$1, PLACEMENT: PLACEMENT$1 } = STATES;
+var { SELECTION, MOVEMENT: MOVEMENT$1, MOVEMENT2, MOVEMENT3, DESELECTION, COLLOCATION: COLLOCATION$1, PLACEMENT: PLACEMENT$1 } = STATES;
 function createPiece(id) {
 	return {
 		id,
@@ -579,11 +579,14 @@ function hasToToggle(pieceId, selectedPiece, { players, snipe, pieceState, piece
 	if (snipe) return false;
 	if (isToggledTeamControlled(pieceId, teamControl, piecesPrevState, players, pieces)) return false;
 	if (!selectedPiece) return true;
-	if (isSpy(pieceId)) {
-		if (pieceState === MOVEMENT$1) return false;
-		if (getPieceById(pieceId, pieces).buffed && pieceState === MOVEMENT2$1) return false;
-	}
+	if (isSpyMidWalk(pieceId, pieces, pieceState)) return false;
 	return selectedPiece.id === pieceId;
+}
+function isSpyMidWalk(pieceId, pieces, pieceState) {
+	if (!isSpy(pieceId)) return false;
+	const spy = getPieceById(pieceId, pieces);
+	if (!spy.selected) return false;
+	return pieceState === MOVEMENT$1 || spy.buffed && pieceState === MOVEMENT2;
 }
 function isToggledTeamControlled(pieceId, teamControl, piecesPrevState, players, pieces) {
 	if (cells_default.inBoard(getPieceById(pieceId, pieces).position)) return false;
@@ -610,10 +613,7 @@ function toggledPiece(piece) {
 }
 function togglePieceState$1(pieceId, { pieces, pieceState, followMouse }) {
 	const selectedPiece = getSelectedPiece(pieces);
-	if (isSpy(pieceId, pieces)) {
-		if (pieceState === MOVEMENT$1) return MOVEMENT$1;
-		if (getPieceById(pieceId, pieces).buffed && pieceState === MOVEMENT2$1) return MOVEMENT2$1;
-	}
+	if (isSpyMidWalk(pieceId, pieces, pieceState)) return pieceState;
 	if (!!selectedPiece && selectedPiece.id !== pieceId) return pieceState;
 	if (followMouse) return COLLOCATION$1;
 	const toggledPiece = getPieceById(pieceId, pieces);
@@ -691,9 +691,16 @@ function moveSpy(spy, toPosition, throughSniperLineOf, pieceState) {
 		position: toPosition,
 		direction: spyDirection,
 		selectedDirection: spySelectedDirection,
-		showMoveCells: spy.position && pieceState === SELECTION || spy.buffed && pieceState === MOVEMENT$1 ? true : false,
+		showMoveCells: willSpyKeepMoving(spy, pieceState),
+		selected: !isSettledByMove(spy, pieceState),
 		throughSniperLineOf
 	};
+}
+function willSpyKeepMoving(spy, pieceState) {
+	return Boolean(spy.position && pieceState === SELECTION || spy.buffed && pieceState === MOVEMENT$1);
+}
+function isSettledByMove(piece, pieceState) {
+	return isSpy(piece.id) && Boolean(piece.position) && !willSpyKeepMoving(piece, pieceState);
 }
 function moveSniper(sniper, toPosition, throughSniperLineOf) {
 	const sniperDirection = sniper.position ? cells_default.getDirection(sniper.position, toPosition) : void 0;
@@ -716,8 +723,8 @@ function movedPieceState$2(pieceId, { pieces, pieceState }) {
 	}
 }
 function getMovedSpyState(spy, pieceState) {
-	if (spy.buffed) return pieceState === MOVEMENT$1 ? MOVEMENT2$1 : pieceState === MOVEMENT2$1 ? MOVEMENT3$1 : MOVEMENT$1;
-	return pieceState === MOVEMENT$1 ? MOVEMENT2$1 : MOVEMENT$1;
+	if (spy.buffed) return pieceState === MOVEMENT$1 ? MOVEMENT2 : pieceState === MOVEMENT2 ? MOVEMENT3 : MOVEMENT$1;
+	return pieceState === MOVEMENT$1 ? MOVEMENT2 : MOVEMENT$1;
 }
 function getPossibleDirections(piece, pieces, pieceState) {
 	switch (getType(piece.id)) {
@@ -803,6 +810,41 @@ function getSniperPositions(sniper, pieces) {
 }
 function isSpyMiddleMovement(buffed, pieceState) {
 	return pieceState === SELECTION || buffed && pieceState === MOVEMENT$1;
+}
+function getPreviewPositions(pieces, pieceState) {
+	const walking = pieces.find((piece) => piece.showMoveCells && isSpy(piece.id) && piece.position);
+	return walking ? getSpyPreviewPositions(walking, pieces, pieceState) : [];
+}
+function getSpyPreviewPositions(spy, pieces, pieceState) {
+	const levels = [];
+	const seen = [spy.position];
+	let frontier = [spy.position];
+	for (const state of getRemainingSpyStates(spy, pieceState)) {
+		frontier = getUniquePositions(frontier.reduce((acc, from) => acc.concat(getSpyPositionsFrom(spy, from, pieces, state)), []));
+		levels.push(frontier.filter((position) => !areCoordsInList(position, seen)));
+		seen.push(...frontier);
+	}
+	return levels.slice(1);
+}
+function getSpyPositionsFrom(spy, from, pieces, pieceState) {
+	const stepped = pieces.map((piece) => piece.id === spy.id ? {
+		...piece,
+		position: from
+	} : piece);
+	return getSpyPositions(getPieceById(spy.id, stepped), stepped, pieceState);
+}
+function getRemainingSpyStates(spy, pieceState) {
+	const finished = spy.buffed ? MOVEMENT3 : MOVEMENT2;
+	const states = [];
+	let state = pieceState;
+	while (state !== finished) {
+		states.push(state);
+		state = getMovedSpyState(spy, state);
+	}
+	return states;
+}
+function getUniquePositions(positions) {
+	return positions.reduce((unique, position) => areCoordsInList(position, unique) ? unique : unique.concat([position]), []);
 }
 function getFreePositionAt(position, piece, pieces) {
 	const pieceAtPosition = getPieceAtPosition(position, pieces);
@@ -1133,10 +1175,12 @@ var pz = {
 	togglePieceState: togglePieceState$1,
 	move,
 	movedPieceState: movedPieceState$2,
+	isSettledByMove,
 	getPossibleDirections,
 	changeSelectedPieceDirection,
 	getSelectedPiece,
 	getHighlightedPositions,
+	getPreviewPositions,
 	getPieceAtPosition,
 	removeIsThroughSniperLine,
 	killSnipedPiece,
@@ -1671,13 +1715,13 @@ function playersReducer({ players }, action) {
 //#endregion
 //#region src/game/reducers/hasTurnEndedReducer.js
 var { AGENT: AGENT$1, CEO: CEO$1, SPY: SPY$1, SNIPER: SNIPER$1 } = TYPES;
-var { MOVEMENT, MOVEMENT2, MOVEMENT3, PLACEMENT } = STATES;
+var { MOVEMENT, PLACEMENT } = STATES;
 function hasPieceEndedTurn(pieces, pieceState, toggledPieceId) {
 	const selectedPiece = pz.getSelectedPiece(pieces);
 	if (selectedPiece && selectedPiece.id === toggledPieceId) switch (pz.getType(selectedPiece.id)) {
 		case AGENT$1: return pieceState === PLACEMENT || pieceState === MOVEMENT;
 		case CEO$1: return pieceState === PLACEMENT || pieceState === MOVEMENT;
-		case SPY$1: return selectedPiece.buffed ? pieceState === PLACEMENT || pieceState === MOVEMENT3 : pieceState === PLACEMENT || pieceState === MOVEMENT2;
+		case SPY$1: return pieceState === PLACEMENT;
 		case SNIPER$1: return pieceState === PLACEMENT || pieceState === MOVEMENT;
 		default: return false;
 	}
@@ -1689,6 +1733,10 @@ function hasTurnChangedTheBoard(state, toggledPieceId) {
 function isPieceBeingDropped(state, toggledPieceId) {
 	if (state.hasTurnEnded) return true;
 	return hasPieceEndedTurn(state.pieces, state.pieceState, toggledPieceId) && hasTurnChangedTheBoard(state, toggledPieceId);
+}
+function isPieceSettledByMove(state, { pieceId, coords }) {
+	if (!pz.isSettledByMove(pz.getPieceById(pieceId, state.pieces), state.pieceState)) return false;
+	return pz.hasBoardChanged(pz.move(state.pieces, pieceId, coords, state.pieceState), state.piecesPrevState);
 }
 function isSniperSelectedForSnipe(snipe, pieceId) {
 	return snipe && pz.isSniper(pieceId);
@@ -1706,7 +1754,7 @@ function hasTurnEndedReducer(state, action) {
 		case NEXT_TURN: return false;
 		case START_GAME: return false;
 		case TOGGLE_PIECE: return togglePieceState(state, action.payload.pieceId);
-		case MOVE_PIECE: return false;
+		case MOVE_PIECE: return isPieceSettledByMove(state, action.payload);
 		case SNIPE: return snipeState$2(state);
 		default: return state.hasTurnEnded;
 	}
@@ -1759,8 +1807,12 @@ function piecesReducer(state, action) {
 *
 * SPY: SELECTION => DESELECTION
 *                => PLACEMENT => COLLOCATION
-*                => MOVEMENT => MOVEMENT2 => COLLOCATION
-*                                (buffed) => MOVEMENT3 => COLLOCATION
+*                => MOVEMENT => MOVEMENT2
+*                                (buffed) => MOVEMENT3
+*
+* The spy is the one piece whose walk does not end in a COLLOCATION. Its last step sets its facing,
+* so there is nothing left to point and it puts itself down — pz.isSettledByMove. Coming out of an
+* HQ it goes through PLACEMENT like everything else, because it lands there with no facing at all.
 *
 * CEO: SELECTION => DESELECTION
 *                => PLACEMENT => COLLOCATION

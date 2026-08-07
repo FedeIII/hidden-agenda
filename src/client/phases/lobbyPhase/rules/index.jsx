@@ -5,6 +5,9 @@ import { RULES_PAGES, GROUPS, findRulePage } from './content';
 import {
 	RulesPanel,
 	RulesIntro,
+	PageHead,
+	PageHeadTitle,
+	HeadStep,
 	CheatSheetLink,
 	CheatSheetLinkTitle,
 	CheatSheetLinkTeaser,
@@ -165,11 +168,7 @@ function RuleLightbox({ image, onClose }) {
 
 	return (
 		<LightboxOverlay id="rules-lightbox" onClick={onClose}>
-			<LightboxImage
-				src={`img/rules/${image.file}`}
-				alt={image.alt}
-				onClick={event => event.stopPropagation()}
-			/>
+			<LightboxImage src={`img/rules/${image.file}`} alt={image.alt} onClick={event => event.stopPropagation()} />
 			<LightboxHint>Esc or click outside to close</LightboxHint>
 		</LightboxOverlay>
 	);
@@ -214,6 +213,91 @@ export function RulesIndex({ onOpen, onBack }) {
 	);
 }
 
+// Leaving the book, which is a different kind of decision from turning a page in it — so it keeps
+// its own row, at the top, and is not repeated at the foot.
+function PageChrome({ onBack, onIndex }) {
+	return (
+		<Buttons>
+			<Button id="rules-main-menu" small active onClick={onBack}>
+				Main Menu
+			</Button>
+			<Button id="rules-index" small active onClick={onIndex}>
+				Index
+			</Button>
+		</Buttons>
+	);
+}
+
+// The pager brackets the content rather than sitting only under it. A rule page is a long read on a
+// phone: arriving at one, the way on was a scroll away at the bottom, and skipping a page you did
+// not want meant scrolling the whole of it to find out there was a way past.
+//
+// At the top it is a glyph either side of the title — a running head — because that is a whole band
+// of chrome saved on the screen where it is scarcest, and the two destinations are named in full at
+// the foot of the page anyway. They are still named here, to the label rather than to the eye.
+//
+// `top`/`bottom` are in the ids because these are two real sets of buttons, not one drawn twice:
+// duplicate ids would be invalid, and a strict-mode locator resolves to neither.
+function RunningHead({ title, prev, next, onOpen }) {
+	return (
+		<PageHead>
+			<HeadStep>
+				{prev && (
+					<Button
+						id="rules-prev-top"
+						small
+						active
+						aria-label={`Back to ${prev.title}`}
+						title={prev.title}
+						onClick={() => onOpen(prev.slug)}
+					>
+						‹
+					</Button>
+				)}
+			</HeadStep>
+
+			<PageHeadTitle>{title}</PageHeadTitle>
+
+			<HeadStep>
+				{next && (
+					<Button
+						id="rules-next-top"
+						small
+						active
+						aria-label={`On to ${next.title}`}
+						title={next.title}
+						onClick={() => onOpen(next.slug)}
+					>
+						›
+					</Button>
+				)}
+			</HeadStep>
+		</PageHead>
+	);
+}
+
+// The foot of the page, where there is room to say where each one goes.
+function PageSteps({ prev, next, onOpen }) {
+	if (!prev && !next) {
+		return null;
+	}
+
+	return (
+		<Buttons>
+			{prev && (
+				<Button id="rules-prev-bottom" small active onClick={() => onOpen(prev.slug)}>
+					‹ {prev.title}
+				</Button>
+			)}
+			{next && (
+				<Button id="rules-next-bottom" small active onClick={() => onOpen(next.slug)}>
+					{next.title} ›
+				</Button>
+			)}
+		</Buttons>
+	);
+}
+
 // One topic, start to finish, with a way to step to the next one without going back through the
 // index — a rulebook you can read straight through if that is the mood you are in.
 export function RulePage({ slug, onOpen, onBack, onIndex }) {
@@ -223,14 +307,7 @@ export function RulePage({ slug, onOpen, onBack, onIndex }) {
 	if (!page) {
 		return (
 			<RulesPanel>
-				<Buttons>
-					<Button id="rules-main-menu" small active onClick={onBack}>
-						Main Menu
-					</Button>
-					<Button id="rules-index" small active onClick={onIndex}>
-						Index
-					</Button>
-				</Buttons>
+				<PageChrome onBack={onBack} onIndex={onIndex} />
 				<Subtitle>That page isn't here</Subtitle>
 			</RulesPanel>
 		);
@@ -245,16 +322,9 @@ export function RulePage({ slug, onOpen, onBack, onIndex }) {
 	if (page.cheatSheet) {
 		return (
 			<RulesPanel>
-				<Buttons>
-					<Button id="rules-main-menu" small active onClick={onBack}>
-						Main Menu
-					</Button>
-					<Button id="rules-index" small active onClick={onIndex}>
-						Index
-					</Button>
-				</Buttons>
+				<PageChrome onBack={onBack} onIndex={onIndex} />
 
-				<Subtitle>{page.title}</Subtitle>
+				<RunningHead title={page.title} prev={prev} next={next} onOpen={onOpen} />
 
 				<CheatGrid>
 					{page.cheatSheet.map(section => (
@@ -270,29 +340,16 @@ export function RulePage({ slug, onOpen, onBack, onIndex }) {
 					))}
 				</CheatGrid>
 
-				<Buttons>
-					{next && (
-						<Button id="rules-next" small active onClick={() => onOpen(next.slug)}>
-							{next.title} ›
-						</Button>
-					)}
-				</Buttons>
+				<PageSteps prev={prev} next={next} onOpen={onOpen} />
 			</RulesPanel>
 		);
 	}
 
 	return (
 		<RulesPanel>
-			<Buttons>
-				<Button id="rules-main-menu" small active onClick={onBack}>
-					Main Menu
-				</Button>
-				<Button id="rules-index" small active onClick={onIndex}>
-					Index
-				</Button>
-			</Buttons>
+			<PageChrome onBack={onBack} onIndex={onIndex} />
 
-			<Subtitle>{page.title}</Subtitle>
+			<RunningHead title={page.title} prev={prev} next={next} onOpen={onOpen} />
 
 			<RuleContent>
 				{/* Most pages float their exhibit beside the prose. A page whose images are the whole
@@ -325,35 +382,20 @@ export function RulePage({ slug, onOpen, onBack, onIndex }) {
 						</RuleTable>
 					)}
 				</RuleBody>
-				{page.imagesAtEnd && page.images && <ExhibitPair images={page.images} index={pageIndex} onZoom={setZoomed} full />}
+				{page.imagesAtEnd && page.images && (
+					<ExhibitPair images={page.images} index={pageIndex} onZoom={setZoomed} full />
+				)}
 				{page.imagesAtEnd && page.imageGroups && (
 					<ExhibitGroupRow>
 						{page.imageGroups.map((group, groupIndex) => (
-							<ExhibitPair
-								key={group[0].file}
-								images={group}
-								index={pageIndex + groupIndex}
-								onZoom={setZoomed}
-								full
-							/>
+							<ExhibitPair key={group[0].file} images={group} index={pageIndex + groupIndex} onZoom={setZoomed} full />
 						))}
 					</ExhibitGroupRow>
 				)}
 				{page.imagesAtEnd && page.image && <Exhibit image={page.image} index={pageIndex} onZoom={setZoomed} />}
 			</RuleContent>
 
-			<Buttons>
-				{prev && (
-					<Button id="rules-prev" small active onClick={() => onOpen(prev.slug)}>
-						‹ {prev.title}
-					</Button>
-				)}
-				{next && (
-					<Button id="rules-next" small active onClick={() => onOpen(next.slug)}>
-						{next.title} ›
-					</Button>
-				)}
-			</Buttons>
+			<PageSteps prev={prev} next={next} onOpen={onOpen} />
 
 			{zoomed && <RuleLightbox image={zoomed} onClose={() => setZoomed(null)} />}
 		</RulesPanel>

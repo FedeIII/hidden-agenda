@@ -1,15 +1,24 @@
 import styled from 'styled-components';
+import { narrow } from 'Client/components/breakpoints';
 
 // The waiting room, which is the first place an online table sees the skin the server drew for it:
 // the room frame carries it alongside the seat list, so by the time a code is on screen everyone
 // looking at that code is looking at the same material.
 
+// Tighter on a phone, where this padding and this gap are the frame around a screen that has none
+// to spare — and where they are paid above the fold every time, on the lobby's own forms as much as
+// on a rule page, which stacks three more bands under them before its first line of text.
 export const LobbyContainer = styled.div`
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	gap: 18px;
 	padding: 24px 16px;
+
+	${narrow} {
+		gap: 10px;
+		padding: 12px 12px;
+	}
 `;
 
 export const Panel = styled.div`

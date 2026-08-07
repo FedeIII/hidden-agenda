@@ -165,6 +165,44 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.11.0
+* **A spy shows the whole walk, not just its next step.** It moves a cell at a time and then has to
+  move again, and the board only ever marked the step in hand — so the player was holding the rest of
+  it in their head, which is a lot to ask of the one piece that can end up almost anywhere. Each move
+  is marked in a colour of its own now: **red** where it can go this step, **teal** where the second
+  could take it, and **gold** for the third a CEO buff adds. A colour per step rather than one red
+  fading out, so which move a cell belongs to can be read off that cell alone. A cell it could reach
+  both now and later is a legal cell first, in red, so nothing that can be clicked has been made to
+  look like something that cannot
+* None of it is a legal move and none of it can be clicked: the preview is its own list, and the
+  server still re-derives legality from the cells the current move may actually reach
+* **A spy has no turning step any more.** Its facing has always come from the step it just took, so
+  by the time the last one landed the board was asking for a decision that had already been made —
+  point it where it is already pointing, then put it down. It settles where it lands now, facing the
+  way it walked, and the turn is over. Coming out of an HQ is unchanged: it arrives with no facing
+  of its own, so it is still pointed and put down by hand
+  * Which took a bug with it on the way in: settling ends the turn without the drop that used to
+    reset the piece state machine, so one spy's walk was left lying around for the next one to pick
+    up — and a buffed spy that picked it up thought it had already taken two of its three steps, and
+    moved once. That state belongs to whatever is in hand, and between turns nothing is
+* **How to Play's Spy and CEO Buffs photographs were taken again**, so the pages show what the board
+  actually looks like: two rings on the Spy's own page, three on the buffed one
+* **How to Play turns its pages from either end now.** *Main Menu* and *Index* stay at the top, where
+  leaving the book belongs, and the previous/next pair sits both above the text and below it — so on
+  a phone, where a page is a long read, the way on is wherever you happen to be rather than only at
+  the bottom. Turning a page starts the next one at the top, which it did not: every screen here is
+  the same component with different props, so nothing was moving the scroll, and turning the page
+  from the foot of one dropped you that far down the next
+* **A photograph's caption no longer prints over the photograph.** It sat in a fixed strip at the
+  foot of the mat, so a caption long enough to wrap to a fourth line — which is most of them on a
+  phone — grew up over the picture instead of down
+* **A rule page starts near the top of the screen.** The header, the way out, the page title and the
+  pager stacked four deep and took 210px of a 700px phone before the first word — a third of the
+  screen, on the device with the least of it. The title and the page-turn pair share one line now,
+  as a running head with a ‹ and a › either side of the title, and the frame around the whole lobby
+  is tighter on a narrow screen. Down to 131px, and the foot of the page still names both
+  destinations in full
+
 ### v3.10.2
 * **Every door on the How to Play index is the same size now.** The cards were laid out as a grid,
   which hands each row entirely to whatever is in it — so *Winning*'s two doors came out nearly three

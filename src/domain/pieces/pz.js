@@ -67,17 +67,32 @@ function hasToToggle(pieceId, selectedPiece, { players, snipe, pieceState, piece
 		return true;
 	}
 
-	if (isSpy(pieceId)) {
-		if (pieceState === MOVEMENT) {
-			return false;
-		}
-
-		if (getPieceById(pieceId, pieces).buffed && pieceState === MOVEMENT2) {
-			return false;
-		}
+	if (isSpyMidWalk(pieceId, pieces, pieceState)) {
+		return false;
 	}
 
 	return selectedPiece.id === pieceId;
+}
+
+// A spy that has taken a step and has more to take may not be put down: it has to finish the walk.
+//
+// Scoped to the spy actually in hand, and that is not decoration. `pieceState` describes whatever
+// is being held, so a spy only owns MOVEMENT or MOVEMENT2 while it is the selected piece — and a
+// settled spy now ends the turn without a toggle, which leaves the state machine sitting on
+// MOVEMENT2 rather than DESELECTION. Read without the check, a buffed spy picked up afterwards
+// inherited those two steps and moved once.
+function isSpyMidWalk(pieceId, pieces, pieceState) {
+	if (!isSpy(pieceId)) {
+		return false;
+	}
+
+	const spy = getPieceById(pieceId, pieces);
+
+	if (!spy.selected) {
+		return false;
+	}
+
+	return pieceState === MOVEMENT || (spy.buffed && pieceState === MOVEMENT2);
 }
 
 function isToggledTeamControlled(pieceId, teamControl, piecesPrevState, players, pieces) {
@@ -119,14 +134,10 @@ function toggledPiece(piece) {
 function togglePieceState(pieceId, { pieces, pieceState, followMouse }) {
 	const selectedPiece = getSelectedPiece(pieces);
 
-	if (isSpy(pieceId, pieces)) {
-		if (pieceState === MOVEMENT) {
-			return MOVEMENT;
-		}
-
-		if (getPieceById(pieceId, pieces).buffed && pieceState === MOVEMENT2) {
-			return MOVEMENT2;
-		}
+	// Mid-walk the click did nothing, so the state machine does not move either. Same predicate as
+	// hasToToggle, which is the half of the refusal that leaves the piece where it is.
+	if (isSpyMidWalk(pieceId, pieces, pieceState)) {
+		return pieceState;
 	}
 
 	if (!!selectedPiece && selectedPiece.id !== pieceId) {
@@ -251,9 +262,31 @@ function moveSpy(spy, toPosition, throughSniperLineOf, pieceState) {
 		position: toPosition,
 		direction: spyDirection,
 		selectedDirection: spySelectedDirection,
-		showMoveCells: (spy.position && pieceState === SELECTION) || (spy.buffed && pieceState === MOVEMENT) ? true : false,
+		showMoveCells: willSpyKeepMoving(spy, pieceState),
+		// A spy is the one piece with no turning step, so its last step puts it down as well as
+		// pointing it — see isSettledByMove. Every other piece is aimed after it lands and is put
+		// down by hand, which is the only other place `selected` is written.
+		selected: !isSettledByMove(spy, pieceState),
 		throughSniperLineOf,
 	};
+}
+
+function willSpyKeepMoving(spy, pieceState) {
+	return Boolean((spy.position && pieceState === SELECTION) || (spy.buffed && pieceState === MOVEMENT));
+}
+
+// Which pieces a move leaves settled — facing set, nothing left to point, no longer in hand.
+//
+// Only a spy, and only one already on the board. It takes its facing from the step it just took, so
+// by the time its last step lands there is nothing a turning step could still decide; being asked
+// to point it anyway was asking for a decision that had already been made. Everything else lands
+// and is then aimed, which is what PLACEMENT and COLLOCATION are for — including a spy coming out
+// of an HQ, which arrives with no direction of its own and is pointed like anything else.
+//
+// hasTurnEndedReducer reads this too, so what puts the piece down and what ends the turn are the
+// same question asked once.
+function isSettledByMove(piece, pieceState) {
+	return isSpy(piece.id) && Boolean(piece.position) && !willSpyKeepMoving(piece, pieceState);
 }
 
 function moveSniper(sniper, toPosition, throughSniperLineOf) {
@@ -461,6 +494,78 @@ function getSniperPositions(sniper, pieces) {
 
 function isSpyMiddleMovement(buffed, pieceState) {
 	return pieceState === SELECTION || (buffed && pieceState === MOVEMENT);
+}
+
+// Where the moves AFTER this one could land, grouped by how many moves away they are: index 0 is
+// one move past the current one, index 1 two past it. Only the spy fills it, because it is the one
+// piece that moves a cell at a time and then has to move again — so it was the one piece whose
+// player had to hold the rest of the walk in their head.
+//
+// Deliberately NOT part of getHighlightedPositions, and that separation is the point: the server
+// re-derives legality from that list, and a cell two moves away is not a legal move. This says
+// where the walk could get to and nothing else.
+//
+// The levels are disjoint and the nearest wins, so a cell reachable both now and later is a legal
+// destination first and a preview never.
+function getPreviewPositions(pieces, pieceState) {
+	const walking = pieces.find(piece => piece.showMoveCells && isSpy(piece.id) && piece.position);
+
+	return walking ? getSpyPreviewPositions(walking, pieces, pieceState) : [];
+}
+
+function getSpyPreviewPositions(spy, pieces, pieceState) {
+	const levels = [];
+
+	// The cell it is standing on is not somewhere it can get to, it is where it already is — and
+	// walking out and back is exactly the move hasTurnEndedReducer refuses to call a turn.
+	const seen = [spy.position];
+
+	let frontier = [spy.position];
+
+	for (const state of getRemainingSpyStates(spy, pieceState)) {
+		frontier = getUniquePositions(
+			frontier.reduce((acc, from) => acc.concat(getSpyPositionsFrom(spy, from, pieces, state)), []),
+		);
+
+		levels.push(frontier.filter(position => !areCoordsInList(position, seen)));
+		seen.push(...frontier);
+	}
+
+	// The first is the move the board is already drawing in full red.
+	return levels.slice(1);
+}
+
+// The spy is the only piece that moves during the walk, and every step but the last lands on an
+// empty cell — a middle move may not take a piece — so relocating it is the whole simulation.
+function getSpyPositionsFrom(spy, from, pieces, pieceState) {
+	const stepped = pieces.map(piece => (piece.id === spy.id ? { ...piece, position: from } : piece));
+
+	return getSpyPositions(getPieceById(spy.id, stepped), stepped, pieceState);
+}
+
+// The states a spy is in before each of its remaining moves, current move first. Walked with
+// getMovedSpyState rather than written out a second time, so what the preview shows and what the
+// game will actually allow cannot drift apart: a spy is finished after MOVEMENT2, MOVEMENT3 buffed.
+function getRemainingSpyStates(spy, pieceState) {
+	const finished = spy.buffed ? MOVEMENT3 : MOVEMENT2;
+	const states = [];
+
+	let state = pieceState;
+
+	while (state !== finished) {
+		states.push(state);
+		state = getMovedSpyState(spy, state);
+	}
+
+	return states;
+}
+
+// getUniqueValues compares with includes, which is identity for a pair of coordinates.
+function getUniquePositions(positions) {
+	return positions.reduce(
+		(unique, position) => (areCoordsInList(position, unique) ? unique : unique.concat([position])),
+		[],
+	);
 }
 
 function getFreePositionAt(position, piece, pieces) {
@@ -1045,6 +1150,7 @@ export const pz = {
 	// MOVEMENT
 	move,
 	movedPieceState,
+	isSettledByMove,
 
 	// DIRECTIONS
 	getPossibleDirections,
@@ -1053,6 +1159,7 @@ export const pz = {
 
 	// POSITIONS
 	getHighlightedPositions,
+	getPreviewPositions,
 	getPieceAtPosition,
 
 	// SNIPERS

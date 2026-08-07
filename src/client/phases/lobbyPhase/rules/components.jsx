@@ -1,19 +1,59 @@
 import styled, { css } from 'styled-components';
 import { narrow } from 'Client/components/breakpoints';
+import { Subtitle } from 'Client/components/title';
 
 // The rules read as their own small publication inside the file room — unlike the narrow forms
 // either side of them, this one is meant to fill whatever the device gives it: a page of prose
 // and photographs reads better wide than boxed into the same 760px a name field was happy with.
+//
+// The gap is tighter than the rest of the lobby's, and on a phone tighter again: this panel stacks
+// four things before the first line of text, so every step of the rhythm here is paid four times.
 export const RulesPanel = styled.div`
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 14px;
+	gap: 10px;
 	width: 100%;
 	padding: 0 28px;
 
 	${narrow} {
+		gap: 6px;
 		padding: 0 12px;
+	}
+`;
+
+// The running head: the page's own title with the way on and back either side of it, rather than a
+// band of its own for each. A rule page on a phone had 210px of chrome above its first line of
+// text — nearly a third of the screen — and this is the largest single piece of that back.
+export const PageHead = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	width: 100%;
+`;
+
+// The three sit together in the middle rather than the glyphs being pushed to the page's edges: on
+// a wide screen the content is 1100px across, and a pair of buttons in the far corners reads as two
+// stray controls rather than as the way to turn this page. It shrinks instead of stretching, so a
+// long title takes what it needs and the glyphs stay beside it.
+export const PageHeadTitle = styled(Subtitle)`
+	min-width: 0;
+	padding-top: 0;
+	padding-bottom: 0;
+`;
+
+// Equal on both sides whether or not there is a page to go to, so the title sits on the centre line
+// rather than wandering by half a button at the two ends of the book.
+const STEP_WIDTH = '34px';
+
+export const HeadStep = styled.span`
+	flex: 0 0 ${STEP_WIDTH};
+
+	> button {
+		width: 100%;
+		padding-left: 0;
+		padding-right: 0;
 	}
 `;
 
@@ -385,7 +425,11 @@ export const ExhibitFrame = styled.figure`
 	width: 380px;
 	max-width: 100%;
 	margin: ${({ $reverse }) => ($reverse ? '4px 0 14px 22px' : '4px 22px 14px 0')};
-	padding: 10px 10px 68px;
+	/* No reserved strip at the foot for the caption. This was a flat 68px with the tag absolutely
+	   positioned into it — a fixed height for text that wraps, so a caption needing a fourth line
+	   simply grew upwards over the photograph, which two pages did on a phone. The tag flows now
+	   and the mat sizes to whatever it is actually carrying. */
+	padding: 10px;
 	background: var(--ha-panel);
 	border: 1px solid var(--ha-panel-edge);
 	box-shadow:
@@ -534,13 +578,10 @@ export const ExhibitPairLabel = styled.span`
 `;
 
 export const ExhibitTag = styled.figcaption`
-	position: absolute;
-	left: 10px;
-	right: 10px;
-	bottom: 10px;
 	display: flex;
 	flex-direction: column;
 	gap: 1px;
+	margin-top: 10px;
 `;
 
 export const ExhibitLabel = styled.span`

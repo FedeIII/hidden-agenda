@@ -388,14 +388,14 @@ export const RULES_PAGES = [
 			{
 				file: 'spy-move.png',
 				label: 'Move',
-				alt: 'A spy selected, with its neighbouring cells lit up red for its next single step',
-				caption: 'One step at a time, in any direction — that is the whole zig-zag',
+				alt: 'A spy selected, its neighbouring cells lit red for its first step and the ring beyond them teal for its second',
+				caption: 'Red is this step, teal is the next — the whole zig-zag, laid out',
 			},
 			{
 				file: 'spy-kill.png',
 				label: 'Kill',
-				alt: 'A spy selected, one of its highlighted cells standing directly behind an enemy piece',
-				caption: 'Lit up behind the enemy — the one angle a Spy is allowed to strike from',
+				alt: 'A spy selected, with an enemy piece two cells away standing on one of the teal second-step cells, its back turned',
+				caption: 'Two steps off and already marked — and its back is turned, which is the only angle that counts',
 			},
 		],
 		body: [
@@ -404,10 +404,16 @@ export const RULES_PAGES = [
 			},
 			{ p: 'Its first step has to land on an **empty** cell — a Spy cannot kill on the way, only right at the end.' },
 			{
+				p: 'You do not have to work the zig-zag out in your head: while a Spy still has steps left, the board marks where the **later** ones could get to, each in a colour of its own — **teal** for the second step, **gold** for the third if it is buffed. Only the red cells are the ones you can click right now.',
+			},
+			{
 				p: 'On its last step, it can kill — but only by walking up on an enemy **from behind**: straight behind them, or from one of the two rear corners. Walk up to their face or their side, and it is simply not an option.',
 			},
 			{
 				p: 'Once a Spy has taken its first step, there is no putting it back — you must finish both steps before your turn can end.',
+			},
+			{
+				p: 'There is no aiming a Spy at the end: it ends up **facing the way it walked**, so its last step settles it where it lands and your turn is over. Coming out of its HQ is the one exception — it arrives with no heading of its own, so you point it as usual.',
 			},
 			{ note: 'Standing next to its own CEO, a Spy gets a third step instead of two.', buff: true },
 		],
@@ -520,8 +526,8 @@ export const RULES_PAGES = [
 			{
 				file: 'buff-spy.png',
 				label: 'Spy',
-				alt: 'A glowing, buffed spy with an enemy three cells away lit up as a legal kill',
-				caption: 'A third step reaches this kill — two never would have',
+				alt: 'A glowing, buffed spy beside its CEO, the board marked in three rings out from it — red, then teal, then gold',
+				caption: 'Three steps, three colours — the gold ring is reach two never had',
 			},
 			{
 				file: 'buff-sniper.png',

@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { createInitialState, gameReducer } from 'Game/reducer';
 import { startGame, nextTurn, togglePiece, movePiece, directPiece } from 'Game/actions';
-import { pz } from 'Domain/pieces';
+import { pz, STATES } from 'Domain/pieces';
 import cells from 'Domain/cells';
+
+const { SELECTION, MOVEMENT2 } = STATES;
 
 // A turn that leaves the board exactly as it found it is not a turn, and must not end one — the
 // NEXT TURN button is nothing but hasTurnEnded. Every sequence below is one the UI produces from
@@ -89,54 +91,105 @@ test.describe('a deployed sniper', () => {
 	});
 });
 
+// None of these ends with a togglePiece: a spy has no turning step, so its last move both points
+// it and puts it down. The move is the whole turn.
 test.describe('a spy that walks back onto its own cell', () => {
 	// Two moves are enough to leave and return, and the return leg sets the facing. Come back the
 	// way you came and the board is untouched.
 	test('does not end the turn when it arrives on the heading it left with', () => {
 		const state = deploy(twoPlayerGame(), '1-S', [4, 3], [3, 3]);
 
-		const dropped = dispatch(
-			state,
-			togglePiece('1-S'),
-			movePiece('1-S', [5, 3]),
-			movePiece('1-S', [4, 3]),
-			togglePiece('1-S'),
-		);
+		const walked = dispatch(state, togglePiece('1-S'), movePiece('1-S', [5, 3]), movePiece('1-S', [4, 3]));
 
-		const spy = pz.getPieceById('1-S', dropped.pieces);
+		const spy = pz.getPieceById('1-S', walked.pieces);
 
-		expect(dropped.hasTurnEnded).toBe(false);
+		expect(walked.hasTurnEnded).toBe(false);
 		expect(spy.position).toEqual([4, 3]);
 		expect(spy.direction).toEqual([1, 1]);
+
+		// Settled rather than stuck: the steps are spent, so it is back on the board with nothing
+		// in hand, and picking it up again is a fresh walk.
+		expect(spy.selected).toBe(false);
+		expect(pz.getPieceById('1-S', dispatch(walked, togglePiece('1-S')).pieces).showMoveCells).toBe(true);
 	});
 
 	test('does end the turn when it arrives facing a different way', () => {
 		const state = deploy(twoPlayerGame(), '1-S', [4, 3], [3, 3]);
 
-		const dropped = dispatch(
-			state,
-			togglePiece('1-S'),
-			movePiece('1-S', [4, 2]),
-			movePiece('1-S', [4, 3]),
-			togglePiece('1-S'),
-		);
+		const walked = dispatch(state, togglePiece('1-S'), movePiece('1-S', [4, 2]), movePiece('1-S', [4, 3]));
 
-		expect(dropped.hasTurnEnded).toBe(true);
-		expect(pz.getPieceById('1-S', dropped.pieces).direction).toEqual([0, 0]);
+		expect(walked.hasTurnEnded).toBe(true);
+		expect(pz.getPieceById('1-S', walked.pieces).direction).toEqual([0, 0]);
+		expect(pz.getPieceById('1-S', walked.pieces).selected).toBe(false);
 	});
 
 	test('does end the turn when it walks somewhere else', () => {
 		const state = deploy(twoPlayerGame(), '1-S', [4, 3], [3, 3]);
 
-		const dropped = dispatch(
-			state,
-			togglePiece('1-S'),
-			movePiece('1-S', [4, 2]),
-			movePiece('1-S', [4, 1]),
-			togglePiece('1-S'),
-		);
+		const walked = dispatch(state, togglePiece('1-S'), movePiece('1-S', [4, 2]), movePiece('1-S', [4, 1]));
 
-		expect(dropped.hasTurnEnded).toBe(true);
+		expect(walked.hasTurnEnded).toBe(true);
+	});
+
+	test('is settled for good — a click after it lands does not pick it up again', () => {
+		const state = deploy(twoPlayerGame(), '1-S', [4, 3], [3, 3]);
+
+		const walked = dispatch(state, togglePiece('1-S'), movePiece('1-S', [4, 2]), movePiece('1-S', [4, 1]));
+		const clicked = dispatch(walked, togglePiece('1-S'));
+
+		expect(clicked.hasTurnEnded).toBe(true);
+		expect(pz.getPieceById('1-S', clicked.pieces).selected).toBe(false);
+		expect(pz.getPieceById('1-S', clicked.pieces).showMoveCells).toBe(false);
+	});
+});
+
+// Regression. A settled spy ends the turn without a toggle, so the state machine is left sitting on
+// MOVEMENT2 instead of the DESELECTION a drop used to leave — and the guard that stops a spy being
+// put down mid-walk read that state without asking whose it was. A buffed spy picked up afterwards
+// inherited two steps it had never taken and moved once.
+test.describe('a spy does not inherit the last one’s steps', () => {
+	function buffedSpyAndAWalkedOne() {
+		let state = twoPlayerGame();
+
+		state = deploy(state, '1-C', [3, 3], [2, 3]);
+		state = deploy(state, '1-S', [4, 3], [3, 3]);
+		state = deploy(state, '0-S', [1, 1], [1, 2]);
+
+		// The other spy takes its two steps, settling itself and leaving MOVEMENT2 behind.
+		const walked = dispatch(state, togglePiece('0-S'), movePiece('0-S', [1, 2]), movePiece('0-S', [2, 2]));
+
+		expect(walked.pieceState).toEqual(MOVEMENT2);
+		expect(walked.hasTurnEnded).toBe(true);
+
+		return dispatch(walked, nextTurn());
+	}
+
+	test('a buffed spy still gets all three of its steps', () => {
+		const state = buffedSpyAndAWalkedOne();
+
+		expect(pz.getPieceById('1-S', state.pieces).buffed).toBe(true);
+
+		const picked = dispatch(state, togglePiece('1-S'));
+		expect(picked.pieceState).toEqual(SELECTION);
+
+		const first = dispatch(picked, movePiece('1-S', [4, 2]));
+		expect(first.hasTurnEnded).toBe(false);
+
+		const second = dispatch(first, movePiece('1-S', [4, 1]));
+		expect(second.hasTurnEnded).toBe(false);
+
+		const third = dispatch(second, movePiece('1-S', [3, 1]));
+		expect(third.hasTurnEnded).toBe(true);
+		expect(pz.getPieceById('1-S', third.pieces).position).toEqual([3, 1]);
+	});
+
+	test('and still cannot be put down in the middle of them', () => {
+		const state = buffedSpyAndAWalkedOne();
+
+		const midWalk = dispatch(state, togglePiece('1-S'), movePiece('1-S', [4, 2]), togglePiece('1-S'));
+
+		expect(pz.getPieceById('1-S', midWalk.pieces).selected).toBe(true);
+		expect(midWalk.hasTurnEnded).toBe(false);
 	});
 });
 
