@@ -555,10 +555,21 @@ export const ExhibitGroupRow = styled.div`
 
 // Three sits in one row, same as two — it is four that wants a 2×2 block instead of a strip too
 // narrow for its own captions. \`$full\` has the room to just lay every frame in one row.
+//
+// **Two columns is the ceiling on a phone, whatever the page asked for.** This had no narrow rule
+// at all, so a row divided 390px between however many frames it held and every one of them came out
+// a postage stamp: the sniper's four beats at 75px across, Making a Move's five at 58. A board crop
+// that small is not a smaller picture, it is no picture — the thing it was cropped to show stops
+// being visible at all. Halves are the smallest that still read, and the odd one out on a page with
+// an odd number of frames sits on its own row rather than shrinking the rest to meet it.
 export const ExhibitPairRow = styled.div`
 	display: grid;
 	grid-template-columns: repeat(${({ $count, $full }) => ($full ? $count : $count >= 4 ? 2 : $count)}, 1fr);
 	gap: 8px;
+
+	${narrow} {
+		grid-template-columns: repeat(${({ $count }) => Math.min($count, 2)}, 1fr);
+	}
 `;
 
 export const ExhibitPairColumn = styled.div`

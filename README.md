@@ -165,6 +165,17 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.11.1
+* **A phone stopped shrinking How to Play's photographs to nothing.** A row of exhibits divided the
+  screen between however many frames it held, and nothing capped that on a narrow one — so the
+  Sniper's four beats came out at 75px across and Making a Move's five at 58. A board crop that small
+  is not a smaller picture: the thing it was cropped to show stops being visible at all. Two columns
+  is the ceiling on a phone now, so every frame is at least half the column and the odd one out sits
+  on its own row instead of shrinking the rest to meet it
+* **Killing's photograph shows a cemetery with something in it.** The tally read `x1` against an
+  otherwise empty strip, which is a true picture of one kill and a poor picture of what a cemetery
+  is. It is two agents and a spy now, and the whole card is in frame — file tab included
+
 ### v3.11.0
 * **A spy shows the whole walk, not just its next step.** It moves a cell at a time and then has to
   move again, and the board only ever marked the step in hand — so the player was holding the rest of

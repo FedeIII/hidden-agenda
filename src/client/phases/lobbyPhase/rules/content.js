@@ -492,8 +492,8 @@ export const RULES_PAGES = [
 		teaser: 'Land on them, and they’re gone — to the cemetery.',
 		image: {
 			file: 'killing-hq.png',
-			alt: 'The HQ card of the team that just made a kill, its cemetery tally reading one agent',
-			caption: 'The tally at the foot of the card — the credit for a kill lands on the killer’s HQ',
+			alt: 'The HQ card of the team that made the kills, its cemetery tally reading two agents and a spy',
+			caption: 'Two agents and a spy, tallied at the foot of the card — the credit lands on the killer’s HQ',
 		},
 		body: [
 			{

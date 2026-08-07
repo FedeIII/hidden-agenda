@@ -16,6 +16,29 @@ async function openRule(page, slug) {
 	await page.click(`#rules-open-${slug}`);
 }
 
+// Every page that carries a photograph. Written out rather than read from the content module so a
+// page losing its images is a spec that fails rather than one that quietly stops checking anything.
+const RULE_PAGES = [
+	'big-idea',
+	'secret-cards',
+	'the-pieces',
+	'getting-ready',
+	'your-turn',
+	'making-a-move',
+	'the-agent',
+	'the-ceo',
+	'the-spy',
+	'the-sniper',
+	'killing',
+	'ceo-buffs',
+	'snipers-in-action',
+	'taking-control',
+	'revealing',
+	'accusing',
+	'how-it-ends',
+	'playing-online',
+];
+
 // `.game` is the scrollport, not the document — it is absolutely positioned over the viewport with
 // `overflow-y: auto`, so window.scrollY is 0 no matter how far down the page you are.
 const scrollTop = page => page.evaluate(() => document.querySelector('.game').scrollTop);
@@ -103,6 +126,31 @@ test.describe('THE RULE BOOK', () => {
 				.evaluate(el => Math.round(el.getBoundingClientRect().bottom));
 
 			expect(chromeEndsAt).toBeLessThan(160);
+		});
+
+		// Every page in the book, because the defect this catches is per-page: a row of exhibits
+		// divided the screen between however many frames it held, so a four-beat sequence came out
+		// at 75px a frame and a five-beat one at 58. A board crop that small is not a smaller
+		// picture — the thing it was cropped to show stops being visible at all. Two columns is the
+		// ceiling on a phone now, and halves are the smallest that still read.
+		test('no photograph is squeezed below half the column', async ({ page }) => {
+			const tooSmall = [];
+
+			for (const slug of RULE_PAGES) {
+				await openRule(page, slug);
+
+				const widths = await page.evaluate(() =>
+					[...document.querySelectorAll('figure img')].map(img => img.clientWidth),
+				);
+
+				for (const width of widths) {
+					if (width < 140) {
+						tooSmall.push(`${slug}: ${width}px`);
+					}
+				}
+			}
+
+			expect(tooSmall).toEqual([]);
 		});
 
 		// The caption is pinned under the photograph rather than into a fixed strip at the foot of
