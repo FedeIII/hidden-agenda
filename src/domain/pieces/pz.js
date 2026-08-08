@@ -1036,8 +1036,21 @@ function hasPiece(position, pieces) {
 	return !!getPieceAtPosition(position, pieces);
 }
 
+// Whether whoever is standing on `position` has their back to the spy — straight behind them, or one
+// of the two rear corners.
+//
+// It used to ask whether *any* piece on the board had its back turned, which is a different question
+// with the same answer nearly all of the time: with one enemy in reach it is right, and it only comes
+// apart when a second one is in reach as well. Then a spy was offered a kill on the piece looking
+// straight at it, because some other piece somewhere had happened to turn away.
+//
+// A piece with no facing yet — one being placed this very turn — has no back to come at, and is not
+// one either. It cannot arise while a spy is in hand, since only one piece is ever selected, but the
+// answer should not depend on that.
 function hasPieceBackwards(position, pieces, spyPosition) {
-	return !!(hasPiece(position, pieces) && pieces.find(piece => isPieceBackwards(piece, spyPosition)));
+	const target = getPieceAtPosition(position, pieces);
+
+	return !!(target && target.direction && isPieceBackwards(target, spyPosition));
 }
 
 function isPieceBackwards(piece, from) {
@@ -1165,6 +1178,11 @@ export const pz = {
 	// SNIPERS
 	removeIsThroughSniperLine,
 	killSnipedPiece,
+	// Which cells a sniper is watching. The game itself never draws this — a player reads it off the
+	// cells another piece is quietly refused — so nothing in the play phase asks. The training board
+	// does, because learning that the line is there at all is the whole of that lesson, and it has to
+	// be the same list the kill is worked out from rather than a second reading of the rule.
+	getSnipedPositionsBy,
 	highlightSnipersWithSight,
 	isInSniperSight,
 	isAnyPieceThroughSniperLine,

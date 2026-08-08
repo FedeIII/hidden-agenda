@@ -1101,7 +1101,8 @@ function hasPiece(position, pieces) {
 	return !!getPieceAtPosition(position, pieces);
 }
 function hasPieceBackwards(position, pieces, spyPosition) {
-	return !!(hasPiece(position, pieces) && pieces.find((piece) => isPieceBackwards(piece, spyPosition)));
+	const target = getPieceAtPosition(position, pieces);
+	return !!(target && target.direction && isPieceBackwards(target, spyPosition));
 }
 function isPieceBackwards(piece, from) {
 	return areCoordsInList(from, getThreeBackPositions(piece));
@@ -1184,6 +1185,7 @@ var pz = {
 	getPieceAtPosition,
 	removeIsThroughSniperLine,
 	killSnipedPiece,
+	getSnipedPositionsBy,
 	highlightSnipersWithSight,
 	isInSniperSight,
 	isAnyPieceThroughSniperLine,

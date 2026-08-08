@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { Button, Buttons } from 'Client/components/button';
 import { Subtitle } from 'Client/components/title';
 import { RULES_PAGES, GROUPS, findRulePage } from './content';
+import { EXERCISES } from '../training/exercises';
 import {
 	RulesPanel,
 	RulesIntro,
@@ -11,6 +12,13 @@ import {
 	CheatSheetLink,
 	CheatSheetLinkTitle,
 	CheatSheetLinkTeaser,
+	TrainingFile,
+	TrainingArt,
+	TrainingWords,
+	TrainingEyebrow,
+	TrainingTitle,
+	TrainingTeaser,
+	TrainingStamp,
 	CheatGrid,
 	CheatSection,
 	CheatHeading,
@@ -174,9 +182,41 @@ function RuleLightbox({ image, onClose }) {
 	);
 }
 
+// A pointy-top hexagon, the same shape the board is tiled with, as an SVG path.
+function hex(x, y, width, height) {
+	const half = width / 2;
+
+	return `M${x + half} ${y} L${x + width} ${y + height / 4} L${x + width} ${y + (height * 3) / 4}
+		L${x + half} ${y + height} L${x} ${y + (height * 3) / 4} L${x} ${y + height / 4} Z`;
+}
+
+// Three cells, a piece on the first, and a ring over the cell it is two moves from — a whole turn of
+// this game in one small drawing, and the pulse is the same mark the exercises put over what to
+// click next. Not a photograph: at 104px a crop of the real board is a smudge, and a smudge is a
+// poor invitation.
+function TrainingDiagram() {
+	const CELLS = [0, 36, 72];
+
+	return (
+		<TrainingArt viewBox="0 0 104 46" aria-hidden="true">
+			{CELLS.map(x => (
+				<path key={x} d={hex(x, 4, 32, 38)} fill="none" stroke="var(--ha-ink)" strokeWidth="1.2" opacity="0.55" />
+			))}
+
+			<path d={hex(0, 4, 32, 38)} fill="var(--ha-ink)" opacity="0.85" />
+			<path d="M18 23 L26 23 M23 20 L26 23 L23 26" stroke="var(--ha-panel)" strokeWidth="1.6" fill="none" />
+
+			<path d="M34 12 Q54 -2 86 12" stroke="var(--ha-accent)" strokeWidth="1.2" strokeDasharray="3 3" fill="none" />
+
+			<circle className="seek" cx="88" cy="23" r="13" fill="none" stroke="var(--ha-accent)" strokeWidth="2" />
+			<circle cx="88" cy="23" r="2" fill="var(--ha-accent)" />
+		</TrainingArt>
+	);
+}
+
 // The table of contents. Grouped rather than one long list of twenty, because a stranger to the
 // game should be able to tell at a glance which door leads to what they actually want to know.
-export function RulesIndex({ onOpen, onBack }) {
+export function RulesIndex({ onOpen, onTrain, onBack }) {
 	return (
 		<RulesPanel>
 			<Buttons>
@@ -190,6 +230,28 @@ export function RulesIndex({ onOpen, onBack }) {
 				Everybody moves everybody's pieces. Only two cards, held in secret, say whose side you are really on. Here is
 				the whole game, in plain words — pick a page, or read it start to finish.
 			</RulesIntro>
+
+			{/* Above the reading, because for most people it is the better door: eight short exercises
+			    on the real board beat twenty pages, and the pages are still here for afterwards. */}
+			<TrainingFile id="rules-open-training" type="button" onClick={onTrain}>
+				{/* The same corners of tape the exhibits are mounted with, so the one door that leads
+				    out of the book reads as something stuck into it rather than another card in it. */}
+				<ExhibitTape $side="left" />
+				<ExhibitTape $side="right" />
+				<TrainingDiagram />
+				<TrainingWords>
+					{/* Counted rather than written down: the course grows and a card that still says
+					    eight is a card nobody thought to look at. */}
+					<TrainingEyebrow>{EXERCISES.length} exercises</TrainingEyebrow>
+					<TrainingTitle>Learn by Playing</TrainingTitle>
+					<TrainingTeaser>Almost nothing to read. Click your way through it.</TrainingTeaser>
+				</TrainingWords>
+				<TrainingStamp>
+					Field
+					<br />
+					Training
+				</TrainingStamp>
+			</TrainingFile>
 
 			<CheatSheetLink id="rules-open-cheat-sheet" type="button" onClick={() => onOpen('cheat-sheet')}>
 				<CheatSheetLinkTitle>Cheat Sheet</CheatSheetLinkTitle>

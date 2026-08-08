@@ -165,6 +165,24 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.12.0
+* **How to Play opens on a board now, not a page.** *Field Training* is ten short exercises played on
+  the real table — the real reducer, the real hexagons, the real HQ cards — with a hand-authored
+  position each and a ring over the one thing to click. There is one stamped word per step and
+  nothing else to read: which cells light up, which way a piece turns, whose name lands on an HQ
+  card, all of that is the game answering. Friend and foe, the four beats of a move, the agent's
+  kill, the CEO's reach, the spy's walk, the snipe and its rollback, how far a line of fire reaches,
+  all three CEO buffs, claiming a team, turning a card face up and guessing somebody else's
+* **An off-script click does nothing at all**, so an exercise cannot be walked into a state it has no
+  way out of and nothing ever has to be undone. Each step names the clicks it accepts and reads the
+  board to know it is finished, so a lesson cannot teach a move the rules would refuse
+* **The sniper's line of fire is drawn, once.** The game never shows it — you read it off the cells
+  another piece is quietly refused — which is exactly why the exercise about it does
+* **A spy was offered a kill on the piece looking straight at it.** It takes people from behind, and
+  what decides that is which way the *target* is facing — but the check asked whether any piece on
+  the board had its back turned, which is the same question only while there is one enemy in reach.
+  With two, the one facing the spy was offered as well, because the other happened to be turned away
+
 ### v3.11.1
 * **A phone stopped shrinking How to Play's photographs to nothing.** A row of exhibits divided the
   screen between however many frames it held, and nothing capped that on a narrow one — so the
@@ -744,6 +762,8 @@ Play it over the internet. Also a complete change of toolchain underneath, and t
 * Port to electron
 
 ## Known Bugs
+* ~~A spy was offered a kill on the enemy looking straight at it, whenever some other piece anywhere
+  on the board happened to have its back turned~~
 * ~~LEAVE did nothing at all when the connection was down or a second window had taken the seat~~
 * ~~A refresh mid-game looked like it worked and then swallowed every move afterwards: two sockets held
   the one seat and took it off each other, so actions went out on whichever had just lost it~~

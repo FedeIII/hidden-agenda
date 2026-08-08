@@ -11,6 +11,8 @@ import { ROOM_STATES } from 'Domain/phases';
 import { isRoomNameShaped, MAX_ROOM_NAME_LENGTH, pickRoomName } from 'Domain/roomNames';
 import { RulesIndex, RulePage } from './rules';
 import { findRulePage } from './rules/content';
+import TrainingCourse from './training';
+import { EXERCISES, findExercise } from './training/exercises';
 import {
 	LobbyContainer,
 	Panel,
@@ -332,6 +334,10 @@ const RULES = 'rules';
 // A rule page is `rules:<slug>` — one string, so the rest of the component still only ever
 // juggles a single piece of state, the same as it did with three fixed values.
 const RULE_PREFIX = 'rules:';
+// And a training exercise is `training:<slug>`, for the same reason and with the same shape. It is
+// a real path rather than state inside the course so the browser's own back button steps through the
+// exercises, and so one of them can be linked to on its own.
+const TRAINING_PREFIX = 'training:';
 
 // Each submenu gets a real path rather than being pure React state, so the browser's own back
 // button — and a bookmark or a shared link straight into one — both work. `#/r/CODE` is the only
@@ -351,6 +357,10 @@ function hashFor(view) {
 
 	if (view.startsWith(RULE_PREFIX)) {
 		return `#/rules/${view.slice(RULE_PREFIX.length)}`;
+	}
+
+	if (view.startsWith(TRAINING_PREFIX)) {
+		return `#/training/${view.slice(TRAINING_PREFIX.length)}`;
 	}
 
 	return '#/';
@@ -391,6 +401,18 @@ function readMenuView() {
 	// honest answer, not a page that renders nothing.
 	if (ruleMatch && findRulePage(ruleMatch[1])) {
 		return `${RULE_PREFIX}${ruleMatch[1]}`;
+	}
+
+	// `#/training` on its own is the first exercise, which is where the course starts anyway — so a
+	// link with nothing after it lands somewhere rather than nowhere.
+	const trainingMatch = /^#\/training(?:\/([a-z-]+))?$/.exec(hash);
+
+	if (trainingMatch) {
+		const slug = trainingMatch[1];
+
+		if (!slug || findExercise(slug)) {
+			return `${TRAINING_PREFIX}${slug || ''}`;
+		}
 	}
 
 	return MENU;
@@ -528,7 +550,13 @@ function JoinForm({ session, unreachable }) {
 	const goToMainMenu = useCallback(() => enterView(MENU), [enterView]);
 
 	if (view === RULES) {
-		return <RulesIndex onOpen={slug => enterView(`${RULE_PREFIX}${slug}`)} onBack={goToMainMenu} />;
+		return (
+			<RulesIndex
+				onOpen={slug => enterView(`${RULE_PREFIX}${slug}`)}
+				onTrain={() => enterView(`${TRAINING_PREFIX}${EXERCISES[0].slug}`)}
+				onBack={goToMainMenu}
+			/>
+		);
 	}
 
 	if (view.startsWith(RULE_PREFIX)) {
@@ -538,6 +566,19 @@ function JoinForm({ session, unreachable }) {
 				onOpen={slug => enterView(`${RULE_PREFIX}${slug}`)}
 				onBack={goToMainMenu}
 				onIndex={() => enterView(RULES)}
+			/>
+		);
+	}
+
+	if (view.startsWith(TRAINING_PREFIX)) {
+		return (
+			<TrainingCourse
+				slug={view.slice(TRAINING_PREFIX.length)}
+				onOpen={slug => enterView(`${TRAINING_PREFIX}${slug}`)}
+				onOpenFile={slug => enterView(`${RULE_PREFIX}${slug}`)}
+				onBack={goToMainMenu}
+				onIndex={() => enterView(RULES)}
+				onPlay={goHotSeat}
 			/>
 		);
 	}

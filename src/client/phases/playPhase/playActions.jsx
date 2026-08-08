@@ -1,10 +1,6 @@
-import { useContext, useCallback } from 'react';
-import { StateContext } from 'State';
-import { pz } from 'Domain/pieces';
-import py from 'Domain/py';
 import useBooleanState from 'Hooks/useBooleanState';
-import { useCanAct, useCanSnipe } from 'Hooks/useSession';
-import { snipe } from 'Game/actions';
+import { useCanAccuse, useCanReveal } from 'Hooks/useSession';
+import useSnipe from 'Hooks/useSnipe';
 import { Button } from 'Client/components/button';
 import LeaveGame from 'Client/components/leaveGame';
 import { Actions, Action, ActionButton } from './components';
@@ -12,23 +8,6 @@ import AccuseScreen from './accuseScreen';
 import RevealScreen from './revealScreen';
 import AlignmentScreen from './alignmentScreen';
 import LeaveScreen from './leaveScreen';
-
-// Not gated on canAct like every other action here: sniping is the rest of the table's answer to
-// the move the player on turn has just made, so it is theirs and not the mover's.
-function useSnipe() {
-	const [{ pieces, snipe: armed }, dispatch] = useContext(StateContext);
-	const canSnipe = useCanSnipe();
-
-	const isSniperOnBoard = pz.isSniperOnBoard(pieces);
-
-	const onSnipe = useCallback(() => {
-		if (isSniperOnBoard && canSnipe) {
-			dispatch(snipe());
-		}
-	}, [isSniperOnBoard, canSnipe, dispatch]);
-
-	return [canSnipe, onSnipe, armed];
-}
 
 // Accusing and revealing are screens now rather than rows of buttons that grew out of the bar. Both
 // are decisions with a price — a wrong accusation is spent forever, a reveal costs fifty points — and
@@ -51,16 +30,10 @@ function useScreens() {
 }
 
 function PlayActions() {
-	const [{ players }] = useContext(StateContext);
-	const canAct = useCanAct();
 	const [canSnipe, onSnipe, isSnipeArmed] = useSnipe();
+	const canReveal = useCanReveal();
+	const canAccuse = useCanAccuse();
 	const screens = useScreens();
-
-	const player = players.find(entry => entry.turn);
-	// Both alignments already public means there is nothing left to reveal, and both accusations spent
-	// means there is nothing left to accuse. A dead button that says why beats one that just sits there.
-	const canReveal = py.isRevealActive(players) && canAct;
-	const canAccuse = (player.allowedToAccuse.friend || player.allowedToAccuse.foe) && canAct;
 
 	return (
 		<Actions>

@@ -1,4 +1,4 @@
-import styled, { css } from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 import { narrow } from 'Client/components/breakpoints';
 import { Subtitle } from 'Client/components/title';
 
@@ -64,6 +64,156 @@ export const RulesIntro = styled.p`
 	font-size: 15px;
 	line-height: 1.5;
 	margin: 0;
+`;
+
+/* ── The training file ─────────────────────────────────────────────────────────────────────
+ * The one door on this page that leads out of the book and onto a board, so it is the one thing on
+ * it that is not a card of text: a file pulled from the drawer, taped down, with a live diagram of
+ * a piece about to move and a ring pulsing over where it is going. That ring is the same mark the
+ * exercises themselves put over what to click, which is the honest way to advertise them — it says
+ * what the offer is before the offer is taken.
+ *
+ * Everything about it is Dossier's own vocabulary already in use elsewhere on this page: the mat's
+ * tape, the buff badge's overlapping stamp, the cheat sheet's accented ground.
+ * ------------------------------------------------------------------------------------------ */
+
+const seek = keyframes`
+	0%   { transform: scale(1);    opacity: 0.9; }
+	55%  { transform: scale(1.35); opacity: 0.15; }
+	100% { transform: scale(1);    opacity: 0.9; }
+`;
+
+export const TrainingFile = styled.button`
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	width: 100%;
+	max-width: 520px;
+	margin-top: 4px;
+	padding: 14px 16px;
+	text-align: left;
+	background: var(--ha-accent-wash);
+	background-image: var(--ha-panel-ornament);
+	background-repeat: no-repeat;
+	border: 1px solid var(--ha-accent);
+	border-radius: var(--ha-panel-radius);
+	box-shadow: var(--ha-panel-shadow);
+	cursor: pointer;
+	transform: rotate(-0.5deg);
+
+	&:hover {
+		filter: brightness(1.05);
+		transform: rotate(0deg);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--ha-accent);
+		outline-offset: 3px;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		&,
+		&:hover {
+			transform: none;
+		}
+	}
+
+	${narrow} {
+		gap: 10px;
+		padding: 12px 12px 14px;
+	}
+`;
+
+// The diagram: three cells, a piece on the first, and the ring over where it lands. Drawn rather
+// than photographed because at this size a screenshot of the board is a smudge, and because a
+// drawing can carry the pulse.
+export const TrainingArt = styled.svg`
+	flex: 0 0 124px;
+	width: 124px;
+	height: 55px;
+	overflow: visible;
+
+	.seek {
+		transform-box: fill-box;
+		transform-origin: center;
+		animation: ${seek} 1.8s ease-in-out infinite;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.seek {
+			animation: none;
+			opacity: 0.6;
+		}
+	}
+
+	${narrow} {
+		flex-basis: 88px;
+		width: 88px;
+	}
+`;
+
+export const TrainingWords = styled.span`
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	/* Clear of the stamp, which overlaps the card's own corner. */
+	padding-right: 74px;
+
+	${narrow} {
+		padding-right: 56px;
+	}
+`;
+
+export const TrainingEyebrow = styled.span`
+	font-family: var(--ha-face-data);
+	font-size: 10px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	color: var(--ha-ink-faint);
+`;
+
+export const TrainingTitle = styled.span`
+	font-weight: bold;
+	font-size: 17px;
+	letter-spacing: var(--ha-track-label);
+	color: var(--ha-accent);
+`;
+
+export const TrainingTeaser = styled.span`
+	font-size: 12px;
+	line-height: 1.35;
+	color: var(--ha-ink-dim);
+`;
+
+// The round rubber stamp, over the corner. Same shape as the game's own SNIPE control, because both
+// are an authorisation rather than a label.
+export const TrainingStamp = styled.span`
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 66px;
+	height: 66px;
+	border-radius: 50%;
+	border: var(--ha-stamp-edge);
+	color: var(--ha-stamp-ink);
+	font-size: 9px;
+	line-height: 1.3;
+	letter-spacing: var(--ha-track-label);
+	text-align: center;
+	transform: rotate(-11deg);
+	opacity: 0.9;
+
+	${narrow} {
+		width: 52px;
+		height: 52px;
+		font-size: 7px;
+	}
 `;
 
 // The one door out of the grouped index, to the summary rather than to a topic — sized and set

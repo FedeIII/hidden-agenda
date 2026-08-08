@@ -87,6 +87,23 @@ test.describe('spy movement', () => {
 		expect(pz.isSettledByMove(inTheHq, SELECTION)).toBe(false);
 		expect(pz.isSettledByMove(agent, MOVEMENT)).toBe(false);
 	});
+
+	// A spy takes somebody from behind, and what decides that is which way the *target* is facing.
+	// The check used to ask whether any piece on the board had its back turned, which gives the right
+	// answer with one enemy in reach and the wrong one with two: the spy was offered a kill on the
+	// piece looking straight at it, because the other one happened to be facing away.
+	test('offers only the enemy whose back is turned, with two of them equally in reach', () => {
+		let pieces = pz.init();
+		pieces = onBoard(pieces, '0-S', [3, 2], [0, 0]);
+		pieces = withPiece(pieces, '0-S', { selected: true, showMoveCells: true });
+		pieces = onBoard(pieces, '1-A1', [3, 3], [0, 0]);
+		pieces = onBoard(pieces, '1-A2', [2, 2], [-1, 1]);
+
+		const landings = pz.getHighlightedPositions(pieces, MOVEMENT);
+
+		expect(landings).toContainEqual([3, 3]);
+		expect(landings).not.toContainEqual([2, 2]);
+	});
 });
 
 // The board says where the rest of the walk could get to, a level per move away. A spy is the only

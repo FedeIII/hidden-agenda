@@ -45,3 +45,26 @@ export function useCanSnipe() {
 
 	return py.getTurn(players) !== session.name;
 }
+
+// The two free moves, and whether there is anything left of either. Both alignments already public
+// means there is nothing to reveal, and both accusations spent means there is nothing to accuse — a
+// dead button that says why beats one that just sits there.
+//
+// Here beside useCanAct rather than inside the action bar because the training board draws the same
+// two controls, and two readings of "may this be pressed" is two readings that can disagree.
+// Both hooks are called before anything is decided, never inside a `&&`: short-circuiting past a
+// hook is exactly the thing the rules of hooks forbid.
+export function useCanReveal() {
+	const canAct = useCanAct();
+	const [{ players }] = useContext(StateContext);
+
+	return canAct && py.isRevealActive(players);
+}
+
+export function useCanAccuse() {
+	const canAct = useCanAct();
+	const [{ players }] = useContext(StateContext);
+	const player = players.find(entry => entry.turn);
+
+	return canAct && (player.allowedToAccuse.friend || player.allowedToAccuse.foe);
+}
