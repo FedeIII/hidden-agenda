@@ -1,6 +1,7 @@
 import styled, { css, keyframes } from 'styled-components';
 import { narrow, narrowOrShort, short } from 'Client/components/breakpoints';
 import { Buttons } from 'Client/components/button';
+import HQs from 'Client/components/hqs';
 import { Subtitle, Title } from 'Client/components/title';
 import { Board, TableBoardStyled } from 'Phases/playPhase/components';
 import { Alignments, AlignmentCardStyled } from 'Client/components/alignments/components';
@@ -222,6 +223,34 @@ export const TrainingBoard = styled(Board)`
 
 				${narrow} {
 					width: 100%;
+				}
+			}
+		`}
+
+	/* A lesson that uses one team a side puts both trays *under* the board on a phone, rather than
+	   one above it and one below. Stacked the game's way, the tray on top is the full width of the
+	   screen — and an HQ card is square, so it is also the full height of one, which pushed the very
+	   table the lesson is about off the bottom of the screen.
+
+	   Each tray is half the row whether the lesson uses one or two, so the card is the same width,
+	   and therefore the same height, in every lesson: the board sits at one place on the screen for
+	   the whole course. A lesson that uses four is already two halves above and two below and is
+	   left alone. */
+	${({ $compact }) =>
+		$compact &&
+		css`
+			${narrow} {
+				flex-flow: row wrap;
+				align-items: flex-start;
+				column-gap: 8px;
+
+				${TableBoardStyled} {
+					order: 1;
+				}
+
+				${HQs} {
+					order: 2;
+					width: calc(50% - 4px);
 				}
 			}
 		`}

@@ -410,5 +410,33 @@ test.describe('FIELD TRAINING', () => {
 			expect(board.width).toBeGreaterThan(240);
 			expect(board.height).toBeGreaterThan(180);
 		});
+
+		// A lesson that uses one team a side used to stack the game's way: one tray above the board
+		// and one below. An HQ card is square, so the full-width one on top was also a full screen
+		// tall, and the table the lesson is about started below the fold.
+		//
+		// Both go under the board now, each half the row. The half is what makes the card the same
+		// width — and, being square, the same height — whether the lesson uses one tray or two, so
+		// the board sits at one place on the screen for the whole course.
+		test('puts both trays under the board, each half the row', async ({ page }) => {
+			const cardBox = team => page.locator(`#store-${team}`).evaluate(el => el.parentElement.getBoundingClientRect());
+
+			await goToExercise(page, 'agent');
+
+			const board = await page.locator('#board').boundingBox();
+			const [black, red] = [await cardBox(0), await cardBox(1)];
+
+			expect(black.top).toBeGreaterThanOrEqual(board.y + board.height - 1);
+			expect(red.top).toBeGreaterThanOrEqual(board.y + board.height - 1);
+
+			// Side by side rather than one under the other.
+			expect(Math.abs(black.top - red.top)).toBeLessThan(2);
+			expect(red.left).toBeGreaterThanOrEqual(black.right - 1);
+
+			// Half of the row each, to the gap between them — which is the sum a lesson with one
+			// tray divides the same way, leaving the card exactly this wide.
+			expect(black.width).toBeCloseTo(red.width, 0);
+			expect(black.width + red.width).toBeCloseTo(board.width - 8, 0);
+		});
 	});
 });

@@ -176,9 +176,13 @@ function CardStage({ cards, notes, onLook }) {
 
 function BoardStage({ exercise }) {
 	const hqs = exercise.hqs;
+	// Two cards or fewer go under the board together on a phone rather than one above it and one
+	// below — see TrainingBoard. Counted here because the count is a fact about the exercise, and
+	// CSS cannot ask how many children another element has.
+	const compact = Boolean(hqs) && hqs.left.length + hqs.right.length <= 2;
 
 	return (
-		<TrainingBoard $solo={!hqs}>
+		<TrainingBoard $solo={!hqs} $compact={compact}>
 			{hqs && (
 				<HQs>
 					{hqs.left.map(team => (

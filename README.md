@@ -165,6 +165,14 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.14.1
+* **A training exercise puts both HQ trays under the board on a phone.** They used to stack the game's
+  own way — one tray above the table and one below — and an HQ card is square, so the full-width one on
+  top was also a full screen tall and the board the lesson is about started below the fold
+* Each tray is half the row whether the exercise uses one or two, so a card is the same width, and
+  being square the same height, in every lesson: the board sits at one place on the screen for the
+  whole course. An exercise that uses four teams was already two halves above and two below
+
 ### v3.14.0
 * **A passed exercise is stamped now, not simply displayed.** The finding card drops onto the desk a
   little high and a little large, squashes, rebounds, and then the `Passed` stamp comes down too big
@@ -788,6 +796,8 @@ Play it over the internet. Also a complete change of toolchain underneath, and t
 * Port to electron
 
 ## Known Bugs
+* ~~A training exercise on a phone put a full-screen-tall HQ card above the board, which started the
+  lesson below the fold~~
 * ~~A spy was offered a kill on the enemy looking straight at it, whenever some other piece anywhere
   on the board happened to have its back turned~~
 * ~~LEAVE did nothing at all when the connection was down or a second window had taken the seat~~
