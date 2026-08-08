@@ -49,6 +49,19 @@ export function hasStageFailed() {
 	return failed;
 }
 
+// Draw every view on the next frame — for a caller outside this layer that knows the DOM is moving
+// under it. At rest the loop only looks for a shifted element ten times a second, which is plenty for
+// a board that is not going anywhere and five stair-steps for one sliding down the screen.
+//
+// Unlike getStage() this never creates a stage: something that merely knows the layout is moving must
+// not be the reason a renderer exists. With no WebGL, or under `?flat`, the board is DOM and moves by
+// itself, so there is nothing here to ask.
+export function invalidateStage() {
+	if (stage) {
+		stage.invalidateAll();
+	}
+}
+
 // A player who has asked their system for less movement gets none: pieces appear where they are
 // rather than travelling there, and a lit sniper stays lit rather than pulsing. The flat renderer
 // only ever animated for 200ms at a time, so continuous motion is something this layer introduced

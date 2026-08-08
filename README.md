@@ -165,6 +165,21 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.14.0
+* **A passed exercise is stamped now, not simply displayed.** The finding card drops onto the desk a
+  little high and a little large, squashes, rebounds, and then the `Passed` stamp comes down too big
+  and off angle and knocks the card once. Its lines catch up in turn. Cartoon timing in the file
+  room's own vocabulary: no glow, no flash and no colour that was not already in the file
+* **And the board eases down to make room for it rather than jumping.** The step slip and the card
+  take turns in one box, and they are nothing like the same height — a line of chrome against a card —
+  so the swap used to drop the whole table sixty pixels in a single frame. The box travels between the
+  two heights now, clipping at its bottom edge only, so the card is revealed the way a document comes
+  out of a folder
+* The tiles came down that slide in five steps at first: the renderer only looks for a shifted element
+  ten times a second once the scene is at rest, which is right for a board that is not going anywhere
+  and wrong for one being moved by something else. Every frame of the travel is asked for now
+* A player who has asked their system for less movement gets the card and none of it
+
 ### v3.13.0
 * **A CEO settles where it lands.** It faces whichever way it just moved, so the click that asked you
   to confirm the facing was asking for a decision that had already been made — on the one piece that

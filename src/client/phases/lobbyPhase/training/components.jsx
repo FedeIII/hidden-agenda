@@ -1,5 +1,6 @@
 import styled, { css, keyframes } from 'styled-components';
 import { narrow, narrowOrShort, short } from 'Client/components/breakpoints';
+import { Buttons } from 'Client/components/button';
 import { Subtitle, Title } from 'Client/components/title';
 import { Board, TableBoardStyled } from 'Phases/playPhase/components';
 import { Alignments, AlignmentCardStyled } from 'Client/components/alignments/components';
@@ -315,38 +316,111 @@ export const CardWord = styled.span`
 	color: var(--ha-ink-dim);
 `;
 
-/* ── The finding ───────────────────────────────────────────────────────────────────────────
- * What the exercise just proved, in one line, with the page that says it at length.
+/* ── The placard ───────────────────────────────────────────────────────────────────────────
+ * The slip and the finding take turns in this one box, and they are nothing like the same height — a
+ * line of chrome against a card. Swapped straight over, the whole board jumped down the screen in a
+ * single frame, which reads as a glitch rather than as an answer.
+ *
+ * So the box measures whatever is in it and travels between the two heights, and the card inside is
+ * at full size from the first frame: what clips is the **bottom edge only**, so the sheet is revealed
+ * top-down as the room for it opens, the way a document comes out of a folder.
+ *
+ * Two things about that clip are deliberate. It is `clip-path` rather than `overflow: hidden`, which
+ * would need padding to spare the stamp's overhang and the card's shadow — and padding here is height
+ * taken off a board that fits an 800x600 window with nothing to spare. And the height travels without
+ * overshooting, because every hexagon below is a transparent box projected onto a tile: a box that
+ * springs past its mark and comes back moves all 61 of them twice.
  * ------------------------------------------------------------------------------------------- */
 
-export const Finding = styled.div`
-	position: relative;
+// Long enough to read as a movement rather than a jump, short enough that nobody waits for it. A
+// number rather than a string because the frame pump that keeps the board in step with it needs the
+// same figure — see `StepPlacard`.
+export const TRAVEL_MS = 360;
+
+export const Placard = styled.div`
 	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 10px;
+	/* Not the default stretch, which would be a loop: the box is told its height, and a sheet
+	   stretched to fill it would then measure that same height straight back. */
+	align-items: flex-start;
+	justify-content: center;
 	width: 100%;
-	max-width: 520px;
-	margin-top: 6px;
-	padding: 18px 20px 14px;
-	background: var(--ha-panel);
-	border: 1px solid var(--ha-panel-edge);
-	box-shadow: var(--ha-panel-shadow);
+	/* Bottom edge only: the top and sides are where the stamp and the shadow live. */
+	clip-path: inset(-40px -40px 0 -40px);
+	/* Soft at both ends. An aggressive ease-out was tried and is wrong for this: it puts the board
+	   most of the way down the screen inside three frames, which is the jump again with a tail on it. */
+	transition: height ${TRAVEL_MS}ms cubic-bezier(0.4, 0, 0.2, 1);
+
+	@media (prefers-reduced-motion: reduce) {
+		transition: none;
+	}
 `;
 
-// The stamp that lands on a passed exercise, overlapping the top edge the way the CEO-buff badge
-// does on a rule page.
-export const FindingStamp = styled.span`
-	position: absolute;
-	top: -12px;
-	padding: 3px 12px 2px;
-	background: var(--ha-panel);
-	color: var(--ha-stamp-ink);
-	border: var(--ha-stamp-edge);
-	font-size: 11px;
-	letter-spacing: var(--ha-track-label);
-	transform: rotate(var(--ha-stamp-rotate));
+// What is measured. The box itself has a height written on it, so the content cannot be asked how
+// tall it is — this is the child that still answers honestly.
+export const PlacardSheet = styled.div`
+	display: flex;
+	justify-content: center;
+	width: 100%;
 `;
+
+/* ── The finding ───────────────────────────────────────────────────────────────────────────
+ * What the exercise just proved, in one line, with the page that says it at length.
+ *
+ * It arrives the way a file lands on a desk: dropped in a little high and a little large, squashed
+ * flat on impact, and settled — then the stamp comes down on it hard enough to knock the card once.
+ * Cartoon timing, in this room's own vocabulary: the overshoot and the recoil are the whole of it,
+ * and there is no glow, no flash and no colour that is not already in the file.
+ * ------------------------------------------------------------------------------------------- */
+
+// 520ms all in. The opacity is spent in the first tenth of that on purpose: a card that fades up
+// slowly while its own lines are still queued is a blank manila box for a beat, which reads as
+// something loading rather than something arriving.
+const LAND_MS = 520;
+
+const land = keyframes`
+	0%   { opacity: 0; transform: translateY(-22px) scale(1.05); }
+	8%   { opacity: 1; }
+	/* The desk. A squash on the way in, a stretch on the rebound, and smaller each time. */
+	25%  { transform: translateY(0) scaleX(1.035) scaleY(0.92); }
+	40%  { transform: translateY(-5px) scaleX(0.99) scaleY(1.03); }
+	54%  { transform: translateY(0) scaleX(1.01) scaleY(0.993); }
+	62%  { transform: translateY(0) scale(1); }
+	/* Where the stamp lands, which the card feels. */
+	68%  { transform: translateY(1.5px) scaleX(1.006) scaleY(0.988); }
+	80%  { transform: translateY(0) scaleX(0.997) scaleY(1.006); }
+	100% { transform: translateY(0) scale(1); }
+`;
+
+// A rubber stamp, at the size a rubber stamp comes down from: too big, off angle, and hard. It has to
+// finish on the rotation the token asks for, or the chip would snap straight after it landed.
+//
+// It hits at 55% of its own run, and the delay is set so that moment is the one the card recoils on.
+const stamp = keyframes`
+	0%   { opacity: 0; transform: rotate(-16deg) scale(1.9); }
+	55%  { opacity: 1; transform: rotate(var(--ha-stamp-rotate)) scale(0.93); }
+	78%  { transform: rotate(var(--ha-stamp-rotate)) scale(1.03); }
+	100% { transform: rotate(var(--ha-stamp-rotate)) scale(1); }
+`;
+
+const STAMP_MS = 320;
+const STAMP_DELAY_MS = 170;
+
+// Each line of the card catches up in turn, which is the whole of the videogame in this. Close
+// together on purpose — a stagger long enough to notice is a stagger long enough to wait through.
+const rise = keyframes`
+	0%   { opacity: 0; transform: translateY(6px); }
+	100% { opacity: 1; transform: translateY(0); }
+`;
+
+const RISE_MS = 200;
+
+const risesAt = delay => css`
+	animation: ${rise} ${RISE_MS}ms ease-out ${delay}ms both;
+`;
+
+/* The card's own contents are declared above it because `Finding` staggers them by name, and a
+   component selector is resolved when this module is read rather than when a card is rendered — a
+   reference below its use is a ReferenceError at import time, not a rule that quietly misses. */
 
 export const FindingLine = styled.p`
 	margin: 4px 0 0;
@@ -378,6 +452,81 @@ export const FindingNote = styled.span`
 	letter-spacing: var(--ha-track-label);
 	text-transform: uppercase;
 	color: var(--ha-ink-faint);
+`;
+
+// The pages the course never covered, on the card that closes it. Here rather than with the way out
+// below, because it is one of the card's own lines and is staggered in with the rest of them.
+export const DoneList = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: center;
+`;
+
+export const Finding = styled.div`
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	max-width: 520px;
+	margin-top: 6px;
+	padding: 18px 20px 14px;
+	background: var(--ha-panel);
+	border: 1px solid var(--ha-panel-edge);
+	box-shadow: var(--ha-panel-shadow);
+	/* The card is drawn from its top edge down, because that edge is the one the box is not clipping
+	   and the one the sheet appears to come out from. */
+	transform-origin: top center;
+	animation: ${land} ${LAND_MS}ms cubic-bezier(0.3, 0.85, 0.3, 1) both;
+
+	${FindingLine} {
+		${risesAt(60)}
+	}
+
+	${FindingSmall},
+	${FindingNote} {
+		${risesAt(110)}
+	}
+
+	${DoneList},
+	${Buttons} {
+		${risesAt(160)}
+	}
+
+	/* Continuous motion is one thing; an entrance is another — but a player who has asked for neither
+	   gets the card and none of it. */
+	@media (prefers-reduced-motion: reduce) {
+		animation: none;
+
+		${FindingLine},
+		${FindingSmall},
+		${FindingNote},
+		${DoneList},
+		${Buttons} {
+			animation: none;
+		}
+	}
+`;
+
+// The stamp that lands on a passed exercise, overlapping the top edge the way the CEO-buff badge
+// does on a rule page.
+export const FindingStamp = styled.span`
+	position: absolute;
+	top: -12px;
+	padding: 3px 12px 2px;
+	background: var(--ha-panel);
+	color: var(--ha-stamp-ink);
+	border: var(--ha-stamp-edge);
+	font-size: 11px;
+	letter-spacing: var(--ha-track-label);
+	transform: rotate(var(--ha-stamp-rotate));
+	animation: ${stamp} ${STAMP_MS}ms cubic-bezier(0.3, 1.1, 0.4, 1) ${STAMP_DELAY_MS}ms both;
+
+	@media (prefers-reduced-motion: reduce) {
+		animation: none;
+	}
 `;
 
 /* ── The coach marks ───────────────────────────────────────────────────────────────────────
@@ -517,11 +666,4 @@ export const ExerciseActions = styled.div`
 	width: 100%;
 	padding-bottom: 4px;
 	z-index: 10;
-`;
-
-export const DoneList = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-	justify-content: center;
 `;

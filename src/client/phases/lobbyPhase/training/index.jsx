@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { SessionContext, StateContext } from 'State';
 import { DragProvider } from 'Client/drag';
 import { gameReducer } from 'Game/reducer';
 import { PHASES } from 'Domain/phases';
 import { pz } from 'Domain/pieces';
 import { TEAM_NAMES } from 'Domain/teams';
+import { invalidateStage } from 'Client/three/stage';
 import useSkin from 'Hooks/useSkin';
 import useSnipe from 'Hooks/useSnipe';
 import { useCanAccuse, useCanReveal } from 'Hooks/useSession';
@@ -42,6 +43,9 @@ import {
 	FindingLine,
 	FindingSmall,
 	FindingNote,
+	Placard,
+	PlacardSheet,
+	TRAVEL_MS,
 	ExerciseActions,
 	DoneList,
 } from './components';
@@ -201,6 +205,93 @@ function BoardStage({ exercise }) {
 // "the agent is in your hand" stops being true the moment you put it down. Forward `while` rather
 // than `if` because one click is often two steps — the click that lands a spy's second step also
 // ends the turn — and a learner who does two things at once should step past both.
+/**
+ * The one box the slip and the finding share, travelling between their two heights.
+ *
+ * It measures whatever is in it rather than being told, because the two things it holds are a line of
+ * chrome and a card and neither knows about the other — and because a hint that wraps, or a window
+ * that narrows, changes the answer without either of them being swapped.
+ *
+ * The measured height goes through the `style` prop and never through a styled-components template:
+ * every distinct interpolated value mints a class that is never reclaimed, which is the same rule the
+ * projected hexagons follow. `null` until the first measurement, so the box opens at the height it
+ * would have had anyway and nothing travels on mount.
+ *
+ * `onSettled` fires when the box has finished moving. What needs it is the spotlight: the thing a
+ * finished exercise points at is often at the foot of an HQ card, and scrolling to it while the card
+ * above is still opening leaves it as far below the fold as it started.
+ */
+function StepPlacard({ children, onSettled }) {
+	const sheet = useRef(null);
+	const measured = useRef(null);
+	const [height, setHeight] = useState(null);
+	const [travelling, setTravelling] = useState(false);
+
+	useLayoutEffect(() => {
+		const observer = new ResizeObserver(([entry]) => {
+			const next = entry.contentRect.height;
+
+			// The first measurement is the height the box already had, so nothing travels on mount.
+			// The ref rather than the state, because a state read here would be the one from the
+			// render this observer was created in.
+			if (measured.current !== null && measured.current !== next) {
+				setTravelling(true);
+			}
+
+			measured.current = next;
+			setHeight(next);
+		});
+
+		observer.observe(sheet.current);
+
+		return () => observer.disconnect();
+	}, []);
+
+	// The board sits directly under this box and travels with it, and the board is painted by WebGL —
+	// which, with nothing in the scene moving, only looks for a shifted element ten times a second. So
+	// every frame of the travel is asked for, or the tiles come down the screen in five steps while the
+	// card slides. A timeout rather than `transitionend`: this has to end even when there is no
+	// transition to end, which is every player who has asked for less movement.
+	useEffect(() => {
+		if (!travelling) {
+			return;
+		}
+
+		let frame = requestAnimationFrame(function pump() {
+			invalidateStage();
+			frame = requestAnimationFrame(pump);
+		});
+
+		const settled = setTimeout(() => setTravelling(false), TRAVEL_MS + 80);
+
+		return () => {
+			cancelAnimationFrame(frame);
+			clearTimeout(settled);
+		};
+	}, [travelling]);
+
+	// transitionend bubbles, so a control inside the card finishing its own hover would otherwise
+	// report the box as settled.
+	const onEnd = useCallback(
+		event => {
+			if (event.target === event.currentTarget && event.propertyName === 'height') {
+				onSettled();
+			}
+		},
+		[onSettled],
+	);
+
+	return (
+		<Placard
+			id="training-placard"
+			style={height === null ? undefined : { height: `${height}px` }}
+			onTransitionEnd={onEnd}
+		>
+			<PlacardSheet ref={sheet}>{children}</PlacardSheet>
+		</Placard>
+	);
+}
+
 function advance(exercise, from, game, notes) {
 	let next = from;
 
@@ -307,7 +398,11 @@ function ExerciseRunner({ exercise, onNext, onOpenFile, isLast }) {
 	// card that just replaced the slip has pushed the whole board down to make room for itself — so on
 	// a short screen the one line worth reading can end up below the fold. Instant rather than smooth:
 	// a box still travelling is a box Playwright refuses to look at.
-	useEffect(() => {
+	//
+	// Run twice, and both times matter. Now, which is the only time it happens at all for a player who
+	// has asked for no motion; and again when the placard has finished opening, because the target is
+	// below it and has moved the whole way down with it.
+	const revealSpotlight = useCallback(() => {
 		if (!finished || !exercise.spotlight) {
 			return;
 		}
@@ -318,6 +413,8 @@ function ExerciseRunner({ exercise, onNext, onOpenFile, isLast }) {
 			target.scrollIntoView({ block: 'center' });
 		}
 	}, [finished, exercise.spotlight]);
+
+	useEffect(revealSpotlight, [revealSpotlight]);
 
 	// One caption on the board, and only where the board is being asked to show something it never
 	// shows in a real game.
@@ -335,31 +432,33 @@ function ExerciseRunner({ exercise, onNext, onOpenFile, isLast }) {
 		<SessionContext.Provider value={session}>
 			<StateContext.Provider value={stateValue}>
 				<DragProvider>
-					{finished ? (
-						<Finding id="training-finding">
-							<FindingStamp>Passed</FindingStamp>
-							<FindingLine id="training-finding-line">{exercise.finding}</FindingLine>
-							{/* The second line is for the half of a rule the board cannot show. That a reveal
-							    costs fifty points is visible on the screen; that they come *off* is not. */}
-							{exercise.note && <FindingSmall id="training-finding-note">{exercise.note}</FindingSmall>}
-							<Buttons>
-								<Button id="training-file" small active onClick={() => onOpenFile(exercise.file)}>
-									Read the file
-								</Button>
-								<Button id="training-next" active onClick={onNext}>
-									{isLast ? 'Finish ›' : 'Next ›'}
-								</Button>
-							</Buttons>
-						</Finding>
-					) : (
-						<Slip id="training-slip">
-							<SlipKey id="training-step">
-								Step {stepIndex + 1} / {exercise.steps.length}
-							</SlipKey>
-							<Verb id="training-verb">{step.verb}</Verb>
-							{step.hint && <Hint id="training-hint">{step.hint}</Hint>}
-						</Slip>
-					)}
+					<StepPlacard onSettled={revealSpotlight}>
+						{finished ? (
+							<Finding id="training-finding">
+								<FindingStamp>Passed</FindingStamp>
+								<FindingLine id="training-finding-line">{exercise.finding}</FindingLine>
+								{/* The second line is for the half of a rule the board cannot show. That a reveal
+								    costs fifty points is visible on the screen; that they come *off* is not. */}
+								{exercise.note && <FindingSmall id="training-finding-note">{exercise.note}</FindingSmall>}
+								<Buttons>
+									<Button id="training-file" small active onClick={() => onOpenFile(exercise.file)}>
+										Read the file
+									</Button>
+									<Button id="training-next" active onClick={onNext}>
+										{isLast ? 'Finish ›' : 'Next ›'}
+									</Button>
+								</Buttons>
+							</Finding>
+						) : (
+							<Slip id="training-slip">
+								<SlipKey id="training-step">
+									Step {stepIndex + 1} / {exercise.steps.length}
+								</SlipKey>
+								<Verb id="training-verb">{step.verb}</Verb>
+								{step.hint && <Hint id="training-hint">{step.hint}</Hint>}
+							</Slip>
+						)}
+					</StepPlacard>
 
 					{exercise.strip && (
 						<Strip>

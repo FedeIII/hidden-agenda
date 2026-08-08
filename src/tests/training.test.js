@@ -312,6 +312,73 @@ test.describe('FIELD TRAINING', () => {
 		expect(await get.pieceIn(3, 3).id).toEqual('pz-1-A1');
 	});
 
+	/* ── The finding card's entrance ────────────────────────────────────────────────────────────
+	 * The slip and the card take turns in one box, and they are nothing like the same height. What is
+	 * worth asserting is not how it looks — that is a stamp coming down on a file and no spec can
+	 * read it — but the two things that would be broken rather than merely different: that the box
+	 * ends up exactly the size of what is in it, and that the entrance leaves nothing behind.
+	 * ------------------------------------------------------------------------------------------- */
+
+	// A transform still applied at rest is the failure mode with teeth: the card would sit a few
+	// pixels off its own box for the rest of the exercise, and every hexagon under it with it.
+	const residue = element => Math.round(element.getBoundingClientRect().height - element.offsetHeight);
+
+	test('grows the box it shares with the slip, and settles exactly on the card', async ({ page, clickOn }) => {
+		await goToExercise(page, 'ceo');
+
+		const box = page.locator('#training-placard');
+		const slipHeight = await box.evaluate(el => el.getBoundingClientRect().height);
+
+		expect(await page.locator('#training-slip').evaluate(el => el.getBoundingClientRect().height)).toBeCloseTo(
+			slipHeight,
+			0,
+		);
+
+		await clickOn.team(0).ceo();
+		await clickOn.cell(3, 3);
+
+		await expect(page.locator('#training-finding')).toBeVisible();
+
+		// The card is taller than the slip, so the box has somewhere to travel to — and once it has
+		// arrived, nothing of the card is left below the edge the box clips at.
+		await expect.poll(() => box.evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThan(slipHeight + 20);
+
+		await expect
+			.poll(() =>
+				page.evaluate(() => {
+					const placard = document.getElementById('training-placard').getBoundingClientRect();
+					const card = document.getElementById('training-finding').getBoundingClientRect();
+
+					return Math.round(card.bottom - placard.bottom);
+				}),
+			)
+			.toBeLessThanOrEqual(0);
+
+		await expect.poll(() => page.locator('#training-finding').evaluate(residue)).toBe(0);
+		await expect(page.locator('#training-finding')).toHaveCSS('opacity', '1');
+	});
+
+	// An entrance is not continuous motion, but a player who has asked for neither gets the card and
+	// none of it — the same answer the coach marks and the 3D layer already give.
+	//
+	// Emulated on the page rather than declared with `test.use({ reducedMotion })`, which does not
+	// reach it: `fixtures.js` overrides the `page` fixture, and the preference never arrives.
+	test('puts the card up with no entrance at all when less movement is asked for', async ({ page, clickOn }) => {
+		await goToExercise(page, 'ceo');
+		await page.emulateMedia({ reducedMotion: 'reduce' });
+
+		await expect(page.locator('#training-placard')).toHaveCSS('transition-duration', '0s');
+
+		await clickOn.team(0).ceo();
+		await clickOn.cell(3, 3);
+
+		const card = page.locator('#training-finding');
+
+		await expect(card).toBeVisible();
+		expect(await card.evaluate(el => getComputedStyle(el).animationName)).toBe('none');
+		expect(await card.evaluate(residue)).toBe(0);
+	});
+
 	// The one rule the coach marks live under: the board is the game, and every hexagon is a
 	// transparent element that has to keep receiving its own clicks.
 	test('never lets a coach mark take a click off the board', async ({ page }) => {
