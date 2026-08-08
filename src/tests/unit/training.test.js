@@ -216,10 +216,11 @@ test.describe('THE TRAINING COURSE', () => {
 
 		expect(pz.getHighlightedPositions(gameReducer(state, togglePiece('0-A1')).pieces, 'selection')).toEqual([]);
 
+		// Two clicks and the turn is spent: a CEO settles on its move, like a spy.
 		state = gameReducer(state, togglePiece('0-C'));
 		state = gameReducer(state, movePiece('0-C', [3, 2]));
-		state = gameReducer(state, togglePiece('0-C'));
 
+		expect(state.hasTurnEnded).toBe(true);
 		expect(pz.getPieceById('0-A1', state.pieces).buffed).toBe(false);
 
 		state = gameReducer(state, nextTurn());

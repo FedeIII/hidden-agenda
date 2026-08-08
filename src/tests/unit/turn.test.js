@@ -143,6 +143,48 @@ test.describe('a spy that walks back onto its own cell', () => {
 	});
 });
 
+// A CEO has no turning step either — it faces whichever way it just went — so the move ends the turn
+// on its own and the confirming click it used to ask for was a decision already made.
+test.describe('a ceo that moves on the board', () => {
+	test('settles where it lands and ends the turn on the move', () => {
+		const state = deploy(twoPlayerGame(), '0-C', [3, 3], [3, 4]);
+
+		const moved = dispatch(state, togglePiece('0-C'), movePiece('0-C', [1, 1]));
+		const ceo = pz.getPieceById('0-C', moved.pieces);
+
+		expect(moved.hasTurnEnded).toBe(true);
+		expect(ceo.position).toEqual([1, 1]);
+		expect(ceo.selected).toBe(false);
+		expect(ceo.showMoveCells).toBe(false);
+		expect(ceo.direction).toEqual([1, 1]);
+	});
+
+	test('is settled for good — a click after it lands does not pick it up again', () => {
+		const state = deploy(twoPlayerGame(), '0-C', [3, 3], [3, 4]);
+
+		const moved = dispatch(state, togglePiece('0-C'), movePiece('0-C', [1, 1]));
+		const clicked = dispatch(moved, togglePiece('0-C'));
+
+		expect(clicked.hasTurnEnded).toBe(true);
+		expect(pz.getPieceById('0-C', clicked.pieces).selected).toBe(false);
+		expect(pz.getPieceById('0-C', clicked.pieces).showMoveCells).toBe(false);
+	});
+
+	// The exception, and the one place a CEO is still put down by hand: out of an HQ it lands with no
+	// facing of its own, so it is pointed like everything else.
+	test('is still pointed by hand when it comes out of its HQ', () => {
+		const placed = dispatch(twoPlayerGame(), togglePiece('0-C'), movePiece('0-C', [3, 3]));
+
+		expect(placed.hasTurnEnded).toBe(false);
+		expect(pz.getPieceById('0-C', placed.pieces).selected).toBe(true);
+
+		const dropped = dispatch(hover(placed, '0-C', [2, 2]), togglePiece('0-C'));
+
+		expect(dropped.hasTurnEnded).toBe(true);
+		expect(pz.getPieceById('0-C', dropped.pieces).direction).toEqual([1, 1]);
+	});
+});
+
 // Regression. A settled spy ends the turn without a toggle, so the state machine is left sitting on
 // MOVEMENT2 instead of the DESELECTION a drop used to leave — and the guard that stops a spy being
 // put down mid-walk read that state without asking whose it was. A buffed spy picked up afterwards
@@ -214,10 +256,12 @@ test.describe('turns that did something still end', () => {
 		expect(dropped.hasTurnEnded).toBe(true);
 	});
 
+	// No togglePiece at the end of this one, for the same reason as the spy above: a CEO faces the
+	// way it just went, so the move points it and puts it down in one.
 	test('moving a ceo already on the board', () => {
 		const state = deploy(twoPlayerGame(), '0-C', [3, 3], [3, 4]);
 
-		const dropped = dispatch(state, togglePiece('0-C'), movePiece('0-C', [3, 5]), togglePiece('0-C'));
+		const dropped = dispatch(state, togglePiece('0-C'), movePiece('0-C', [3, 5]));
 
 		expect(dropped.hasTurnEnded).toBe(true);
 	});

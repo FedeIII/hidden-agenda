@@ -171,9 +171,9 @@ test.describe('FIELD TRAINING', () => {
 		expect(await get.cell(2, 3).isHighlighted).toBe(false);
 		await clickOn.team(0).agent(1);
 
+		// Two clicks, like the spy: a CEO faces the way it just went, so the move puts it down.
 		await clickOn.team(0).ceo();
 		await clickOn.cell(3, 2);
-		await clickOn.team(0).ceo();
 
 		// Still nothing: the CEO is beside it, but the turn has not turned over.
 		await expect(page.locator('#training-verb')).toHaveText('PASS');

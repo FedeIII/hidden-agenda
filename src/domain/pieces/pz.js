@@ -211,7 +211,7 @@ function moveByType(piece, toPosition, throughSniperLineOf, pieceState) {
 		case AGENT:
 			return moveAgent(piece, toPosition, throughSniperLineOf);
 		case CEO:
-			return moveCeo(piece, toPosition, throughSniperLineOf);
+			return moveCeo(piece, toPosition, throughSniperLineOf, pieceState);
 		case SPY:
 			return moveSpy(piece, toPosition, throughSniperLineOf, pieceState);
 		case SNIPER:
@@ -239,7 +239,7 @@ function moveAgent(agent, toPosition, throughSniperLineOf) {
 	};
 }
 
-function moveCeo(ceo, toPosition, throughSniperLineOf) {
+function moveCeo(ceo, toPosition, throughSniperLineOf, pieceState) {
 	const ceoDirection = ceo.position ? cells.getDirection(ceo.position, toPosition) : undefined;
 	const ceoSelectedDirection = ceo.position ? ceoDirection : [1, 0];
 
@@ -249,6 +249,9 @@ function moveCeo(ceo, toPosition, throughSniperLineOf) {
 		direction: ceoDirection,
 		selectedDirection: ceoSelectedDirection,
 		showMoveCells: false,
+		// A CEO faces the way it just moved and has no turning step, so the move puts it down as
+		// well as pointing it — see isSettledByMove, which the spy answers the same way.
+		selected: !isSettledByMove(ceo, pieceState),
 		throughSniperLineOf,
 	};
 }
@@ -277,16 +280,26 @@ function willSpyKeepMoving(spy, pieceState) {
 
 // Which pieces a move leaves settled — facing set, nothing left to point, no longer in hand.
 //
-// Only a spy, and only one already on the board. It takes its facing from the step it just took, so
-// by the time its last step lands there is nothing a turning step could still decide; being asked
-// to point it anyway was asking for a decision that had already been made. Everything else lands
-// and is then aimed, which is what PLACEMENT and COLLOCATION are for — including a spy coming out
-// of an HQ, which arrives with no direction of its own and is pointed like anything else.
+// The spy and the CEO, and only ones already on the board. Both take their facing from the move they
+// just made, so by the time it lands there is nothing a turning step could still decide; being asked
+// to point either one anyway was asking for a decision that had already been made. A CEO settles on
+// its move because a move IS its whole distance in one direction, and a spy on the last step of its
+// walk. Everything else lands and is then aimed, which is what PLACEMENT and COLLOCATION are for —
+// including a spy or a CEO coming out of an HQ, which arrives with no direction of its own and is
+// pointed like anything else.
 //
 // hasTurnEndedReducer reads this too, so what puts the piece down and what ends the turn are the
 // same question asked once.
 function isSettledByMove(piece, pieceState) {
-	return isSpy(piece.id) && Boolean(piece.position) && !willSpyKeepMoving(piece, pieceState);
+	if (!piece.position) {
+		return false;
+	}
+
+	if (isCeo(piece.id)) {
+		return true;
+	}
+
+	return isSpy(piece.id) && !willSpyKeepMoving(piece, pieceState);
 }
 
 function moveSniper(sniper, toPosition, throughSniperLineOf) {

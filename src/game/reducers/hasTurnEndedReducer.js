@@ -11,12 +11,12 @@ function hasPieceEndedTurn(pieces, pieceState, toggledPieceId) {
 		switch (pz.getType(selectedPiece.id)) {
 			case AGENT:
 				return pieceState === PLACEMENT || pieceState === MOVEMENT;
+			// Placement only, for the CEO and the spy alike. Both take their facing from the move
+			// they just made, so neither is ever in hand afterwards to be dropped — a CEO settles on
+			// its move and a spy on the last step of its walk, see isPieceSettledByMove. Either is
+			// only ever put down by hand coming out of an HQ, where it lands with no facing of its
+			// own and has to be pointed like everything else.
 			case CEO:
-				return pieceState === PLACEMENT || pieceState === MOVEMENT;
-			// Placement only. A spy walking on the board settles itself on its last step and is
-			// never in hand at MOVEMENT2 or MOVEMENT3 to be dropped — see isPieceSettledByMove.
-			// It is only ever put down by hand coming out of an HQ, where it lands with no facing
-			// of its own and has to be pointed like everything else.
 			case SPY:
 				return pieceState === PLACEMENT;
 			case SNIPER:
@@ -55,10 +55,10 @@ function isPieceBeingDropped(state, toggledPieceId) {
 }
 
 // The other way a turn ends, and the reason the rule above is stated once rather than twice: a spy
-// has no turning step, so its last step both points it and puts it down, and there is no drop left
-// to end the turn on. The board still has to have changed — a spy that walks out and back onto the
-// facing it left with has spent its steps and settled exactly where it started, so it is simply
-// back on the board unselected and can be picked up and walked again.
+// and a CEO have no turning step, so the move both points the piece and puts it down, and there is
+// no drop left to end the turn on. The board still has to have changed — a spy that walks out and
+// back onto the facing it left with has spent its steps and settled exactly where it started, so it
+// is simply back on the board unselected and can be picked up and walked again.
 function isPieceSettledByMove(state, { pieceId, coords }) {
 	if (!pz.isSettledByMove(pz.getPieceById(pieceId, state.pieces), state.pieceState)) {
 		return false;

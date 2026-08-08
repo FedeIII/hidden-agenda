@@ -202,6 +202,8 @@ test.describe('CEO', () => {
 		expect(await get.cell(4, 1).isHighlighted).toBeFalsy();
 	});
 
+	// One click per move, and no confirming click after any of them: a CEO faces whichever way it
+	// just went, so the move points it and puts it down at once.
 	test('faces in the direction of the movement', async ({ page, clickOn, get, drag, goToPlay }) => {
 		await clickOn.team(0).ceo();
 		await clickOn.cell(3, 3);
@@ -211,14 +213,12 @@ test.describe('CEO', () => {
 
 		await clickOn.team(0).ceo();
 		await clickOn.cell(2, 3);
-		await clickOn.cell(2, 3);
 
 		expect(await get.pieceIn(2, 3).direction).toEqual(DIRECTION.up.right);
 
 		await page.click('#next-turn');
 
 		await clickOn.team(0).ceo();
-		await clickOn.cell(2, 4);
 		await clickOn.cell(2, 4);
 
 		expect(await get.pieceIn(2, 4).direction).toEqual(DIRECTION.right);
@@ -227,14 +227,12 @@ test.describe('CEO', () => {
 
 		await clickOn.team(0).ceo();
 		await clickOn.cell(3, 5);
-		await clickOn.cell(3, 5);
 
 		expect(await get.pieceIn(3, 5).direction).toEqual(DIRECTION.down.right);
 
 		await page.click('#next-turn');
 
 		await clickOn.team(0).ceo();
-		await clickOn.cell(5, 3);
 		await clickOn.cell(5, 3);
 
 		expect(await get.pieceIn(5, 3).direction).toEqual(DIRECTION.down.left);
@@ -243,7 +241,6 @@ test.describe('CEO', () => {
 
 		await clickOn.team(0).ceo();
 		await clickOn.cell(5, 1);
-		await clickOn.cell(5, 1);
 
 		expect(await get.pieceIn(5, 1).direction).toEqual(DIRECTION.left);
 
@@ -251,8 +248,44 @@ test.describe('CEO', () => {
 
 		await clickOn.team(0).ceo();
 		await clickOn.cell(3, 1);
-		await clickOn.cell(3, 1);
 
 		expect(await get.pieceIn(3, 1).direction).toEqual(DIRECTION.up.left);
+	});
+
+	// A CEO has no turning step, exactly like a spy: the move it just made IS its facing, so asking
+	// for a second click was asking for a decision that had already been made.
+	test('settles where it lands, with nothing left to point', async ({ page, clickOn, get }) => {
+		await clickOn.team(0).ceo();
+		await clickOn.cell(3, 3);
+		await clickOn.cell(2, 2);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).ceo();
+		await clickOn.cell(3, 5);
+
+		expect(await get.pieceIn(3, 5).isHighlighted).toBeFalsy();
+		expect(await get.pieceIn(3, 5).direction).toEqual(DIRECTION.right);
+		expect(await get.nextTurn.isActive).toBeTruthy();
+
+		// Settled means settled: clicking it again does not pick it up for another move.
+		await clickOn.team(0).ceo();
+		expect(await get.pieceIn(3, 5).isHighlighted).toBeFalsy();
+		expect(await get.cell(3, 6).isHighlighted).toBeFalsy();
+	});
+
+	// The exception, and the one place a CEO is still put down by hand: out of its HQ it lands with
+	// no facing of its own, so it is pointed like everything else.
+	test('is still pointed by hand when it comes out of its HQ', async ({ page, clickOn, get }) => {
+		await clickOn.team(0).ceo();
+		await clickOn.cell(3, 3);
+
+		expect(await get.pieceIn(3, 3).isHighlighted).toBeTruthy();
+		expect(await get.nextTurn.isActive).toBeFalsy();
+
+		await clickOn.cell(2, 2);
+
+		expect(await get.pieceIn(3, 3).direction).toEqual(DIRECTION.up.left);
+		expect(await get.nextTurn.isActive).toBeTruthy();
 	});
 });

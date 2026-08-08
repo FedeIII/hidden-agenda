@@ -165,6 +165,17 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.13.0
+* **A CEO settles where it lands.** It faces whichever way it just moved, so the click that asked you
+  to confirm the facing was asking for a decision that had already been made — on the one piece that
+  never had one to make. One click moves it and puts it down now, the way a spy's last step does, and
+  the turn is over. Coming out of an HQ is the one exception: it arrives with no heading of its own,
+  so you point it and confirm it like any other fresh piece
+* Which piece a move settles is one predicate rather than two rules, so what puts a piece down and
+  what ends the turn cannot disagree — the spy answered it already and the CEO answers it now
+* Field Training's two CEO exercises each lost their last step, and the CEO's rule page says the move
+  confirms itself
+
 ### v3.12.0
 * **How to Play opens on a board now, not a page.** *Field Training* is ten short exercises played on
   the real table — the real reducer, the real hexagons, the real HQ cards — with a hand-authored

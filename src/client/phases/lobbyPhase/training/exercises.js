@@ -248,16 +248,13 @@ export const EXERCISES = [
 				// The crossed cell is the lesson. Every ray runs to the edge of the board except this
 				// one, which stops one short of the red agent — a CEO cannot land on anybody, so it
 				// cannot kill anybody either.
+				//
+				// And like a spy, a CEO has no turning step: it faces the way it just went, so this
+				// one click both points it and puts it down. There is nothing left to confirm.
 				verb: 'MOVE',
 				marks: [{ cell: [3, 3] }, { cell: [3, 4], deny: true }],
 				allows: lands([3, 3]),
 				done: state => stands(state, '0-C', [3, 3]),
-			},
-			{
-				verb: 'PUT DOWN',
-				marks: [{ piece: '0-C' }],
-				allows: picks('0-C'),
-				done: turnSpent,
 			},
 		],
 	},
@@ -486,17 +483,12 @@ export const EXERCISES = [
 				done: state => isHeld(state, '0-C'),
 			},
 			{
+				// One click again: a CEO settles where it lands, so this spends the turn on its own.
 				verb: 'MOVE',
 				hint: 'next to the stuck agent',
 				marks: [{ cell: [3, 2] }],
 				allows: lands([3, 2]),
 				done: state => stands(state, '0-C', [3, 2]),
-			},
-			{
-				verb: 'PUT DOWN',
-				marks: [{ piece: '0-C' }],
-				allows: picks('0-C'),
-				done: turnSpent,
 			},
 			{
 				// Nothing about the agent has changed yet. Buffs are worked out at the start of a turn,

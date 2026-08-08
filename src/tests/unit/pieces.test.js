@@ -79,6 +79,8 @@ test.describe('spy movement', () => {
 		const onTheBoard = pz.getPieceById('0-S', onBoard(pz.init(), '0-S', [3, 3]));
 		const inTheHq = pz.getPieceById('0-S', pz.init());
 		const agent = pz.getPieceById('0-A1', onBoard(pz.init(), '0-A1', [3, 3]));
+		const ceo = pz.getPieceById('0-C', onBoard(pz.init(), '0-C', [3, 3]));
+		const ceoInTheHq = pz.getPieceById('0-C', pz.init());
 
 		expect(pz.isSettledByMove(onTheBoard, SELECTION)).toBe(false);
 		expect(pz.isSettledByMove(onTheBoard, MOVEMENT)).toBe(true);
@@ -86,6 +88,11 @@ test.describe('spy movement', () => {
 		expect(pz.isSettledByMove({ ...onTheBoard, buffed: true }, MOVEMENT2)).toBe(true);
 		expect(pz.isSettledByMove(inTheHq, SELECTION)).toBe(false);
 		expect(pz.isSettledByMove(agent, MOVEMENT)).toBe(false);
+
+		// A CEO spends its whole move in one direction, so there is no state at which it has more
+		// of one to take: any move off the board settles it, and a deployment never does.
+		expect(pz.isSettledByMove(ceo, SELECTION)).toBe(true);
+		expect(pz.isSettledByMove(ceoInTheHq, SELECTION)).toBe(false);
 	});
 
 	// A spy takes somebody from behind, and what decides that is which way the *target* is facing.
@@ -103,6 +110,33 @@ test.describe('spy movement', () => {
 
 		expect(landings).toContainEqual([3, 3]);
 		expect(landings).not.toContainEqual([2, 2]);
+	});
+});
+
+// A CEO faces the way it just went, exactly like a spy, so it settles on the move as well: it is the
+// second piece with no turning step and the second one never asked for a confirming click.
+test.describe('ceo movement', () => {
+	test('puts itself down on the move, facing the way it went', () => {
+		let pieces = pz.init();
+		pieces = onBoard(pieces, '0-C', [3, 3]);
+		pieces = withPiece(pieces, '0-C', { selected: true, showMoveCells: true });
+
+		const ceo = pz.getPieceById('0-C', pz.move(pieces, '0-C', [3, 5], SELECTION));
+
+		expect(ceo.position).toEqual([3, 5]);
+		expect(ceo.selected).toBe(false);
+		expect(ceo.showMoveCells).toBe(false);
+		expect(ceo.direction).toEqual([0, 0]);
+		expect(ceo.direction).toEqual(ceo.selectedDirection);
+	});
+
+	test('is still put down by hand when it comes out of an HQ', () => {
+		const pieces = withPiece(pz.init(), '0-C', { selected: true, showMoveCells: true });
+		const ceo = pz.getPieceById('0-C', pz.move(pieces, '0-C', [3, 3], SELECTION));
+
+		// No position to have come from means no direction of its own, so the aiming step stands.
+		expect(ceo.selected).toBe(true);
+		expect(ceo.direction).toBeUndefined();
 	});
 });
 

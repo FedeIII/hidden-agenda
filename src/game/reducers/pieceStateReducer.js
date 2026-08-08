@@ -13,13 +13,14 @@ import { TOGGLE_PIECE, MOVE_PIECE, CLAIM_CONTROL, CANCEL_CONTROL } from 'Game/ac
  *                => MOVEMENT => MOVEMENT2
  *                                (buffed) => MOVEMENT3
  *
- * The spy is the one piece whose walk does not end in a COLLOCATION. Its last step sets its facing,
- * so there is nothing left to point and it puts itself down — pz.isSettledByMove. Coming out of an
- * HQ it goes through PLACEMENT like everything else, because it lands there with no facing at all.
- *
  * CEO: SELECTION => DESELECTION
  *                => PLACEMENT => COLLOCATION
- *                => MOVEMENT => DESELECTION
+ *                => MOVEMENT
+ *
+ * The spy and the CEO are the two pieces whose move does not end in a COLLOCATION. The step sets the
+ * facing, so there is nothing left to point and the piece puts itself down — pz.isSettledByMove.
+ * Coming out of an HQ both go through PLACEMENT like everything else, because a piece lands there
+ * with no facing at all.
  *
  * SNIPER: SELECTION => DESELECTION
  *                   => PLACEMENT => COLLOCATION

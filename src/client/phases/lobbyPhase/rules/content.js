@@ -297,6 +297,9 @@ export const RULES_PAGES = [
 			{
 				note: 'A spy is the one piece that cannot change its mind once it starts moving — more on that on its own page.',
 			},
+			{
+				note: 'A CEO and a spy already on the board skip the last two beats: both face the way they just moved, so the move confirms itself and your turn is over.',
+			},
 		],
 	},
 	{
@@ -366,7 +369,10 @@ export const RULES_PAGES = [
 				p: 'It stops right before whoever is blocking it, friend or enemy. That is the trade-off for going so far: the CEO **can never kill**.',
 			},
 			{
-				p: 'It does not turn on its own — it always faces whichever way it just moved. Only when you first bring it onto the board can you point it wherever you like.',
+				p: 'It does not turn on its own — it always faces whichever way it just moved. There is nothing to aim, so **one click moves it and puts it down**, and your turn is over.',
+			},
+			{
+				p: 'Only when you first bring it onto the board do you point it wherever you like — it arrives with no heading of its own, so you point it and confirm it like any other fresh piece.',
 			},
 			{ p: 'Why the CEO matters so much:' },
 			{

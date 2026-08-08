@@ -548,7 +548,7 @@ var cells_default = {
 //#endregion
 //#region src/domain/pieces/pz.js
 var { AGENT: AGENT$2, CEO: CEO$2, SPY: SPY$2, SNIPER: SNIPER$2 } = TYPES;
-var { SELECTION, MOVEMENT: MOVEMENT$1, MOVEMENT2, MOVEMENT3, DESELECTION, COLLOCATION: COLLOCATION$1, PLACEMENT: PLACEMENT$1 } = STATES;
+var { SELECTION, MOVEMENT: MOVEMENT$1, MOVEMENT2, MOVEMENT3, DESELECTION, COLLOCATION, PLACEMENT: PLACEMENT$1 } = STATES;
 function createPiece(id) {
 	return {
 		id,
@@ -615,7 +615,7 @@ function togglePieceState$1(pieceId, { pieces, pieceState, followMouse }) {
 	const selectedPiece = getSelectedPiece(pieces);
 	if (isSpyMidWalk(pieceId, pieces, pieceState)) return pieceState;
 	if (!!selectedPiece && selectedPiece.id !== pieceId) return pieceState;
-	if (followMouse) return COLLOCATION$1;
+	if (followMouse) return COLLOCATION;
 	const toggledPiece = getPieceById(pieceId, pieces);
 	if (!toggledPiece.selected) {
 		if (isSniper(toggledPiece.id) && !!toggledPiece.position) return MOVEMENT$1;
@@ -647,7 +647,7 @@ function getMovedPiece(pieces, piece, toPosition, pieceState) {
 function moveByType(piece, toPosition, throughSniperLineOf, pieceState) {
 	switch (getType(piece.id)) {
 		case AGENT$2: return moveAgent(piece, toPosition, throughSniperLineOf);
-		case CEO$2: return moveCeo(piece, toPosition, throughSniperLineOf);
+		case CEO$2: return moveCeo(piece, toPosition, throughSniperLineOf, pieceState);
 		case SPY$2: return moveSpy(piece, toPosition, throughSniperLineOf, pieceState);
 		case SNIPER$2: return moveSniper(piece, toPosition, throughSniperLineOf);
 		default: return;
@@ -671,7 +671,7 @@ function moveAgent(agent, toPosition, throughSniperLineOf) {
 		throughSniperLineOf
 	};
 }
-function moveCeo(ceo, toPosition, throughSniperLineOf) {
+function moveCeo(ceo, toPosition, throughSniperLineOf, pieceState) {
 	const ceoDirection = ceo.position ? cells_default.getDirection(ceo.position, toPosition) : void 0;
 	const ceoSelectedDirection = ceo.position ? ceoDirection : [1, 0];
 	return {
@@ -680,6 +680,7 @@ function moveCeo(ceo, toPosition, throughSniperLineOf) {
 		direction: ceoDirection,
 		selectedDirection: ceoSelectedDirection,
 		showMoveCells: false,
+		selected: !isSettledByMove(ceo, pieceState),
 		throughSniperLineOf
 	};
 }
@@ -700,7 +701,9 @@ function willSpyKeepMoving(spy, pieceState) {
 	return Boolean(spy.position && pieceState === SELECTION || spy.buffed && pieceState === MOVEMENT$1);
 }
 function isSettledByMove(piece, pieceState) {
-	return isSpy(piece.id) && Boolean(piece.position) && !willSpyKeepMoving(piece, pieceState);
+	if (!piece.position) return false;
+	if (isCeo(piece.id)) return true;
+	return isSpy(piece.id) && !willSpyKeepMoving(piece, pieceState);
 }
 function moveSniper(sniper, toPosition, throughSniperLineOf) {
 	const sniperDirection = sniper.position ? cells_default.getDirection(sniper.position, toPosition) : void 0;
@@ -1722,7 +1725,7 @@ function hasPieceEndedTurn(pieces, pieceState, toggledPieceId) {
 	const selectedPiece = pz.getSelectedPiece(pieces);
 	if (selectedPiece && selectedPiece.id === toggledPieceId) switch (pz.getType(selectedPiece.id)) {
 		case AGENT$1: return pieceState === PLACEMENT || pieceState === MOVEMENT;
-		case CEO$1: return pieceState === PLACEMENT || pieceState === MOVEMENT;
+		case CEO$1:
 		case SPY$1: return pieceState === PLACEMENT;
 		case SNIPER$1: return pieceState === PLACEMENT || pieceState === MOVEMENT;
 		default: return false;
@@ -1812,13 +1815,14 @@ function piecesReducer(state, action) {
 *                => MOVEMENT => MOVEMENT2
 *                                (buffed) => MOVEMENT3
 *
-* The spy is the one piece whose walk does not end in a COLLOCATION. Its last step sets its facing,
-* so there is nothing left to point and it puts itself down — pz.isSettledByMove. Coming out of an
-* HQ it goes through PLACEMENT like everything else, because it lands there with no facing at all.
-*
 * CEO: SELECTION => DESELECTION
 *                => PLACEMENT => COLLOCATION
-*                => MOVEMENT => DESELECTION
+*                => MOVEMENT
+*
+* The spy and the CEO are the two pieces whose move does not end in a COLLOCATION. The step sets the
+* facing, so there is nothing left to point and the piece puts itself down — pz.isSettledByMove.
+* Coming out of an HQ both go through PLACEMENT like everything else, because a piece lands there
+* with no facing at all.
 *
 * SNIPER: SELECTION => DESELECTION
 *                   => PLACEMENT => COLLOCATION
@@ -1847,12 +1851,11 @@ function pieceStateReducer(state, action) {
 //#endregion
 //#region src/game/reducers/followMouseReducer.js
 var { AGENT, CEO, SPY, SNIPER } = TYPES;
-var { COLLOCATION } = STATES;
-function movedPieceState({ pieces, followMouse, pieceState }) {
+function movedPieceState({ pieces, followMouse }) {
 	const selectedPiece = pz.getSelectedPiece(pieces);
 	switch (pz.getType(selectedPiece.id)) {
 		case AGENT: return true;
-		case CEO: return pieceState === COLLOCATION;
+		case CEO:
 		case SPY: return false;
 		case SNIPER: return true;
 		default: return followMouse;
