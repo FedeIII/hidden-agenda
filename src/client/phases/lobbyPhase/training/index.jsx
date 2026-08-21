@@ -9,7 +9,7 @@ import useT, { useLang } from 'Client/i18n';
 import useSkin from 'Hooks/useSkin';
 import useSnipe from 'Hooks/useSnipe';
 import { useCanAccuse, useCanReveal } from 'Hooks/useSession';
-import { Button, Buttons } from 'Client/components/button';
+import { Button } from 'Client/components/button';
 import HQs from 'Client/components/hqs';
 import { AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
 import { useRulesPages } from '../rules/content';
@@ -25,16 +25,28 @@ import { seedState } from './seed';
 import CoachMarks from './marks';
 import {
 	TrainingPanel,
-	HeadRow,
+	Briefing,
+	BriefingTab,
+	BriefingHead,
+	BriefingWho,
+	BriefingFoot,
+	Eyebrow,
+	NavLink,
 	TrainingHead,
+	Mat,
+	MatTab,
+	MatRing,
+	MatNote,
 	Strip,
 	Record,
 	RecordLabel,
 	RecordBox,
 	Slip,
+	SlipLine,
 	SlipKey,
 	Verb,
 	Hint,
+	HintSlot,
 	TrainingBoard,
 	CardTable,
 	CardBack,
@@ -45,6 +57,9 @@ import {
 	FindingLine,
 	FindingSmall,
 	FindingNote,
+	FindingActions,
+	Cta,
+	QuietLink,
 	Placard,
 	PlacardSheet,
 	TRAVEL_MS,
@@ -59,6 +74,14 @@ import {
 // dispatch. So the answer to every click is the game's own answer, and a lesson cannot teach a move
 // the rules would refuse. What the tutorial adds is only the ring round what to click next, one
 // stamped verb, and one line at the end of each exercise saying what just happened.
+//
+// **The screen is in two halves, and the halves are the design.** The folder at the top is the
+// course: it says what to do, it says what just happened, and it holds the ways out. The mat below it
+// is the game: the real turn strip, the real board, the real HQ cards and the real action buttons,
+// and nothing else. A learner should never have to work out which one they are touching, and before
+// the two boxes existed there was nothing to work it out from — START OVER and NEXT TURN were the
+// same red stamp, the same size, five inches apart. See the note at the top of `components.jsx` for
+// the colour rule that goes with the boxes.
 //
 // Three things hold it up:
 //
@@ -179,7 +202,48 @@ function CardStage({ cards, notes, onLook }) {
 	);
 }
 
-function BoardStage({ exercise }) {
+/**
+ * The folder: everything the course itself owns.
+ *
+ * Both the exercises and the card that closes the course are dealt into the same folder, so the head,
+ * the tab and the ways out are written once. What changes is the sheet in the middle.
+ */
+function Folder({ head, nav, children }) {
+	const t = useT();
+
+	return (
+		<Briefing id="training-briefing">
+			<BriefingTab>{t('training.fieldTraining')}</BriefingTab>
+			{head}
+			{children}
+			<BriefingFoot>{nav}</BriefingFoot>
+		</Briefing>
+	);
+}
+
+/**
+ * The mat: everything the game owns.
+ *
+ * An outline, a dark tab and one line of legend. The legend is the only place on the screen that
+ * says out loud what the rings are for, and it says it once rather than on every step — the marks
+ * themselves are the vocabulary the rest of the course teaches by using.
+ */
+function GameMat({ label, snug, children }) {
+	const t = useT();
+
+	return (
+		<Mat id="training-mat" $snug={snug}>
+			<MatTab id="training-mat-tab">
+				<MatRing aria-hidden="true" />
+				{label}
+				<MatNote>{t('training.matNote')}</MatNote>
+			</MatTab>
+			{children}
+		</Mat>
+	);
+}
+
+function BoardStage({ exercise, bar }) {
 	const hqs = exercise.hqs;
 	// Two cards or fewer go under the board together on a phone rather than one above it and one
 	// below — see TrainingBoard. Counted here because the count is a fact about the exercise, and
@@ -187,7 +251,7 @@ function BoardStage({ exercise }) {
 	const compact = Boolean(hqs) && hqs.left.length + hqs.right.length <= 2;
 
 	return (
-		<TrainingBoard $solo={!hqs} $compact={compact}>
+		<TrainingBoard $solo={!hqs} $compact={compact} $bar={bar}>
 			{hqs && (
 				<HQs>
 					{hqs.left.map(team => (
@@ -360,7 +424,7 @@ function openExerciseAt(exercise) {
  * board rather than trying to walk it backwards. A reducer's initialiser only runs on mount, which
  * is exactly the lifetime an exercise wants.
  */
-function ExerciseRunner({ exercise, onNext, onOpenFile, isLast }) {
+function ExerciseRunner({ exercise, onNext, onOpenFile, isLast, head, nav }) {
 	const t = useT();
 	const lang = useLang();
 	const documentSkin = useSkin();
@@ -390,6 +454,9 @@ function ExerciseRunner({ exercise, onNext, onOpenFile, isLast }) {
 
 	const step = exercise.steps[stepIndex];
 	const finished = !step;
+	// Whether the mat has to keep room under the board for one of the game's own buttons. Three
+	// lessons do; the other seven give the space to the board. See `TrainingBoard`.
+	const hasBar = Boolean(exercise.snipe || exercise.screen);
 
 	// Where a sniper is looking, drawn either for a whole exercise or for the few steps of one that
 	// are about it — the other steps of the buff lesson have three rings of their own on the board
@@ -444,53 +511,67 @@ function ExerciseRunner({ exercise, onNext, onOpenFile, isLast }) {
 		<SessionContext.Provider value={session}>
 			<StateContext.Provider value={stateValue}>
 				<DragProvider>
-					<StepPlacard onSettled={revealSpotlight}>
-						{finished ? (
-							<Finding id="training-finding">
-								<FindingStamp>{t('training.passed')}</FindingStamp>
-								<FindingLine id="training-finding-line">{said.finding}</FindingLine>
-								{/* The second line is for the half of a rule the board cannot show. That a reveal
-								    costs fifty points is visible on the screen; that they come *off* is not. */}
-								{said.note && <FindingSmall id="training-finding-note">{said.note}</FindingSmall>}
-								<Buttons>
-									<Button id="training-file" small active onClick={() => onOpenFile(exercise.file)}>
-										{t('training.readTheFile')}
-									</Button>
-									<Button id="training-next" active onClick={onNext}>
-										{t(isLast ? 'training.finish' : 'training.next')}
-									</Button>
-								</Buttons>
-							</Finding>
-						) : (
-							<Slip id="training-slip">
-								<SlipKey id="training-step">
-									{t('training.step', { n: stepIndex + 1, total: exercise.steps.length })}
-								</SlipKey>
-								{/* The verb and the hint come from `said`, which is the exercise's own words in the
-								    reader's language, indexed by the same step number the gate is. */}
-								<Verb id="training-verb">{said.steps[stepIndex].verb}</Verb>
-								{said.steps[stepIndex].hint && <Hint id="training-hint">{said.steps[stepIndex].hint}</Hint>}
-							</Slip>
+					<Folder head={head} nav={nav}>
+						<StepPlacard onSettled={revealSpotlight}>
+							{finished ? (
+								<Finding id="training-finding">
+									<FindingStamp>{t('training.passed')}</FindingStamp>
+									<FindingLine id="training-finding-line">{said.finding}</FindingLine>
+									{/* The second line is for the half of a rule the board cannot show. That a reveal
+									    costs fifty points is visible on the screen; that they come *off* is not. */}
+									{said.note && <FindingSmall id="training-finding-note">{said.note}</FindingSmall>}
+									{/* One loud control and one quiet one, stacked. They were two red stamps side by
+									    side, which asked the learner to choose between reading and carrying on. */}
+									<FindingActions>
+										<Cta id="training-next" active onClick={onNext}>
+											{t(isLast ? 'training.finish' : 'training.next')}
+										</Cta>
+										<QuietLink id="training-file" type="button" onClick={() => onOpenFile(exercise.file)}>
+											{t('training.readTheFile')}
+										</QuietLink>
+									</FindingActions>
+								</Finding>
+							) : (
+								<Slip id="training-slip">
+									<SlipLine>
+										<SlipKey id="training-step">
+											{t('training.step', { n: stepIndex + 1, total: exercise.steps.length })}
+										</SlipKey>
+										{/* The verb and the hint come from `said`, which is the exercise's own words in
+										    the reader's language, indexed by the same step number the gate is. */}
+										<Verb id="training-verb">{said.steps[stepIndex].verb}</Verb>
+										{/* The slot is here on every step, with or without a hint in it. See `Slip`. */}
+										<HintSlot>
+											{said.steps[stepIndex].hint && <Hint id="training-hint">{said.steps[stepIndex].hint}</Hint>}
+										</HintSlot>
+									</SlipLine>
+								</Slip>
+							)}
+						</StepPlacard>
+					</Folder>
+
+					<GameMat
+						label={t(exercise.cards ? 'training.yourCards' : 'training.liveBoard')}
+						snug={Boolean(exercise.cards)}
+					>
+						{exercise.strip && (
+							<Strip>
+								<TurnStrip />
+							</Strip>
 						)}
-					</StepPlacard>
 
-					{exercise.strip && (
-						<Strip>
-							<TurnStrip />
-						</Strip>
-					)}
+						{exercise.cards ? (
+							<CardStage cards={exercise.cards} notes={notes} onLook={flag => dispatch(note(flag))} />
+						) : (
+							<BoardStage exercise={exercise} bar={hasBar} />
+						)}
 
-					{exercise.cards ? (
-						<CardStage cards={exercise.cards} notes={notes} onLook={flag => dispatch(note(flag))} />
-					) : (
-						<BoardStage exercise={exercise} />
-					)}
+						{exercise.snipe && <SnipeAction />}
 
-					{exercise.snipe && <SnipeAction />}
-
-					{exercise.screen && (
-						<ScreenAction which={exercise.screen} notes={notes} onLook={flag => dispatch(note(flag))} />
-					)}
+						{exercise.screen && (
+							<ScreenAction which={exercise.screen} notes={notes} onLook={flag => dispatch(note(flag))} />
+						)}
+					</GameMat>
 
 					<CoachMarks marks={marks} tag={tag} />
 				</DragProvider>
@@ -507,7 +588,7 @@ const UNCOVERED = ['how-it-ends', 'playing-online'];
 function CourseComplete({ onOpenFile, onIndex, onPlay }) {
 	const t = useT();
 	// The two page titles come out of the book rather than being written down again here, which is
-	// also what keeps them in the reader's language: they are the same two buttons in both.
+	// also what keeps them in the reader's language: they are the same two links in both.
 	const pages = useRulesPages();
 
 	return (
@@ -517,19 +598,22 @@ function CourseComplete({ onOpenFile, onIndex, onPlay }) {
 			<FindingNote>{t('training.pagesLeft')}</FindingNote>
 			<DoneList>
 				{UNCOVERED.map(slug => (
-					<Button key={slug} id={`training-read-${slug}`} small active onClick={() => onOpenFile(slug)}>
+					<QuietLink key={slug} id={`training-read-${slug}`} type="button" onClick={() => onOpenFile(slug)}>
 						{(pages.find(page => page.slug === slug) || {}).title}
-					</Button>
+					</QuietLink>
 				))}
 			</DoneList>
-			<Buttons>
-				<Button id="training-play" active onClick={onPlay}>
+			{/* One loud thing to press at the end of a course, and it is the game. BACK TO THE INDEX
+			    was a second stamp of the same size beside it, so the card closed on two offers rather
+			    than on one. */}
+			<FindingActions>
+				<Cta id="training-play" active onClick={onPlay}>
 					{t('training.playNow')}
-				</Button>
-				<Button id="training-back-to-index" small active onClick={onIndex}>
+				</Cta>
+				<QuietLink id="training-back-to-index" type="button" onClick={onIndex}>
 					{t('training.backToIndex')}
-				</Button>
-			</Buttons>
+				</QuietLink>
+			</FindingActions>
 		</Finding>
 	);
 }
@@ -573,54 +657,66 @@ export default function TrainingCourse({ slug, onOpen, onBack, onIndex, onOpenFi
 		[onOpen],
 	);
 
+	// The folder's head and its foot are the same on an exercise and on the card that closes the
+	// course, so they are built once here and handed down. The runner needs them as elements rather
+	// than as flags because it is the runner that renders the folder: its board and its sheet are one
+	// reducer and cannot be split across two components.
+	const head = (
+		<BriefingHead>
+			<BriefingWho>
+				{!complete && <Eyebrow>{t('training.exerciseOf', { n: index + 1, total: EXERCISES.length })}</Eyebrow>}
+				<TrainingHead id="training-title">
+					{complete ? t('training.fieldTraining') : exerciseText(exercise, lang).title}
+				</TrainingHead>
+			</BriefingWho>
+
+			<Record id="training-record">
+				<RecordLabel>{t('training.record')}</RecordLabel>
+				{/* Ten titles in a loop, which is why `exerciseText` is a plain function and not a
+				    hook — `useLang()` above supplies the language once for all of them. */}
+				{EXERCISES.map((entry, at) => (
+					<RecordBox
+						key={entry.slug}
+						id={`training-go-${entry.slug}`}
+						type="button"
+						title={exerciseText(entry, lang).title}
+						aria-label={exerciseText(entry, lang).title}
+						$done={passed.has(entry.slug)}
+						$current={!complete && entry.slug === exercise.slug}
+						onClick={() => openExercise(entry.slug)}
+					>
+						{at + 1}
+					</RecordBox>
+				))}
+			</Record>
+		</BriefingHead>
+	);
+
+	// The three ways out, as quiet links at the foot of the folder. They were three red stamps at the
+	// top of the screen — the same control the game uses for SNIPE and NEXT TURN, and the first thing
+	// on the page. A way out has to be findable and must never be the loudest thing offered.
+	const nav = (
+		<>
+			{!complete && (
+				<NavLink id="training-restart" type="button" onClick={() => setAttempt(count => count + 1)}>
+					{t('training.startOver')}
+				</NavLink>
+			)}
+			<NavLink id="rules-index" type="button" onClick={onIndex}>
+				{t('common.index')}
+			</NavLink>
+			<NavLink id="rules-main-menu" type="button" onClick={onBack}>
+				{t('common.mainMenu')}
+			</NavLink>
+		</>
+	);
+
 	return (
 		<TrainingPanel>
-			{/* START OVER sits with the two ways out rather than under the board. It is chrome, and a
-			    row of its own beneath the table is a band of the screen the board could have had. */}
-			<Buttons>
-				<Button id="rules-main-menu" small active onClick={onBack}>
-					{t('common.mainMenu')}
-				</Button>
-				<Button id="rules-index" small active onClick={onIndex}>
-					{t('common.index')}
-				</Button>
-				{!complete && (
-					<Button id="training-restart" small active onClick={() => setAttempt(count => count + 1)}>
-						{t('training.startOver')}
-					</Button>
-				)}
-			</Buttons>
-
-			<HeadRow>
-				<TrainingHead id="training-title">
-					{complete
-						? t('training.fieldTraining')
-						: t('training.exerciseTitle', { n: index + 1, title: exerciseText(exercise, lang).title })}
-				</TrainingHead>
-
-				<Record id="training-record">
-					<RecordLabel>{t('training.record')}</RecordLabel>
-					{/* Ten titles in a loop, which is why `exerciseText` is a plain function and not a
-					    hook — `useLang()` above supplies the language once for all of them. */}
-					{EXERCISES.map((entry, at) => (
-						<RecordBox
-							key={entry.slug}
-							id={`training-go-${entry.slug}`}
-							type="button"
-							title={exerciseText(entry, lang).title}
-							aria-label={exerciseText(entry, lang).title}
-							$done={passed.has(entry.slug)}
-							$current={!complete && entry.slug === exercise.slug}
-							onClick={() => openExercise(entry.slug)}
-						>
-							{at + 1}
-						</RecordBox>
-					))}
-				</Record>
-			</HeadRow>
-
 			{complete ? (
-				<CourseComplete onOpenFile={onOpenFile} onIndex={onIndex} onPlay={onPlay} />
+				<Folder head={head} nav={nav}>
+					<CourseComplete onOpenFile={onOpenFile} onIndex={onIndex} onPlay={onPlay} />
+				</Folder>
 			) : (
 				<ExerciseRunner
 					key={`${exercise.slug}-${attempt}`}
@@ -628,6 +724,8 @@ export default function TrainingCourse({ slug, onOpen, onBack, onIndex, onOpenFi
 					isLast={isLast}
 					onNext={onNext}
 					onOpenFile={onOpenFile}
+					head={head}
+					nav={nav}
 				/>
 			)}
 		</TrainingPanel>

@@ -170,6 +170,38 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.16.0
+* **A training lesson is two boxes now: a folder and a mat.** The folder is the course — manila stock,
+  a tab, a shadow — and it holds the exercise, the order slip and the ways out. The mat below it is
+  the game: an outline on the desk with a dark tab on its top edge, holding the real turn strip, the
+  real board, the real HQ cards and the real `SNIPE`. Nothing of one is inside the other
+* Before this it was one centred column of loose bands, so a learner met nine controls with no way to
+  tell which of them belonged to the game. `START OVER` was the same red stamp, at the same size, as
+  `NEXT TURN` — five inches apart and dressed identically
+* **Red is the game. Ink is the course.** Every control takes its colour from the same four custom
+  properties, so the two tutorial controls re-declare those properties on themselves and the game's
+  own buttons are untouched. The stamped verb and the `Passed` stamp are ink for the same reason: in
+  the accent they read as a second `SNIPE`
+* **One loud control per state, and none at all during a step** — while an exercise is running the
+  thing to press is out on the board, so the folder offers nothing filled and its three ways out are
+  underlined text. A passed exercise has exactly one: `NEXT`, a filled ink block, with `READ THE FILE`
+  a quiet link beneath it. They used to be two stamps side by side, which made carrying on and
+  stopping to read look like a choice between equals
+* **The mat's dark tab is the only legend on the screen** — a ring in the coach marks' own cream, on
+  the coach marks' own dark ground, and the words *click what is ringed*. Said once, on the box it is
+  about, rather than added to every step
+* **The hint is the sentence, not the footnote.** 14px in full-strength ink beside the stamp, where it
+  was 12px of dim italic; the stamp itself no longer moves, because the line is set from the left and
+  the step count has a width of its own. Centred, it swung a hundred and sixty pixels sideways
+  between a step with a hint and a step without one
+* **The whole of a lesson fits an 800×600 window, including the button it presses.** The board takes
+  what the mat is not using, and how much that is depends on whether the lesson has an action bar —
+  three do, seven give the space to the board. The old figure claimed the same thing and missed it by
+  37 pixels, which put `SNIPE` below the fold on the one exercise that asks for it
+* Five new specs hold the design rather than the pixels: what is in each box, ink against red, one
+  loud control on a passed card, an order slip that is the same height on every step of an exercise,
+  and the mat's label legible under four HQ cards
+
 ### v3.15.0
 * **The game is in Spanish as well as English** — all of it. The menus, the lobby, the board, every
   screen, the twenty-page rule book and the ten-exercise training course. Nothing is half-translated

@@ -320,7 +320,12 @@ export default {
 	// The course's chrome. Its exercises' own words live beside the boards they belong to.
 	training: {
 		fieldTraining: 'Field Training',
-		exerciseTitle: '{n}. {title}',
+		exerciseOf: 'Exercise {n} of {total}',
+		// The two tabs that say which half of the screen is which. `liveBoard` is on the mat that
+		// holds the real game; the folder above it holds the course.
+		liveBoard: 'Live board',
+		yourCards: 'Your cards',
+		matNote: 'Click what is ringed',
 		record: 'Record',
 		startOver: 'Start over',
 		step: 'Step {n} / {total}',

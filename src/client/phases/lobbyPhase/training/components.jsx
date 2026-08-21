@@ -1,6 +1,6 @@
 import styled, { css, keyframes } from 'styled-components';
 import { narrow, narrowOrShort, short } from 'Client/components/breakpoints';
-import { Buttons } from 'Client/components/button';
+import { Button } from 'Client/components/button';
 import HQs from 'Client/components/hqs';
 import { Subtitle, Title } from 'Client/components/title';
 import { Board, TableBoardStyled } from 'Phases/playPhase/components';
@@ -14,9 +14,22 @@ import { Alignments, AlignmentCardStyled } from 'Client/components/alignments/co
 //
 // One rule governs everything here: **nothing may cover the board**. Every hexagon is a transparent
 // DOM element and every click in the game goes through it, so the coach marks are `pointer-events:
-// none` and the panel has no background of its own — the WebGL canvas is a sibling of `.game` and
-// sits *under* it, so a fill anywhere in this tree would be a filter over the table rather than a
-// surface behind it.
+// none` and no box in this tree paints a fill over the table — the WebGL canvas is a sibling of
+// `.game` and sits *under* it, so a fill there is a filter over the table rather than a surface
+// behind it. The mat below is therefore an outline and nothing more.
+//
+// The screen holds two things, and a learner must never confuse them:
+//
+// - **The folder** is the course. It is paper: manila stock, a tab, a shadow. It says what to do and
+//   what just happened. Its controls are BLACK INK.
+// - **The mat** is the game. It is an outline on the desk with a dark tab, and it holds the real
+//   turn strip, the real board, the real HQ cards and the real action buttons. Its controls are RED,
+//   because they are the game's own.
+//
+// **Red is the game. Ink is the course.** That is the whole of the vocabulary, and it costs nothing
+// to keep: a control reads its colour from the `--ha-control-*` tokens, so `Cta` and `NavLink` below
+// re-declare those tokens on themselves rather than restyling the shared `Button`. The record boxes
+// and the coach marks were already ink, so the rule was half true before it was written down.
 
 export const TrainingPanel = styled.div`
 	display: flex;
@@ -32,23 +45,146 @@ export const TrainingPanel = styled.div`
 	}
 `;
 
-// The title and the record share a line. Every band of chrome above the board is a band taken off
-// it, and on an 800x600 screen — the one the specs are pinned to — the board had run out of room
-// before this pair were put together.
-export const HeadRow = styled.div`
+/* ── The folder ────────────────────────────────────────────────────────────────────────────
+ * The course, as one sheaf of paper on the desk.
+ *
+ * Before this, the course was four loose bands of type directly on the ground: three stamp buttons,
+ * a title, a record and a slip. Nothing said where the tutorial stopped and the game started,
+ * because the tutorial had no edges. It has edges now, and everything it owns is inside them.
+ *
+ * It carries a tab and no punch holes, unlike the card backs and the rules index's training file.
+ * The holes are a fixed 22% and 78% along the top of whatever they are on, and on a box this wide
+ * and this shallow both of them landed in the head row — one of them directly over the first letter
+ * of the exercise's title.
+ * ------------------------------------------------------------------------------------------- */
+
+export const Briefing = styled.div`
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	/* Centred, not stretched. The head, the foot and the placard all ask for the full width anyway;
+	   what needs this is the card that closes the course, which is 520px inside an 820px folder and
+	   sat against the left edge while the folder stretched it. */
+	align-items: center;
+	gap: 4px;
+	width: 100%;
+	/* Wide enough that the longest step in either language keeps its order and its note on one line.
+	   The widest is Spanish — DESPLEGAR beside a 38-character note — and it needs 764px of line. Below
+	   that the note wraps onto a second line, which the placard slides the board down for rather than
+	   jumping. (No backticks in a comment inside a styled template: they close it.) */
+	max-width: 820px;
+	margin-top: 9px;
+	padding: 9px 18px 6px;
+	background: var(--ha-panel);
+	border: 1px solid var(--ha-panel-edge);
+	box-shadow: var(--ha-panel-shadow);
+
+	${narrowOrShort} {
+		gap: 3px;
+		padding: 9px 10px 5px;
+	}
+`;
+
+// The tab of the folder, on the top edge the way the finding's stamp is. It names the room the
+// learner is in, so the title below is free to name only the exercise.
+export const BriefingTab = styled.span`
+	position: absolute;
+	top: -10px;
+	left: 16px;
+	padding: 2px 10px 1px;
+	background: var(--ha-panel);
+	border: 1px solid var(--ha-panel-edge);
+	border-bottom: 0;
+	color: var(--ha-ink-dim);
+	font-family: var(--ha-face-data);
+	font-size: 9px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+
+	${narrowOrShort} {
+		left: 10px;
+	}
+`;
+
+// Which exercise this is, and how the course is going. One row, because every band above the board
+// is a band taken off it — and on the 800x600 screen the specs are pinned to the board has none to
+// spare.
+export const BriefingHead = styled.div`
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	gap: 14px;
+	justify-content: space-between;
+	gap: 10px;
 	flex-wrap: wrap;
 	width: 100%;
 `;
 
+export const BriefingWho = styled.div`
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	flex-wrap: wrap;
+	min-width: 0;
+`;
+
+export const Eyebrow = styled.span`
+	font-family: var(--ha-face-data);
+	font-size: 9px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	color: var(--ha-ink-faint);
+	white-space: nowrap;
+`;
+
 export const TrainingHead = styled(Subtitle)`
-	padding: 2px 0;
+	padding: 0;
 	color: var(--ha-ink);
 	font-weight: bold;
-	white-space: nowrap;
+	font-size: 17px;
+	text-align: left;
+
+	${narrowOrShort} {
+		padding: 0;
+		font-size: 14px;
+	}
+`;
+
+// The way out, at the foot of the folder and under a rule of its own.
+//
+// These were three rubber stamps at the top of the screen, the same red and the same size as SNIPE
+// and NEXT TURN — so the loudest controls on a lesson were the three that leave it. They are quiet
+// ink links now, which is what a way out should be: findable, and never mistaken for the task.
+export const BriefingFoot = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	flex-wrap: wrap;
+	width: 100%;
+	padding-top: 4px;
+	border-top: 1px solid var(--ha-rule);
+`;
+
+export const NavLink = styled.button`
+	padding: 1px 2px;
+	background: transparent;
+	border: 0;
+	border-bottom: 1px solid var(--ha-rule);
+	color: var(--ha-ink-dim);
+	font-family: var(--ha-face-data);
+	font-size: 11px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	cursor: pointer;
+
+	&:hover {
+		color: var(--ha-ink);
+		border-bottom-color: var(--ha-ink);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--ha-accent);
+		outline-offset: 2px;
+	}
 `;
 
 // The turn strip, in a lesson's proportions. It is the game's own component and says the game's own
@@ -66,18 +202,21 @@ export const Strip = styled.div`
 `;
 
 /* ── The training record ───────────────────────────────────────────────────────────────────
- * Eight boxes, initialled as they are passed, and the way back to any of them. It is the pager as
+ * Ten boxes, initialled as they are passed, and the way back to any of them. It is the pager as
  * well as the progress: the rule pages step one at a time because they are a book, and this is a
  * course, where the exercise you want next is not always the one after this one.
+ *
+ * It is deliberately the quietest thing in the folder. Ten small squares are ten controls, and the
+ * one control that matters on a lesson is out on the board — so these are hairlines until they are
+ * passed, and the boxes are smaller than they were.
  * ------------------------------------------------------------------------------------------- */
 
 export const Record = styled.div`
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: 4px;
 	flex-wrap: wrap;
-	justify-content: center;
-	padding-bottom: 2px;
+	justify-content: flex-end;
 `;
 
 export const RecordLabel = styled.span`
@@ -88,13 +227,16 @@ export const RecordLabel = styled.span`
 	color: var(--ha-ink-faint);
 `;
 
-// The initials box off the routing slip, made into a control. Filled once an exercise has been
-// passed, outlined in the accent while it is the one on the desk.
+// The initials box off the routing slip, made into a control. Filled in ink once an exercise has
+// been passed, ruled in ink while it is the one on the desk.
+//
+// The current one used to be outlined in the accent, which put a red mark in the folder — and red is
+// the game's colour here, so the box read as one of the board's own controls.
 const recordState = ({ $done, $current }) => {
 	if ($current) {
 		return css`
-			color: var(--ha-accent);
-			border-color: var(--ha-accent);
+			color: var(--ha-ink);
+			border-color: var(--ha-ink);
 			border-width: 2px;
 		`;
 	}
@@ -110,10 +252,10 @@ const recordState = ({ $done, $current }) => {
 
 export const RecordBox = styled.button`
 	font-family: var(--ha-face-data);
-	font-size: 11px;
+	font-size: 10px;
 	line-height: 1;
-	width: 22px;
-	height: 20px;
+	width: 18px;
+	height: 17px;
 	padding: 0;
 	text-align: center;
 	background: transparent;
@@ -130,83 +272,240 @@ export const RecordBox = styled.button`
 `;
 
 /* ── The slip ──────────────────────────────────────────────────────────────────────────────
- * What to do, in one word. The routing slip the turn strip is set on, carrying a rubber-stamped
- * verb instead of a name — because the answer to "what now?" should be readable across a room and
- * take no reading at all.
+ * What to do, and why. The typed order in the middle of the folder, and the one thing on the screen
+ * a learner has to read — so it is the largest thing the folder holds.
+ *
+ * The hint used to be twelve pixels of dim italic tucked in beside the stamp, which made it the
+ * smallest type on a screen carrying nine controls. It is fourteen pixels of full-strength ink now,
+ * and it is the sentence that says what the stamped verb means.
+ *
+ * Wide, the pair share a line and the stamp is the tallest thing on it, so the box is the same
+ * height on every step of every exercise. Narrow, the hint takes a line of its own — and that line
+ * is **kept whether or not the step has a hint**. It is seventeen pixels of nothing on the steps
+ * that do not, and the price of taking them back is the whole board stepping up and down the screen
+ * between one click and the next.
+ *
+ * The line is set from the left, not centred, and the step count has a width of its own. Centred, the
+ * stamp moved a hundred and sixty pixels sideways between a step with a hint and a step without one,
+ * and seventeen more between step 9 and step 10. It is the loudest thing on the screen and it should
+ * be in the same place every time it is read. A form's fields are left-aligned anyway.
+ *
+ * On a screen too narrow for the pair — a phone, or a window under about 900px with the Spanish
+ * catalog on — the hint wraps to its own line and the box grows by one. That is a movement rather
+ * than a jump, because the placard measures it and slides the board with it, and it happens between
+ * one step and the next rather than under a click. It is why `Briefing` is as wide as it is.
  * ------------------------------------------------------------------------------------------- */
 
 export const Slip = styled.div`
 	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 14px;
-	flex-wrap: wrap;
+	flex-direction: column;
+	align-items: flex-start;
 	width: 100%;
-	max-width: 620px;
-	padding: 6px 14px;
-	border-top: 1px dashed var(--ha-accent);
-	border-bottom: 2px solid var(--ha-ink);
-
-	${narrowOrShort} {
-		gap: 8px;
-		padding: 4px 8px;
-	}
+	padding: 1px 0 3px;
 `;
 
+export const SlipLine = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 6px 14px;
+	flex-wrap: wrap;
+	width: 100%;
+`;
+
+// A width of its own, so STEP 10 / 12 leaves the stamp exactly where STEP 1 / 12 did.
 export const SlipKey = styled.span`
+	flex: none;
+	min-width: 86px;
+	text-align: right;
 	font-family: var(--ha-face-data);
 	font-size: 9px;
 	letter-spacing: var(--ha-track-label);
 	text-transform: uppercase;
 	color: var(--ha-ink-faint);
 	font-variant-numeric: tabular-nums;
+
+	${narrowOrShort} {
+		min-width: 74px;
+	}
 `;
 
 // The verb, stamped. Written in capitals in the script rather than uppercased here, so what a spec
 // reads with `textContent` and what a player reads off the screen are the same string.
+//
+// Stamped in INK, not in the accent the other stamps in this skin use. A red stamp here sat two
+// inches above the red stamp that says SNIPE and looked like a second one of it. The double rule is
+// the same one `--ha-stamp-edge` draws, in the folder's own colour.
 export const Verb = styled.strong`
-	padding: 3px 14px 2px;
-	font-size: 21px;
+	padding: 3px 16px 2px;
+	font-size: 24px;
 	font-weight: 400;
 	letter-spacing: var(--ha-track);
-	color: var(--ha-stamp-ink);
-	border: var(--ha-stamp-edge);
+	color: var(--ha-ink);
+	border: 2px double var(--ha-ink);
 	transform: rotate(var(--ha-stamp-rotate));
-	text-shadow: var(--ha-control-ink-shadow);
 	white-space: nowrap;
 
 	${narrowOrShort} {
-		font-size: 16px;
-		padding: 2px 9px 1px;
+		font-size: 18px;
+		padding: 2px 10px 1px;
+	}
+`;
+
+// Beside the stamp where there is room for it, and on a line of its own where there is not — a line
+// that is there whether or not this step has a hint. See the note above `Slip`.
+// `narrow` and not `narrowOrShort`: what decides whether the hint fits beside the stamp is the width
+// of the screen, and a phone on its side has plenty. Stacking it there cost twenty pixels of the
+// shortest screen the game runs on.
+export const HintSlot = styled.div`
+	display: flex;
+	align-items: center;
+	min-width: 0;
+
+	${narrow} {
+		/* Its own line, and the full width of it. Indented under the stamp instead, the longest hint
+		   in either language came two pixels short of fitting and wrapped — which moves the board. */
+		flex: 0 0 100%;
+		min-height: 17px;
 	}
 `;
 
 export const Hint = styled.em`
+	max-width: 46ch;
 	font-style: italic;
-	font-size: 12px;
-	color: var(--ha-ink-dim);
+	font-size: 14px;
+	line-height: 1.25;
+	color: var(--ha-ink);
+
+	${narrowOrShort} {
+		font-size: 13px;
+	}
+`;
+
+/* ── The mat ───────────────────────────────────────────────────────────────────────────────
+ * The game, ruled off from the course.
+ *
+ * Everything inside this box is real: the real turn strip, the real board, the real HQ cards, the
+ * real SNIPE, REVEAL, ACCUSE and CLAIM. Everything outside it belongs to the tutorial. That line was
+ * not drawn anywhere before, and without it a red NEXT TURN and a red START OVER were the same
+ * control to anybody meeting the game for the first time.
+ *
+ * It is an outline and a tab and nothing else. A fill here would paint over the WebGL canvas, which
+ * sits under `.game` and is where the board's dark recess is drawn — see the note at the top of this
+ * file. The inset ring is safe because it paints inside the padding, which the board never reaches.
+ * ------------------------------------------------------------------------------------------- */
+
+export const Mat = styled.div`
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100%;
+	/* Wide enough for HQ | board | HQ, and no wider. The lesson with no board at all is snug instead —
+	   an empty three-foot mat behind two playing cards reads as a mistake. (No backticks in this
+	   comment: they close the template, and the parse error names the CSS rather than the quote.) */
+	max-width: ${({ $snug }) => ($snug ? '560px' : '1010px')};
+	/* The top padding clears the tab on the edge above it *and* the file tab an HQ card wears on its
+	   own top corner, which overhangs the card by a few pixels. The lesson with four HQ cards stands
+	   them flush with the top of the mat, and at 9px the two labels sat on top of each other. */
+	padding: 15px 10px 8px;
+	border: 1px solid var(--ha-well-edge);
+	box-shadow: inset 0 0 0 2px rgba(28, 43, 37, 0.11);
+
+	${narrowOrShort} {
+		padding: 13px 6px 7px;
+	}
+`;
+
+// The dark chip that names the table, on the mat's own top edge the way the folder's tab and the
+// finding's stamp are on theirs. On the edge rather than in a row of its own because a row here is
+// twenty pixels off a board that fits an 800x600 window with nothing to spare.
+//
+// Well colour and cream type, which is the board's own pairing — so the label looks like the thing it
+// labels.
+export const MatTab = styled.span`
+	position: absolute;
+	top: -9px;
+	left: 14px;
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	max-width: calc(100% - 28px);
+	padding: 2px 9px 1px;
+	background: var(--ha-well);
+	border: 1px solid var(--ha-well-edge);
+	color: var(--ha-ink-on-accent);
+	font-family: var(--ha-face-data);
+	font-size: 9px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	white-space: nowrap;
+	overflow: hidden;
+
+	${narrowOrShort} {
+		left: 8px;
+		gap: 5px;
+		padding: 2px 7px 1px;
+		max-width: calc(100% - 16px);
+	}
+`;
+
+// The legend, and the only one on the screen: a ring in the coach marks' own cream, on the coach
+// marks' own dark ground. It says what the rings out on the board are without naming them.
+export const MatRing = styled.span`
+	display: block;
+	flex: none;
+	width: 9px;
+	height: 9px;
+	border: 1.5px solid var(--ha-ink-on-accent);
+	border-radius: 50%;
+`;
+
+// The standing instruction, in the same chip as the label and dimmer than it. One sentence, said
+// once, rather than a word added to every step: the marks are the vocabulary the course teaches by
+// using, and this is the only place it is spelled out.
+export const MatNote = styled.span`
+	padding-left: 7px;
+	border-left: 1px solid rgba(240, 228, 204, 0.35);
+	color: rgba(240, 228, 204, 0.62);
+	overflow: hidden;
+	text-overflow: ellipsis;
 `;
 
 /* ── The table ─────────────────────────────────────────────────────────────────────────────
  * The real board, in a shorter box. `Board` is 90vw by 75vh because a game is the whole screen;
- * here it shares the screen with the slip and the record above it, and with the way out.
+ * here it shares the screen with the folder above it and with the mat's own edges.
  * ------------------------------------------------------------------------------------------- */
 
 export const TrainingBoard = styled(Board)`
 	width: 100%;
 	max-width: 1000px;
-	/* Whatever the chrome above and below it is not using. The subtraction is the height of that
-	   chrome at its tallest — the record, the slip, the turn strip and the way out — so the board
-	   fills an 800x600 window without a scroll and grows with anything larger. */
-	height: clamp(200px, calc(100vh - 310px), 420px);
-	margin-bottom: 6px;
+	margin-bottom: 4px;
 
-	/* Repeated rather than inherited: Board sets its own height inside both breakpoints, and a rule
-	   in here would otherwise be beaten by the more specific media block it came from. */
-	${short} {
-		height: clamp(180px, calc(100vh - 250px), 420px);
-		margin-bottom: 4px;
-	}
+	/* Whatever the chrome above and below it is not using, measured rather than guessed.
+	   318px sits above the board on every lesson: the lobby's title band, the folder, the mat's top
+	   edge and the turn strip. What is below it depends on the lesson — 12px of mat edge, plus 32px
+	   more where there is an action bar — so $bar carries the difference rather than every lesson
+	   paying for a button seven of them do not have.
+
+	   That makes the whole of a lesson visible at 800x600, including the one control it presses. The
+	   old single figure claimed as much and missed it by 37 pixels: SNIPE was below the fold on the
+	   one exercise that asks for it.
+
+	   Deliberately NOT in the subtraction: the lobby's own 24px of bottom padding. Buying that back
+	   costs board on every small screen, and what falls past the fold instead is a margin.
+
+	   The cap is the old board's height, so nothing above 800px tall changed. */
+	${({ $bar }) => css`
+		height: clamp(200px, calc(100vh - ${$bar ? 362 : 330}px), 416px);
+
+		/* Repeated rather than inherited: Board sets its own height inside both breakpoints, and a
+		   rule out here would be beaten by the more specific media block it came from. A phone on its
+		   side has no room above the board at all, so it gets the minimum whatever the lesson. */
+		${short} {
+			height: clamp(170px, calc(100vh - ${$bar ? 320 : 288}px), 416px);
+			margin-bottom: 2px;
+		}
+	`}
 
 	${narrow} {
 		height: auto;
@@ -488,8 +787,78 @@ export const FindingNote = styled.span`
 export const DoneList = styled.div`
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
+	gap: 10px;
 	justify-content: center;
+`;
+
+/* ── The one loud control ──────────────────────────────────────────────────────────────────
+ * A finished exercise has exactly one thing to press, and this is it: NEXT, or FINISH on the last
+ * one, or PLAY NOW on the card that closes the course.
+ *
+ * It is the game's own `Button`, so it keeps the `active` gate, the disabled semantics and the focus
+ * ring every other control in the app has. What it changes is the four tokens that decide the
+ * colour, and it changes them ON ITSELF — a filled block of ink instead of an outlined red stamp.
+ * Two reasons, and both are the point of this screen:
+ *
+ * - Red belongs to the game. This button is the course speaking.
+ * - It is the only filled control in the folder, so it cannot be missed, and nothing beside it
+ *   competes: READ THE FILE and the two page links are `QuietLink`s.
+ * ------------------------------------------------------------------------------------------- */
+
+export const Cta = styled(Button)`
+	--ha-control-ink: var(--ha-ink-on-accent);
+	--ha-control-bg: var(--ha-ink);
+	--ha-control-edge: 2px solid var(--ha-ink);
+	--ha-control-ink-shadow: none;
+	--ha-control-shadow: 2px 2px 0 rgba(44, 38, 32, 0.28);
+	--ha-control-shadow-hover: 3px 3px 0 rgba(44, 38, 32, 0.34);
+	--ha-control-rotate: -0.7deg;
+	/* The press. Inherited by nothing, since the button holds only its own word. */
+	--ha-accent-wash: rgba(44, 38, 32, 0.65);
+
+	font-size: 19px;
+	padding: 7px 22px;
+
+	${narrowOrShort} {
+		font-size: 16px;
+		padding: 6px 18px;
+	}
+`;
+
+// Everything else the course offers: read the page this came from, go back to the index, open one of
+// the two pages the course never covered. All of them are worth having and none of them is the task,
+// so all of them are a line of type with a rule under it.
+export const QuietLink = styled.button`
+	padding: 1px 2px;
+	background: transparent;
+	border: 0;
+	border-bottom: 1px solid var(--ha-rule);
+	color: var(--ha-ink-dim);
+	font-family: var(--ha-face-data);
+	font-size: 12px;
+	letter-spacing: var(--ha-track-label);
+	text-transform: uppercase;
+	cursor: pointer;
+
+	&:hover {
+		color: var(--ha-ink);
+		border-bottom-color: var(--ha-ink);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--ha-accent);
+		outline-offset: 2px;
+	}
+`;
+
+// The CTA and its quiet neighbours, stacked rather than in a row: side by side at the same height
+// they read as a pair of choices, which is what this card is trying to stop doing.
+export const FindingActions = styled.div`
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding-top: 2px;
 `;
 
 export const Finding = styled.div`
@@ -500,9 +869,11 @@ export const Finding = styled.div`
 	gap: 10px;
 	width: 100%;
 	max-width: 520px;
-	margin-top: 6px;
+	margin-top: 4px;
 	padding: 18px 20px 14px;
-	background: var(--ha-panel);
+	/* Cream, not manila. The card lands inside the folder now, and manila on manila was a sheet with
+	   an edge drawn round it rather than a sheet. */
+	background: var(--ha-ink-on-accent);
 	border: 1px solid var(--ha-panel-edge);
 	box-shadow: var(--ha-panel-shadow);
 	/* The card is drawn from its top edge down, because that edge is the one the box is not clipping
@@ -520,7 +891,7 @@ export const Finding = styled.div`
 	}
 
 	${DoneList},
-	${Buttons} {
+	${FindingActions} {
 		${risesAt(160)}
 	}
 
@@ -533,21 +904,21 @@ export const Finding = styled.div`
 		${FindingSmall},
 		${FindingNote},
 		${DoneList},
-		${Buttons} {
+		${FindingActions} {
 			animation: none;
 		}
 	}
 `;
 
 // The stamp that lands on a passed exercise, overlapping the top edge the way the CEO-buff badge
-// does on a rule page.
+// does on a rule page. In ink, like the verb it replaces and for the same reason.
 export const FindingStamp = styled.span`
 	position: absolute;
 	top: -12px;
 	padding: 3px 12px 2px;
-	background: var(--ha-panel);
-	color: var(--ha-stamp-ink);
-	border: var(--ha-stamp-edge);
+	background: var(--ha-ink-on-accent);
+	color: var(--ha-ink);
+	border: 2px double var(--ha-ink);
 	font-size: 11px;
 	letter-spacing: var(--ha-track-label);
 	transform: rotate(var(--ha-stamp-rotate));
@@ -684,15 +1055,19 @@ export const MarkTag = styled.div`
 	pointer-events: none;
 `;
 
-/* ── The way out, and the way on ───────────────────────────────────────────────────────────── */
+/* ── The game's own action bar ─────────────────────────────────────────────────────────────── */
 
 // The action bar of the real game, cut down to the one control an exercise needs. `Actions` itself
 // is 90vw and three groups wide, which is a bar for a game rather than for a lesson.
+//
+// It sits inside the mat, under the board, where the real bar sits. That is the whole reason the mat
+// exists: SNIPE used to float on the desk below the table, the same red stamp and the same size as
+// the three tutorial buttons at the top of the screen.
 export const ExerciseActions = styled.div`
 	display: flex;
 	justify-content: center;
 	gap: 10px;
 	width: 100%;
-	padding-bottom: 4px;
+	padding-top: 2px;
 	z-index: 10;
 `;

@@ -288,7 +288,12 @@ export default {
 
 	training: {
 		fieldTraining: 'Entrenamiento de campo',
-		exerciseTitle: '{n}. {title}',
+		exerciseOf: 'Ejercicio {n} de {total}',
+		// Las dos pestañas que dicen qué mitad de la pantalla es cada una. `liveBoard` va en el tapete
+		// que tiene el juego real; la carpeta de arriba tiene el curso.
+		liveBoard: 'Tablero real',
+		yourCards: 'Tus cartas',
+		matNote: 'Pulsa lo que está marcado',
 		record: 'Historial',
 		startOver: 'Empezar de nuevo',
 		step: 'Paso {n} / {total}',

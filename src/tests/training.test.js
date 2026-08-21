@@ -40,6 +40,123 @@ test.describe('FIELD TRAINING', () => {
 		expect(page.url()).toContain('#/training/cards');
 	});
 
+	/* ── The two boxes ─────────────────────────────────────────────────────────────────────────
+	 * A lesson is a folder and a mat: the course says what to do inside the folder, and everything on
+	 * the mat is the real game. Before the boxes existed the two were one column of loose bands, and
+	 * START OVER was the same red stamp, at the same size, as NEXT TURN.
+	 * ------------------------------------------------------------------------------------------ */
+
+	test('keeps the course in the folder and every game control on the mat', async ({ page }) => {
+		await goToExercise(page, 'sniper');
+
+		const folder = page.locator('#training-briefing');
+		const mat = page.locator('#training-mat');
+
+		// What the course says, and the ways out of it.
+		for (const id of ['training-step', 'training-verb', 'training-record', 'training-restart', 'rules-index']) {
+			expect(await folder.locator(`#${id}`).count(), id).toBe(1);
+		}
+
+		// What the game answers with — the strip, the table, a tray and the one control this lesson
+		// presses. Each of these is the game's own component, and none of them is in the folder.
+		for (const id of ['next-turn', 'board', 'store-0', 'claim-1', 'snipe']) {
+			expect(await mat.locator(`#${id}`).count(), id).toBe(1);
+			expect(await folder.locator(`#${id}`).count(), id).toBe(0);
+		}
+
+		// And they are two boxes, one under the other, rather than one inside the other.
+		const [above, below] = [await folder.boundingBox(), await mat.boundingBox()];
+
+		expect(below.y).toBeGreaterThanOrEqual(above.y + above.height - 1);
+	});
+
+	// Red is the game's colour in this direction — SNIPE, CLAIM, NEXT TURN — so the course speaks in
+	// ink. It is the whole of the vocabulary that tells a learner which of the two they are touching.
+	test('speaks in ink where the game speaks in red', async ({ page }) => {
+		await goToExercise(page, 'sniper');
+
+		const inkOf = id => page.locator(`#${id}`).evaluate(el => getComputedStyle(el).color);
+		// An outlined stamp, so its text is the accent itself.
+		const red = await inkOf('claim-1');
+
+		expect(await inkOf('training-verb')).not.toEqual(red);
+		expect(await inkOf('training-restart')).not.toEqual(red);
+		expect(await inkOf('rules-index')).not.toEqual(red);
+		expect(await inkOf('training-go-cards')).not.toEqual(red);
+	});
+
+	// A passed exercise has exactly one thing to press. READ THE FILE was a second stamp beside it, the
+	// same shape and nearly the same size, which made carrying on and stopping to read look like a
+	// choice between equals.
+	test('offers one loud control on a passed exercise, and one quiet one', async ({ page, clickOn }) => {
+		await goToExercise(page, 'ceo');
+
+		await clickOn.team(0).ceo();
+		await clickOn.cell(3, 3);
+
+		await expect(page.locator('#training-finding')).toBeVisible();
+
+		const style = (id, property) => page.locator(`#${id}`).evaluate((el, p) => getComputedStyle(el)[p], property);
+
+		// Filled, and the only filled control on the card.
+		expect(await style('training-next', 'backgroundColor')).not.toEqual('rgba(0, 0, 0, 0)');
+		expect(await style('training-file', 'backgroundColor')).toEqual('rgba(0, 0, 0, 0)');
+		expect(parseFloat(await style('training-next', 'fontSize'))).toBeGreaterThan(
+			parseFloat(await style('training-file', 'fontSize')),
+		);
+	});
+
+	// The order slip is the one thing on the screen a learner has to read, and the board hangs off the
+	// bottom of it — so a step whose hint wraps where the last one did not slides the whole table down
+	// the screen. The folder is wide enough that no step of any exercise does, and this walks the
+	// widest one: nine steps, three of them with a hint, and the longest hint on the last of them.
+	test('keeps the order slip the same height for every step of an exercise', async ({ page, clickOn }) => {
+		await goToExercise(page, 'sniper');
+
+		const slip = page.locator('#training-slip');
+		const heights = new Set();
+		const measure = async () => heights.add(await slip.evaluate(el => Math.round(el.getBoundingClientRect().height)));
+
+		await measure();
+		await clickOn.team(0).agent(1);
+		await measure();
+		await clickOn.cell(4, 3);
+		await measure();
+		await clickOn.team(0).agent(1);
+		await measure();
+		await page.click('#snipe');
+		await measure();
+		await page.click('#pz-1-N');
+		await measure();
+		await page.click('#next-turn');
+		await measure();
+		await clickOn.team(0).agent(2);
+		await measure();
+		await clickOn.cell(3, 3);
+		await measure();
+
+		expect([...heights]).toHaveLength(1);
+	});
+
+	// The mat's label sits on its own top edge to cost the board no height, and the lesson with four
+	// HQ cards stands them flush with that edge — each wearing a file tab that overhangs its own top
+	// corner. At the mat's first padding the two labels were printed over each other.
+	test('leaves the mat’s label legible with four HQ cards under it', async ({ page }) => {
+		await goToExercise(page, 'control');
+
+		const covered = await page.evaluate(() => {
+			const tab = document.getElementById('training-mat-tab');
+			const box = tab.getBoundingClientRect();
+			// Three points across the label, because a card could cover one end of it and not the other.
+			return [0.15, 0.5, 0.85]
+				.map(along => document.elementFromPoint(box.left + box.width * along, box.top + box.height / 2))
+				.filter(at => at !== tab && !tab.contains(at))
+				.map(at => at && (at.id || at.tagName));
+		});
+
+		expect(covered).toEqual([]);
+	});
+
 	// The premise before any of the mechanics: two cards, and only you may look at them.
 	test('turns over both cards and names the two teams', async ({ page }) => {
 		await openTraining(page);
