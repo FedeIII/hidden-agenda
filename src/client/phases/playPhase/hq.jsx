@@ -8,7 +8,7 @@ import { Cementery } from 'Client/components/pieceCount';
 import createHqScene from 'Client/three/hqScene';
 import { slotKeyForPiece } from 'Client/three/layout';
 import useThreeView from 'Client/three/useThreeView';
-import { TEAM_NAMES } from 'Domain/teams';
+import useT from 'Client/i18n';
 import { HqStore, HqFoot, HqStatement, HqClaim, HqHolder, HqLabel, HqFile } from './components';
 import Piece from './piece/index';
 
@@ -18,6 +18,7 @@ function getNotStartedTeamPieces(pieces, team) {
 
 function HQ({ team }) {
 	const [{ pieces, players, teamControl, hasTurnEnded }, dispatch] = useContext(StateContext);
+	const t = useT();
 	const storeRef = useRef(null);
 
 	const playerName = teamControl[team].player;
@@ -57,7 +58,7 @@ function HQ({ team }) {
 			    colour. Each direction reads the same element as something it already has: a file tab
 			    cut into the top edge, a drawing's sheet label, a strip of embossed tape. */}
 			<HqLabel id={`hq-label-${team}`}>
-				{TEAM_NAMES[team]}
+				{t(`team.${team}`)}
 				<HqFile>{String(Number(team) + 1).padStart(2, '0')}</HqFile>
 			</HqLabel>
 
@@ -79,7 +80,7 @@ function HQ({ team }) {
 
 				{isClaimOffered && (
 					<HqClaim id={`claim-${team}`} active={canClaim} onClick={onClaimClick}>
-						{isClaimingControl ? 'CANCEL' : 'CLAIM'}
+						{t(isClaimingControl ? 'play.cancelClaim' : 'play.claim')}
 					</HqClaim>
 				)}
 			</HqFoot>

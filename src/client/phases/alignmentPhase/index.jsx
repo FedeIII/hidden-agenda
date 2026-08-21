@@ -4,10 +4,11 @@ import { setAlignment } from 'Game/actions';
 import { Button, Buttons } from 'Client/components/button';
 import { Title, Subtitle } from 'Client/components/title';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
-import { TEAM_NAMES } from 'Domain/teams';
 import useSession from 'Hooks/useSession';
+import useT from 'Client/i18n';
 import { dealAlignments } from 'Domain/deal';
 import SkinPicker from 'Client/components/skinPicker';
+import LanguagePicker from 'Client/components/languagePicker';
 import LeaveGame from 'Client/components/leaveGame';
 import { AlignmentPhaseContainer } from './components';
 
@@ -109,17 +110,17 @@ function useAlignmentCards(start) {
 	};
 }
 
-function renderTitle(playerTurn) {
+function renderTitle(t, playerTurn) {
 	if (playerTurn) {
 		return (
 			<>
-				<Title>This is only for {playerTurn}'s eyes</Title>
-				<Subtitle>Expose your alignments</Subtitle>
+				<Title>{t('alignmentPhase.onlyForEyes', { name: playerTurn })}</Title>
+				<Subtitle>{t('alignmentPhase.expose')}</Subtitle>
 			</>
 		);
 	}
 
-	return <Title>You are all ready to start!</Title>;
+	return <Title>{t('alignmentPhase.allReady')}</Title>;
 }
 
 // Online there is no ceremony to perform: the server dealt the cards and each client only ever
@@ -127,6 +128,7 @@ function renderTitle(playerTurn) {
 function OnlineAlignment({ onReady }) {
 	const [{ players }] = useContext(StateContext);
 	const session = useSession();
+	const t = useT();
 	const [ready, setReady] = useState(false);
 
 	const me = players.find(player => player.name === session.name);
@@ -139,7 +141,7 @@ function OnlineAlignment({ onReady }) {
 	if (!me) {
 		return (
 			<AlignmentPhaseContainer>
-				<Title>Waiting for the table…</Title>
+				<Title>{t('alignmentPhase.waitingForTable')}</Title>
 			</AlignmentPhaseContainer>
 		);
 	}
@@ -148,21 +150,21 @@ function OnlineAlignment({ onReady }) {
 
 	return (
 		<AlignmentPhaseContainer>
-			<Title>{me.name}, these are yours</Title>
-			<Subtitle>Nobody else can see them</Subtitle>
+			<Title>{t('alignmentPhase.theseAreYours', { name: me.name })}</Title>
+			<Subtitle>{t('alignmentPhase.nobodyElseSees')}</Subtitle>
 
 			<Alignments>
 				<AlignmentFriend id="alingnment-card-friend" disabled player={me.name} team={me.alignment.friend}>
-					{TEAM_NAMES[me.alignment.friend]}
+					{t(`team.${me.alignment.friend}`)}
 				</AlignmentFriend>
 				<AlignmentFoe id="alingnment-card-foe" disabled player={me.name} team={me.alignment.foe}>
-					{TEAM_NAMES[me.alignment.foe]}
+					{t(`team.${me.alignment.foe}`)}
 				</AlignmentFoe>
 			</Alignments>
 
 			<Buttons>
 				<Button id="alignments-btn" active={!ready} onClick={confirm}>
-					{ready ? 'WAITING…' : 'READY'}
+					{t(ready ? 'alignmentPhase.waiting' : 'alignmentPhase.ready')}
 				</Button>
 
 				{/* Straight out, with nothing to confirm — unlike leaving from the board, where LEAVE sits
@@ -173,15 +175,17 @@ function OnlineAlignment({ onReady }) {
 			</Buttons>
 
 			<Subtitle id="alignment-ready-count">
-				{readyCount}/{session.seats.length} ready
+				{t('alignmentPhase.readyCount', { ready: readyCount, total: session.seats.length })}
 			</Subtitle>
 
 			<SkinPicker />
+			<LanguagePicker />
 		</AlignmentPhaseContainer>
 	);
 }
 
 function HotSeatAlignment({ onReady }) {
+	const t = useT();
 	const { cardsRevealed, revealFriend, revealFoe, playerTurn, currentFriend, currentFoe, nextTurn } =
 		useAlignmentCards(onReady);
 
@@ -189,7 +193,7 @@ function HotSeatAlignment({ onReady }) {
 
 	return (
 		<AlignmentPhaseContainer>
-			{renderTitle(playerTurn)}
+			{renderTitle(t, playerTurn)}
 
 			{playerTurn && (
 				<Alignments>
@@ -200,7 +204,7 @@ function HotSeatAlignment({ onReady }) {
 						disabled={cardsRevealed.friend}
 						onClick={revealFriend}
 					>
-						{TEAM_NAMES[currentFriend]}
+						{t(`team.${currentFriend}`)}
 					</AlignmentFriend>
 					<AlignmentFoe
 						id="alingnment-card-foe"
@@ -209,20 +213,23 @@ function HotSeatAlignment({ onReady }) {
 						team={currentFoe}
 						onClick={revealFoe}
 					>
-						{TEAM_NAMES[currentFoe]}
+						{t(`team.${currentFoe}`)}
 					</AlignmentFoe>
 				</Alignments>
 			)}
 
 			<Buttons>
 				<Button id="alignments-btn" active={isButtonActive} onClick={nextTurn}>
-					{playerTurn ? 'NEXT PLAYER' : 'START'}
+					{t(playerTurn ? 'alignmentPhase.nextPlayer' : 'alignmentPhase.start')}
 				</Button>
 			</Buttons>
 
 			{/* The last moment the table can agree on how the evening should look. After this the
-			    board is up and the furniture stops moving. */}
+			    board is up and the furniture stops moving. The language goes with it: a preference,
+			    not a rule of the table, but this is the last screen before the board and nothing may
+			    sit over the board. */}
 			<SkinPicker />
+			<LanguagePicker />
 		</AlignmentPhaseContainer>
 	);
 }

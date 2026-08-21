@@ -6,6 +6,7 @@ import HqStyled from 'Client/components/hqStyled';
 import LeaveGame from 'Client/components/leaveGame';
 import { Buttons } from 'Client/components/button';
 import { Cementery, Survivors } from 'Client/components/pieceCount';
+import useT from 'Client/i18n';
 import { EndPhaseContainer, Score, Points, PieceCountTitle, PieceCountContainer, Scores } from './components';
 import PieceScore from './pieceScore';
 import PlayersScore from './playersScore';
@@ -14,25 +15,28 @@ import PlayersScore from './playersScore';
 // hooks is only safe by accident.
 function TeamPoints({ team }) {
 	const [{ pieces }] = useContext(StateContext);
+	const t = useT();
 
 	return (
 		<Score>
 			{teams.getPointsForTeam(team, pieces)}
-			<Points>pts</Points>
+			<Points>{t('end.points')}</Points>
 		</Score>
 	);
 }
 
 function TeamScore({ team }) {
+	const t = useT();
+
 	return (
 		<HqStyled team={team}>
 			<TeamPoints team={team} />
 			<PieceCountContainer>
-				<PieceCountTitle>Killed:</PieceCountTitle>
+				<PieceCountTitle>{t('end.killed')}</PieceCountTitle>
 				<Cementery team={team} />
 			</PieceCountContainer>
 			<PieceCountContainer>
-				<PieceCountTitle>Survivors:</PieceCountTitle>
+				<PieceCountTitle>{t('end.survivors')}</PieceCountTitle>
 				<Survivors team={team} />
 			</PieceCountContainer>
 		</HqStyled>
@@ -40,6 +44,8 @@ function TeamScore({ team }) {
 }
 
 function EndPhase() {
+	const t = useT();
+
 	return (
 		<EndPhaseContainer>
 			<HQs>
@@ -61,7 +67,7 @@ function EndPhase() {
 			    is over, so there is nothing left to lose by pressing it — and the last player is not turned
 			    out from here by somebody else leaving, because the scores are worth reading. */}
 			<Buttons>
-				<LeaveGame id="end-leave" label="LEAVE GAME" />
+				<LeaveGame id="end-leave" label={t('end.leaveGame')} />
 			</Buttons>
 		</EndPhaseContainer>
 	);

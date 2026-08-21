@@ -8,6 +8,11 @@ An abstract board game with psychology
   an option in the lobby, on either site. The Pages build has no server behind it, which is why that
   link says so up front.
 
+* **In English or Spanish** — the whole of it: menus, the board, the rule book and the training
+  course. Tick the box under the title, or open a link with `?lang=es`. It is a preference of your
+  browser and not a property of the table, so two people in the same room can read it in two
+  languages.
+
 The rules are in **[RULES.md](RULES.md)**.
 
 2–6 players command four teams of agents on a hex board. Nobody owns a team — on your turn you move
@@ -165,6 +170,33 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.15.0
+* **The game is in Spanish as well as English** — all of it. The menus, the lobby, the board, every
+  screen, the twenty-page rule book and the ten-exercise training course. Nothing is half-translated
+  and nothing falls back silently: `src/tests/unit/i18n.test.js` walks the English catalog and fails
+  if Spanish is missing a key, has one nobody reads, or fills a different set of placeholders
+* **The selector is a field on a form, not another button.** A typed key, two boxes, and an ✕ struck
+  into one of them — set larger than its box and a few degrees off, the way a hand-typed mark sits
+  proud of the rule it was aimed at, with the chosen code underlined in the same red pencil the HQ
+  card underlines a holder's name with. It is the one gesture a paper dossier has that nothing else in
+  the interface was using. Dressed in tokens, so a drawing gets a chalked cross in a ruled field and a
+  case gets the mark in brass
+* It sits under the lobby's title, which is above every screen the lobby can show — so a reader four
+  pages into the rule book can switch language and stay on the page they were reading. Also on the
+  hot-seat name form, which is the other front door, and beside the skin picker on the alignment
+  cards, which is the last screen before the board
+* **The skins speak both languages too.** `CONTROL:` on a file, `SIGNED OFF` on a drawing, `CLAIMED ·`
+  on a taped tray: those are CSS `content`, because which words a direction uses is the skin's
+  business as much as the language's. They are a table of skin × language now, injected as a global
+  rule of their own so the six hundred declarations next door still go in exactly once
+* A language is chosen from `?lang=`, then a remembered choice, then the browser's own list, then
+  English. `?lang=` pins one page load and writes nothing down — the same contract `?skin=` has, so a
+  shared link can be in Spanish without rewriting the preference of whoever opens it
+* Slugs, room codes, skin names and piece ids are not translated. `#/rules/the-spy` opens the same
+  page for everybody, because a shared link is the one thing about the book that crosses languages
+* The rule book's photographs are still English screenshots. Their captions and alt text are
+  translated and describe what is happening rather than what the capture says
+
 ### v3.14.1
 * **A training exercise puts both HQ trays under the board on a phone.** They used to stack the game's
   own way — one tray above the table and one below — and an HQ card is square, so the full-width one on

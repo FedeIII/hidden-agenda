@@ -143,10 +143,6 @@ const DOSSIER = {
 	'--ha-card-label-radius': '0',
 	'--ha-card-label-rule': '1px solid currentColor',
 	'--ha-card-label-shadow': 'none',
-	// A file numbers its enclosures, not its words.
-	'--ha-card-fig-friend': "''",
-	'--ha-card-fig-foe': "''",
-
 	// The team over-printed on a block of its own colour, run out to both edges of the sheet and ruled
 	// above and below. A typed page rules a field; it does not draw a box round it.
 	'--ha-card-team-fill': '100%',
@@ -168,7 +164,6 @@ const DOSSIER = {
 	'--ha-card-swatch-radius': '0',
 	'--ha-card-swatch-pad': '0',
 	'--ha-card-swatch-shadow': 'none',
-	'--ha-card-swatch-key': "'colour of record'",
 	// The name is already typed on the block above in 22px caps. A file does not say it twice.
 	'--ha-card-swatch-ref': 'none',
 	'--ha-card-swatch-name': 'none',
@@ -205,8 +200,6 @@ const DOSSIER = {
 	'--ha-claim-frame': '0 0 0 1px #a3282b',
 	'--ha-claim-rotate': '-2deg',
 	'--ha-claim-align': 'left',
-	'--ha-claim-key': "'CONTROL: '",
-	'--ha-claim-empty': "'CONTROL: UNCLAIMED'",
 	'--ha-claim-rule': '1px solid transparent',
 	'--ha-claim-holder-ink': '#2c2620',
 	// Typed, then underlined by hand in red pencil.
@@ -228,8 +221,8 @@ const DOSSIER = {
 	'--ha-stamp-rotate': '-2.5deg',
 	'--ha-tally-bg': 'rgba(255, 250, 235, 0.4)',
 	'--ha-tally-edge': '1px dotted rgba(90, 70, 36, 0.55)',
-	// The drawing's own section flag. A file has no sections, so nothing here.
-	'--ha-strip-mark': "''",
+	// The drawing's own section flag. A file has no sections, so nothing here — the flag's WORDS are
+	// in SKIN_WORDS below, and only its display is a look.
 	'--ha-strip-mark-display': 'none',
 
 	'--ha-field-bg': 'rgba(255, 250, 235, 0.55)',
@@ -326,12 +319,6 @@ const BLUEPRINT = {
 	'--ha-card-label-radius': '0',
 	'--ha-card-label-rule': '1px solid transparent',
 	'--ha-card-label-shadow': 'none',
-	// And a drawing numbers its figures. Same mechanism as the strip's section flag: content is a
-	// value, so the direction gets to say the word its own way without the component knowing which
-	// direction it is in.
-	'--ha-card-fig-friend': "'FIG. 1 — '",
-	'--ha-card-fig-foe': "'FIG. 2 — '",
-
 	// A drawing cannot print a colour, so it does not pretend to: the team is NAMED in chalk between
 	// two rules, and the colour itself is called out underneath as a finish. That is the whole
 	// argument for this direction having a swatch at all, and the reason the block's fill is 0%.
@@ -356,8 +343,6 @@ const BLUEPRINT = {
 	'--ha-card-swatch-radius': '0',
 	'--ha-card-swatch-pad': '6px 7px',
 	'--ha-card-swatch-shadow': 'none',
-	// A drawing references a part by its number, not by its name.
-	'--ha-card-swatch-key': "'colour ref'",
 	'--ha-card-swatch-ref': 'block',
 	'--ha-card-swatch-name': 'none',
 
@@ -387,8 +372,6 @@ const BLUEPRINT = {
 	'--ha-claim-frame': 'none',
 	'--ha-claim-rotate': '0deg',
 	'--ha-claim-align': 'left',
-	'--ha-claim-key': "'SIGNED OFF '",
-	'--ha-claim-empty': "'UNASSIGNED'",
 	'--ha-claim-rule': '1px dashed rgba(220, 232, 242, 0.35)',
 	'--ha-claim-holder-ink': '#ff6b4a',
 	'--ha-claim-holder-rule': '1px solid transparent',
@@ -410,7 +393,6 @@ const BLUEPRINT = {
 	// Written off, and hatched the way a section is.
 	'--ha-tally-bg': 'repeating-linear-gradient(45deg, transparent 0 3px, rgba(255, 107, 74, 0.22) 3px 4px)',
 	'--ha-tally-edge': '1px solid rgba(220, 232, 242, 0.4)',
-	'--ha-strip-mark': "'SECTION A–A'",
 	'--ha-strip-mark-display': 'inline-flex',
 
 	'--ha-field-bg': 'rgba(8, 26, 42, 0.55)',
@@ -500,10 +482,6 @@ const VAULT = {
 	'--ha-card-label-radius': '2px',
 	'--ha-card-label-rule': '1px solid transparent',
 	'--ha-card-label-shadow': 'inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 1px 2px rgba(0, 0, 0, 0.5)',
-	// A tag is stamped, not catalogued.
-	'--ha-card-fig-friend': "''",
-	'--ha-card-fig-foe': "''",
-
 	// The team on an anodised plate the width of the tray, bezelled in brass all the way round — the
 	// one direction of the three that boxes this field rather than ruling it.
 	'--ha-card-team-fill': '100%',
@@ -526,8 +504,6 @@ const VAULT = {
 	'--ha-card-swatch-radius': '2px',
 	'--ha-card-swatch-pad': '6px 8px',
 	'--ha-card-swatch-shadow': 'inset 0 1px 0 rgba(255, 255, 255, 0.06)',
-	// A plate is engraved with a name, not a part number.
-	'--ha-card-swatch-key': "'anodised'",
 	'--ha-card-swatch-ref': 'none',
 	'--ha-card-swatch-name': 'block',
 
@@ -557,11 +533,6 @@ const VAULT = {
 	'--ha-claim-frame': '0 1px 3px rgba(0, 0, 0, 0.5)',
 	'--ha-claim-rotate': '-3deg',
 	'--ha-claim-align': 'center',
-	'--ha-claim-key': "'CLAIMED · '",
-	// This direction would rather say nothing at all than say UNCLAIMED — an unsealed tray is already
-	// the statement. It says it anyway, because the line is what a player clicks to claim the team and
-	// a control nobody can see is not a control.
-	'--ha-claim-empty': "'UNCLAIMED'",
 	'--ha-claim-rule': '1px solid transparent',
 	'--ha-claim-holder-rule': '1px solid transparent',
 
@@ -579,7 +550,6 @@ const VAULT = {
 	// A milled recess with brass in it.
 	'--ha-tally-bg': 'linear-gradient(#1f2327, #191c1f)',
 	'--ha-tally-edge': '1px solid #101315',
-	'--ha-strip-mark': "''",
 	'--ha-strip-mark-display': 'none',
 
 	'--ha-field-bg': 'linear-gradient(#1f2327, #191c1f)',
@@ -594,6 +564,97 @@ export const SKIN_TOKENS = {
 };
 
 export { SHARED };
+
+/**
+ * The words a direction says, per language.
+ *
+ * These six tokens are the only ones in this file whose value is *text* rather than a look, and they
+ * are here rather than in the string catalog because which words they are is the skin's business as
+ * much as the language's: a file stamps CONTROL:, a drawing signs a sheet off, a case is taped shut
+ * and says CLAIMED. Three voices, and each of them has to be said in two languages — so this is a
+ * table of skin × language rather than either on its own.
+ *
+ * They stay CSS custom properties for the reason everything else here is one: `content` on a
+ * pseudo-element is the mechanism, so the component says `content: var(--ha-claim-key)` once and
+ * never learns which direction or which language it is in.
+ *
+ * Two hazards, both of which the header note explains and both of which apply doubly to text:
+ * stylis strips `//` and cannot cope with a bare `(` inside a quoted value, and either one silently
+ * swallows the rest of the block. Nothing in here may contain a slash or a bracket. Accented
+ * characters and the en dash are fine — the stylesheet is injected as a UTF-8 string.
+ *
+ * An empty word is `"''"` and not an absent key: a direction that says nothing here says it
+ * deliberately, and a missing token would be an inherited one.
+ */
+export const SKIN_WORDS = {
+	[SKINS.DOSSIER]: {
+		en: {
+			// A file numbers its enclosures, not its words.
+			'--ha-card-fig-friend': "''",
+			'--ha-card-fig-foe': "''",
+			'--ha-card-swatch-key': "'colour of record'",
+			// Claiming a team is a stamp on the file, and the file says so even when nobody has claimed it.
+			'--ha-claim-key': "'CONTROL: '",
+			'--ha-claim-empty': "'CONTROL: UNCLAIMED'",
+			// A file has no sections.
+			'--ha-strip-mark': "''",
+		},
+		es: {
+			'--ha-card-fig-friend': "''",
+			'--ha-card-fig-foe': "''",
+			'--ha-card-swatch-key': "'color de registro'",
+			'--ha-claim-key': "'CONTROL: '",
+			'--ha-claim-empty': "'CONTROL: SIN RECLAMAR'",
+			'--ha-strip-mark': "''",
+		},
+	},
+
+	[SKINS.BLUEPRINT]: {
+		en: {
+			// A drawing numbers its figures.
+			'--ha-card-fig-friend': "'FIG. 1 — '",
+			'--ha-card-fig-foe': "'FIG. 2 — '",
+			// And references a part by its number rather than by its name.
+			'--ha-card-swatch-key': "'colour ref'",
+			'--ha-claim-key': "'SIGNED OFF '",
+			'--ha-claim-empty': "'UNASSIGNED'",
+			'--ha-strip-mark': "'SECTION A–A'",
+		},
+		es: {
+			'--ha-card-fig-friend': "'FIG. 1 — '",
+			'--ha-card-fig-foe': "'FIG. 2 — '",
+			'--ha-card-swatch-key': "'ref. de color'",
+			'--ha-claim-key': "'FIRMADO POR '",
+			'--ha-claim-empty': "'SIN ASIGNAR'",
+			'--ha-strip-mark': "'SECCIÓN A–A'",
+		},
+	},
+
+	[SKINS.VAULT]: {
+		en: {
+			// A tag is stamped, not catalogued.
+			'--ha-card-fig-friend': "''",
+			'--ha-card-fig-foe': "''",
+			// A plate is engraved with a finish, not a part number.
+			'--ha-card-swatch-key': "'anodised'",
+			// Tamper tape, which reads as claimed from across the room at any size. This direction would
+			// rather say nothing at all than say UNCLAIMED — an unsealed tray is already the statement.
+			// It says it anyway, because the line is what a player clicks to claim the team and a control
+			// nobody can see is not a control.
+			'--ha-claim-key': "'CLAIMED · '",
+			'--ha-claim-empty': "'UNCLAIMED'",
+			'--ha-strip-mark': "''",
+		},
+		es: {
+			'--ha-card-fig-friend': "''",
+			'--ha-card-fig-foe': "''",
+			'--ha-card-swatch-key': "'anodizado'",
+			'--ha-claim-key': "'RECLAMADO · '",
+			'--ha-claim-empty': "'SIN RECLAMAR'",
+			'--ha-strip-mark': "''",
+		},
+	},
+};
 
 // What a direction changes about the *board itself*: the plinth the tiles are seated in, and the
 // recess it is seated in. Read by three/palette.js, which is why these are plain strings and not

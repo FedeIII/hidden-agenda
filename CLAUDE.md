@@ -160,6 +160,32 @@ What a skin changes about the *board* is the plinth the tiles are seated in and 
 
 The recess **cannot be a CSS background** — see the note in the 3D section — so the renderer paints it, and the board element carries only a 1px frame. Its width is 1px in every direction on purpose: this element is what every hexagon's box is projected from.
 
+## Two languages
+
+The interface is in **English and Spanish**, chosen per browser. `src/client/i18n/` holds the store, `t()` and the two catalogs; `LanguagePicker` is the control.
+
+**The language is not game state, and the server neither sends one nor needs to know.** Every string is chosen on the client, so two people at the same table can read the same room in two languages — which is the whole reason this is a preference and not a room property like the skin. Nothing about it crosses the wire.
+
+Where a string lives depends on what kind of string it is, and the split is deliberate:
+
+- **Chrome** — buttons, notices, labels, refusal messages — is in `i18n/{en,es}.js`, keyed by where it is read (`lobby.startAGame`, `play.nextTurn`). `en.js` is the inventory *and* the fallback: a key missing from `es` shows the English sentence, so a gap in a translation looks like a gap rather than an empty button.
+- **The rule book** is content, so it keeps the shape it is authored in: `rules/content.en.js` and `rules/content.es.js`, picked by `rules/content.js`. A translator works on whole paragraphs in order with the picture named on the line above.
+- **The training course** is an *overlay*: `exercises.js` stays the single course — boards, gates, and the predicate that closes each step — and `exercises.es.js` supplies only titles, findings, notes, verbs and hints, by slug and step position. `training/text.js` merges them. A translation cannot move a cell, which is the point.
+- **The skins' own wording** (`CONTROL:`, `SIGNED OFF`, `SECTION A–A`) is skin × language, because which words they are is the skin's business as much as the language's. `SKIN_WORDS` in `theme/tokens.js`, injected by `theme/skinWords.jsx` as a *second* `createGlobalStyle`: the first one is six hundred declarations that must be injected once and never again, and interpolating a language into it would mint a whole second copy of them.
+
+Four things that must survive any edit:
+
+1. **Slugs are never translated.** `#/rules/the-spy` is in the URL, and a shared link has to open the same page for everybody. Same for skin names, room codes and piece ids: an id is the wire's name, and only the label beside it is a language's.
+2. **A drawn room name is a name, not a string.** `domain/roomNames.js` stays English, or two browsers scan a list that does not agree.
+3. **`playwright.config.mjs` pins `locale: 'en-US'`.** With no stored choice the app reads `navigator.languages`, so an unpinned locale means the suite reads the interface in whatever language the machine is set to — and every assertion is written against the English strings. On a Spanish laptop the whole suite fails, naming a button rather than a locale. A spec that wants Spanish asks with `?lang=es`.
+4. **`?lang=` pins for one page load and writes nothing down** — the contract `?skin=` has. A shared link may dress the page it opens and may not rewrite the preference of whoever opened it. The picker persists to `localStorage`; the query param does not.
+
+`src/tests/unit/i18n.test.js` is what keeps this honest, and it needs no browser: it walks the English catalog and asserts a Spanish counterpart for every key, the same placeholders in both, the same pages in the same order with the same layout, a verb for every step of every exercise, and that no skin word contains a bracket or a slash — stylis would swallow the rest of the stylesheet and the page would simply have no ground. **A translation fails by being absent, and an absent string renders as English, which looks like a choice.** That spec is the only thing that would notice.
+
+Adding a language is: a catalog, a `content.<lang>.js`, an `exercises.<lang>.js`, a column in `SKIN_WORDS`, and the code in `LANGS`. The two data files are registered in `rules/content.js` and `training/text.js` respectively.
+
+**The rule book's photographs are English screenshots.** Every `alt` and `caption` is translated, but the pictures themselves show `CONTROL: ALICE` and `NEXT TURN`. Regenerating them per language is a separate job — the captions describe what is happening, not what the capture says.
+
 ## Architecture
 
 ### Three layers

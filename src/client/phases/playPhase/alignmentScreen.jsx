@@ -1,8 +1,8 @@
 import { useContext, useMemo, useState } from 'react';
 import { StateContext } from 'State';
 import py, { BASE_POINTS, REVEAL_COST } from 'Domain/py';
-import { TEAM_NAMES } from 'Domain/teams';
 import useSession from 'Hooks/useSession';
+import useT from 'Client/i18n';
 import { Button, Buttons } from 'Client/components/button';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
 import {
@@ -66,10 +66,10 @@ function useOwnPlayer() {
 // of the game written down as an interface.
 // Two very different facts, and the state used to record only that one of them had happened: an
 // alignment is public because its owner paid to reveal it, or because somebody guessed it correctly.
-function how(player, alignment) {
+function how(t, player, alignment) {
 	const by = player.exposed && player.exposed[alignment];
 
-	return by ? `accused by ${by}` : 'revealed';
+	return by ? t('friendFoeScreen.accusedBy', { name: by }) : t('friendFoeScreen.revealed');
 }
 
 // What everyone is on, which is the same table read as a score.
@@ -83,17 +83,20 @@ function how(player, alignment) {
 // It comes from `py.getBaseScore`, the same function the final score sheet starts from, so a player
 // cannot be told one number here and find a different one behind it at the end.
 function BaseScore({ player }) {
+	const t = useT();
 	const base = py.getBaseScore(player);
 
 	return (
 		<LedgerScore id={`ledger-score-${player.name}`} data-base={base} $spent={base < BASE_POINTS}>
-			<LedgerKey>on</LedgerKey>
+			<LedgerKey>{t('friendFoeScreen.on')}</LedgerKey>
 			{base}
 		</LedgerScore>
 	);
 }
 
 function TableLedger({ players, own }) {
+	const t = useT();
+
 	return (
 		<>
 			<Ledger id="friend-foe-ledger">
@@ -106,20 +109,28 @@ function TableLedger({ players, own }) {
 							<LedgerWho>
 								<LedgerName>
 									{player.name}
-									{isOwn ? ' (you)' : ''}
+									{isOwn ? t('common.you') : ''}
 								</LedgerName>
 								<BaseScore player={player} />
 							</LedgerWho>
 							<LedgerPair>
 								<LedgerCell $alignment="friend">
-									<LedgerKey>friend</LedgerKey>
-									{isOwn || player.revealed.friend ? TEAM_NAMES[friend] : <Redacted aria-label="withheld" />}
-									{player.revealed.friend && <LedgerHow>{how(player, 'friend')}</LedgerHow>}
+									<LedgerKey>{t('alignment.friend.word')}</LedgerKey>
+									{isOwn || player.revealed.friend ? (
+										t(`team.${friend}`)
+									) : (
+										<Redacted aria-label={t('friendFoeScreen.withheld')} />
+									)}
+									{player.revealed.friend && <LedgerHow>{how(t, player, 'friend')}</LedgerHow>}
 								</LedgerCell>
 								<LedgerCell $alignment="foe">
-									<LedgerKey>foe</LedgerKey>
-									{isOwn || player.revealed.foe ? TEAM_NAMES[foe] : <Redacted aria-label="withheld" />}
-									{player.revealed.foe && <LedgerHow>{how(player, 'foe')}</LedgerHow>}
+									<LedgerKey>{t('alignment.foe.word')}</LedgerKey>
+									{isOwn || player.revealed.foe ? (
+										t(`team.${foe}`)
+									) : (
+										<Redacted aria-label={t('friendFoeScreen.withheld')} />
+									)}
+									{player.revealed.foe && <LedgerHow>{how(t, player, 'foe')}</LedgerHow>}
 								</LedgerCell>
 							</LedgerPair>
 						</LedgerRow>
@@ -128,14 +139,14 @@ function TableLedger({ players, own }) {
 			</Ledger>
 
 			<LedgerNote id="friend-foe-base-note">
-				everyone is on {BASE_POINTS} · an alignment becoming public costs its owner {REVEAL_COST} · the teams are
-				counted at the end
+				{t('friendFoeScreen.baseNote', { base: BASE_POINTS, cost: REVEAL_COST })}
 			</LedgerNote>
 		</>
 	);
 }
 
 function AlignmentScreen({ onClose }) {
+	const t = useT();
 	const [{ players }] = useContext(StateContext);
 	const session = useSession();
 	const own = useOwnPlayer();
@@ -148,14 +159,16 @@ function AlignmentScreen({ onClose }) {
 	const name = own ? own.name : '';
 
 	return (
-		<ScreenStyled id="friend-foe-screen" role="dialog" aria-modal="true" aria-label="Your friend and foe">
+		<ScreenStyled id="friend-foe-screen" role="dialog" aria-modal="true" aria-label={t('friendFoeScreen.title')}>
 			<ScreenBody>
-				<ScreenNote id="friend-foe-eyes">{online ? 'nobody else can see these' : `only for ${name}'s eyes`}</ScreenNote>
+				<ScreenNote id="friend-foe-eyes">
+					{online ? t('friendFoeScreen.nobodyElseSees') : t('friendFoeScreen.onlyForEyes', { name })}
+				</ScreenNote>
 
 				{!uncovered && (
 					<Buttons>
 						<Button id="friend-foe-confirm" active onClick={() => setUncovered(true)}>
-							{name} IS LOOKING
+							{t('friendFoeScreen.isLooking', { name })}
 						</Button>
 					</Buttons>
 				)}
@@ -164,10 +177,10 @@ function AlignmentScreen({ onClose }) {
 					<>
 						<Alignments>
 							<AlignmentFriend id="friend-foe-friend" disabled player={own.name} team={own.alignment.friend}>
-								{TEAM_NAMES[own.alignment.friend]}
+								{t(`team.${own.alignment.friend}`)}
 							</AlignmentFriend>
 							<AlignmentFoe id="friend-foe-foe" disabled player={own.name} team={own.alignment.foe}>
-								{TEAM_NAMES[own.alignment.foe]}
+								{t(`team.${own.alignment.foe}`)}
 							</AlignmentFoe>
 						</Alignments>
 
@@ -177,7 +190,7 @@ function AlignmentScreen({ onClose }) {
 
 				<Buttons>
 					<Button id="friend-foe-close" active onClick={onClose}>
-						PUT IT AWAY
+						{t('friendFoeScreen.putItAway')}
 					</Button>
 				</Buttons>
 			</ScreenBody>

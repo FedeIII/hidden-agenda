@@ -4,7 +4,9 @@ import { Title, Subtitle } from 'Client/components/title';
 import Logo from 'Client/components/logo';
 import useSession from 'Hooks/useSession';
 import useTurnstile from 'Hooks/useTurnstile';
+import useT from 'Client/i18n';
 import SkinPicker from 'Client/components/skinPicker';
+import LanguagePicker from 'Client/components/languagePicker';
 import LeaveGame from 'Client/components/leaveGame';
 import { MIN_PLAYERS, MAX_PLAYERS } from 'Domain/py';
 import { ROOM_STATES } from 'Domain/phases';
@@ -48,51 +50,38 @@ import {
 // caught up by the time the hand leaves the keyboard.
 const SEARCH_DEBOUNCE_MS = 200;
 
-const REASONS = {
-	no_such_room: 'No room with that code.',
-	room_full: 'That room is full.',
-	name_taken: 'Somebody in that room already has that name.',
-	room_already_started: 'That game has already started.',
-	not_enough_players: `Wait for at least ${MIN_PLAYERS} players.`,
-	seat_lost: 'Your seat is gone. Join again with a name.',
-	server_full: 'The server is at its room limit. Try again shortly.',
-	slow_down: 'Too many attempts. Wait a moment.',
-	not_host: 'Only the player who made the room can start it.',
-	skin_locked: 'The style cannot be changed once the game has started.',
-	bad_skin: 'No such style.',
-	bad_room_name: 'A room name is letters, digits, spaces and hyphens.',
-	already_seated: 'You are already at a table.',
-	bad_turnstile: 'Bot check failed. Try again.',
-	// Not an error, and the only thing on this list that nobody did wrong. It is here because this is
-	// where a player lands when the rest of the table walks out of a game they were in the middle of,
-	// and arriving back at the lobby with no explanation reads as a bug.
-	left_alone: 'Everybody else left, so the game ended.',
-};
-
 // The one refusal that comes with a number. Leaving a game in progress costs a wait before the next
 // one, and it doubles each time — so saying "later" would be no answer at all, and saying "30 seconds"
 // when it is really sixteen minutes would be worse.
-function waitOut(seconds) {
+function waitOut(t, seconds) {
 	if (!Number.isFinite(seconds)) {
-		return 'You left a game in progress. Wait a moment before starting another.';
+		return t('lobby.reason.quit_timeout_vague');
 	}
 
 	const minutes = Math.ceil(seconds / 60);
+	const wait = seconds < 60 ? t('lobby.waitSeconds', { seconds }) : t('lobby.waitMinutes', { minutes });
 
-	return `You left a game in progress. You can play again in ${seconds < 60 ? `${seconds}s` : `${minutes} min`}.`;
+	return t('lobby.reason.quit_timeout', { wait });
 }
 
-function explain(reason, seconds = null) {
+// Why the server said no. Every refusal arrives as a code — the wire never carries a sentence — so
+// this is the one place a code becomes words, and the same refusal reads in whichever language the
+// browser asking is set to. An unknown code falls back to itself rather than to nothing: a reason
+// this build has never heard of is still better on screen than a blank notice.
+function explain(t, reason, seconds = null) {
 	if (reason === 'quit_timeout') {
-		return waitOut(seconds);
+		return waitOut(t, seconds);
 	}
 
-	return REASONS[reason] || reason;
+	const said = t(`lobby.reason.${reason}`, { min: MIN_PLAYERS });
+
+	return said === `lobby.reason.${reason}` ? reason : said;
 }
 
 // Naming the room and deciding whether anybody may find it. The name field is never empty: it opens
 // on a draw from the two word lists, so "mandatory" costs the player nothing unless they want it to.
 function NewRoom({ canGo, onCreate }) {
+	const t = useT();
 	const [roomName, setRoomName] = useState(pickRoomName);
 	const [isPublic, setIsPublic] = useState(true);
 
@@ -100,24 +89,27 @@ function NewRoom({ canGo, onCreate }) {
 
 	return (
 		<Section>
-			<Subtitle>New room</Subtitle>
+			<Subtitle>{t('lobby.newRoom')}</Subtitle>
 			<Row>
+				{/* The drawn name is not translated. It is a name — what the table calls itself and
+				    what a latecomer searches the list for — and two browsers looking at a list that
+				    did not agree would be looking at two different lists. */}
 				<Field
 					id="lobby-room-name"
 					value={roomName}
 					maxLength={MAX_ROOM_NAME_LENGTH}
-					placeholder="ROOM NAME"
+					placeholder={t('lobby.roomNamePlaceholder')}
 					onChange={event => setRoomName(event.target.value)}
 				/>
 				{/* A re-roll rather than only a text field, because the draw is the point: most tables
 				    want *a* name, not a particular one, and pressing this twice is faster than typing. */}
 				<Button id="lobby-room-reroll" small active onClick={() => setRoomName(pickRoomName())}>
-					↻
+					{t('lobby.reroll')}
 				</Button>
 			</Row>
 
 			<Choices id="lobby-visibility">
-				<Hint>Listed</Hint>
+				<Hint>{t('lobby.listed')}</Hint>
 				<Choice
 					id="lobby-visibility-public"
 					type="button"
@@ -125,7 +117,7 @@ function NewRoom({ canGo, onCreate }) {
 					aria-pressed={isPublic}
 					onClick={() => setIsPublic(true)}
 				>
-					Public
+					{t('lobby.public')}
 				</Choice>
 				<Choice
 					id="lobby-visibility-private"
@@ -134,7 +126,7 @@ function NewRoom({ canGo, onCreate }) {
 					aria-pressed={!isPublic}
 					onClick={() => setIsPublic(false)}
 				>
-					Private
+					{t('lobby.private')}
 				</Choice>
 			</Choices>
 
@@ -144,12 +136,12 @@ function NewRoom({ canGo, onCreate }) {
 					active={canGo && named}
 					onClick={() => canGo && named && onCreate({ room: roomName.trim(), isPrivate: !isPublic })}
 				>
-					NEW ROOM
+					{t('lobby.createRoom')}
 				</Button>
 			</Buttons>
 
-			{!named && <Notice id="lobby-room-name-bad">{explain('bad_room_name')}</Notice>}
-			{!isPublic && <Notice id="lobby-private-hint">A private room is found by its code alone.</Notice>}
+			{!named && <Notice id="lobby-room-name-bad">{explain(t, 'bad_room_name')}</Notice>}
+			{!isPublic && <Notice id="lobby-private-hint">{t('lobby.privateHint')}</Notice>}
 		</Section>
 	);
 }
@@ -158,26 +150,26 @@ function NewRoom({ canGo, onCreate }) {
 // in the text, because what the text says is the skin's business — small caps here, and the row is
 // free to abbreviate — while the count and the state are facts.
 function Finder({ rooms, total, query, onQuery, canGo, held, onEnter, unreachable }) {
+	const t = useT();
+
 	return (
 		<Section>
-			<Subtitle>Find a room</Subtitle>
+			<Subtitle>{t('lobby.findARoom')}</Subtitle>
 			<Field
 				id="lobby-search"
 				value={query}
 				maxLength={MAX_ROOM_NAME_LENGTH}
-				placeholder="SEARCH BY NAME"
+				placeholder={t('lobby.searchPlaceholder')}
 				onChange={event => onQuery(event.target.value)}
 			/>
 
 			{/* An empty list and no server are different facts. On a build with nothing behind /ws —
 			    the Pages one — "no public rooms yet, open one" would be a claim this screen cannot make
 			    and an invitation to press a button that cannot work. */}
-			{unreachable && <Notice id="lobby-rooms-offline">The room list needs a server to ask.</Notice>}
+			{unreachable && <Notice id="lobby-rooms-offline">{t('lobby.roomsOffline')}</Notice>}
 
 			{!unreachable && rooms.length === 0 && (
-				<Notice id="lobby-rooms-empty">
-					{query.trim() ? 'No public room by that name.' : 'No public rooms yet. Open one.'}
-				</Notice>
+				<Notice id="lobby-rooms-empty">{t(query.trim() ? 'lobby.noRoomsNamed' : 'lobby.noRoomsYet')}</Notice>
 			)}
 
 			{rooms.length > 0 && (
@@ -213,7 +205,9 @@ function Finder({ rooms, total, query, onQuery, canGo, held, onEnter, unreachabl
 										<span>
 											{room.players}/{MAX_PLAYERS}
 										</span>
-										<RoomState open={open}>{mine ? 'yours' : room.state}</RoomState>
+										<RoomState open={open}>
+											{mine ? t('lobby.roomState.yours') : t(`lobby.roomState.${room.state}`)}
+										</RoomState>
 									</RoomMeta>
 								</RoomRow>
 							</li>
@@ -224,11 +218,9 @@ function Finder({ rooms, total, query, onQuery, canGo, held, onEnter, unreachabl
 
 			{/* A cap that is not reported reads as "that is every room". */}
 			{total > rooms.length && (
-				<Notice id="lobby-rooms-more">
-					Showing {rooms.length} of {total}. Search to narrow it.
-				</Notice>
+				<Notice id="lobby-rooms-more">{t('lobby.showingSome', { shown: rooms.length, total })}</Notice>
 			)}
-			{rooms.length > 0 && !canGo && <Notice id="lobby-rooms-need-name">Say who you are first.</Notice>}
+			{rooms.length > 0 && !canGo && <Notice id="lobby-rooms-need-name">{t('lobby.needName')}</Notice>}
 		</Section>
 	);
 }
@@ -238,13 +230,15 @@ function Finder({ rooms, total, query, onQuery, canGo, held, onEnter, unreachabl
 // hash, and without this the game you are in the middle of is invisible from the one screen that
 // could take you back to it.
 function Resume({ seats, onEnter }) {
+	const t = useT();
+
 	if (!seats.length) {
 		return null;
 	}
 
 	return (
 		<Section>
-			<Subtitle>You are in a game</Subtitle>
+			<Subtitle>{t('lobby.inAGame')}</Subtitle>
 			<RoomList id="lobby-resume">
 				{seats.map(seat => (
 					<li key={seat.code}>
@@ -258,7 +252,7 @@ function Resume({ seats, onEnter }) {
 							<RoomName>{seat.room || seat.code}</RoomName>
 							<RoomMeta>
 								<span>{seat.name}</span>
-								<RoomState open>resume</RoomState>
+								<RoomState open>{t('lobby.roomState.resume')}</RoomState>
 							</RoomMeta>
 						</RoomRow>
 					</li>
@@ -276,27 +270,30 @@ function Resume({ seats, onEnter }) {
  * playing at one.
  */
 function Automatch({ canGo, queue, onQueue, onCancel }) {
+	const t = useT();
 	const searching = Boolean(queue);
 
 	return (
 		<Section>
-			<Subtitle>Automatch</Subtitle>
+			<Subtitle>{t('lobby.automatch')}</Subtitle>
 			<Row>
 				<Button id="lobby-queue" small active={canGo || searching} onClick={searching ? onCancel : onQueue}>
-					{searching ? 'CANCEL' : 'FIND ME A GAME'}
+					{t(searching ? 'common.cancel' : 'lobby.findMeAGame')}
 				</Button>
 				{searching && (
 					<Hint id="lobby-queue-status" data-waiting={queue.waiting}>
 						{/* The window is what the server is currently willing to match across, and it widens
 						    on its own — so this is a push, not something the client could work out. Null is
-						    the point at which it will take anybody. */}
-						Searching — {queue.waiting} waiting
-						{Number.isFinite(queue.rating) ? `, you are on ${queue.rating}` : ''}
-						{queue.window === null ? ', any rating' : ''}
+						    the point at which it will take anybody. Three clauses rather than one sentence
+						    with two optional halves: which of them are on depends on the queue, and a
+						    language is free to join them its own way. */}
+						{t('lobby.searching', { waiting: queue.waiting })}
+						{Number.isFinite(queue.rating) ? t('lobby.searchingRating', { rating: queue.rating }) : ''}
+						{queue.window === null ? t('lobby.searchingAnyRating') : ''}
 					</Hint>
 				)}
 			</Row>
-			{!canGo && !searching && <Notice id="lobby-queue-need-name">Say who you are first.</Notice>}
+			{!canGo && !searching && <Notice id="lobby-queue-need-name">{t('lobby.needName')}</Notice>}
 		</Section>
 	);
 }
@@ -309,6 +306,7 @@ function Automatch({ canGo, queue, onQueue, onCancel }) {
  * screen would mention that leaving had cost anything.
  */
 function LastGame({ rated, playerName }) {
+	const t = useT();
 	const mine = rated?.players?.find(player => player.name === playerName);
 
 	if (!mine || !mine.delta) {
@@ -317,8 +315,11 @@ function LastGame({ rated, playerName }) {
 
 	return (
 		<Notice id="lobby-last-game" data-delta={mine.delta}>
-			Last game: {mine.delta > 0 ? '+' : '−'}
-			{Math.abs(mine.delta)} — you are on {mine.after}.
+			{t('lobby.lastGame', {
+				sign: mine.delta > 0 ? '+' : '−',
+				delta: Math.abs(mine.delta),
+				after: mine.after,
+			})}
 		</Notice>
 	);
 }
@@ -419,6 +420,7 @@ function readMenuView() {
 }
 
 function JoinForm({ session, unreachable }) {
+	const t = useT();
 	const { code, rooms, roomsTotal, resumable, playerName, queue, rated, error, turnstileRequired, actions } = session;
 	// Pulled out as plain values because they are the effects' dependencies. `actions` itself is a new
 	// object on every session update — it is spread with goOnline/goHotSeat — while the functions in it
@@ -588,10 +590,10 @@ function JoinForm({ session, unreachable }) {
 			<Panel>
 				<Buttons>
 					<Button id="lobby-back" small active onClick={backToMenu}>
-						‹ Back
+						{t('common.back')}
 					</Button>
 				</Buttons>
-				<Subtitle>Start a game</Subtitle>
+				<Subtitle>{t('lobby.startTitle')}</Subtitle>
 				<Automatch
 					canGo={canGo}
 					queue={queue}
@@ -608,10 +610,10 @@ function JoinForm({ session, unreachable }) {
 			<Panel>
 				<Buttons>
 					<Button id="lobby-back" small active onClick={backToMenu}>
-						‹ Back
+						{t('common.back')}
 					</Button>
 				</Buttons>
-				<Subtitle>Join a game</Subtitle>
+				<Subtitle>{t('lobby.joinTitle')}</Subtitle>
 				<Finder
 					rooms={rooms}
 					total={roomsTotal}
@@ -624,18 +626,18 @@ function JoinForm({ session, unreachable }) {
 				/>
 
 				<Section>
-					<Subtitle>Or join by code</Subtitle>
+					<Subtitle>{t('lobby.orJoinByCode')}</Subtitle>
 					<Row>
 						<Field
 							id="lobby-code"
 							code
 							value={roomCode}
 							maxLength={4}
-							placeholder="CODE"
+							placeholder={t('lobby.codePlaceholder')}
 							onChange={event => setRoomCode(event.target.value.toUpperCase())}
 						/>
 						<Button id="lobby-join" small active={canGo && roomCode.trim().length === 4} onClick={joinByCode}>
-							JOIN
+							{t('lobby.join')}
 						</Button>
 					</Row>
 				</Section>
@@ -645,20 +647,20 @@ function JoinForm({ session, unreachable }) {
 
 	return (
 		<Panel $footerGap={turnstileRequired}>
-			<Subtitle>Your name</Subtitle>
+			<Subtitle>{t('lobby.yourName')}</Subtitle>
 			<Field
 				id="lobby-name"
 				value={name}
 				maxLength={16}
-				placeholder="NAME"
+				placeholder={t('lobby.namePlaceholder')}
 				onChange={event => setName(event.target.value.toUpperCase())}
 			/>
 
 			{turnstileRequired && (
 				<TurnstileFooter>
-					<Subtitle>Verify you're human</Subtitle>
+					<Subtitle>{t('lobby.verifyHuman')}</Subtitle>
 					<TurnstileBox id="lobby-turnstile" ref={turnstileRef} />
-					{!turnstileToken && <Notice id="lobby-turnstile-hint">Complete the check to continue.</Notice>}
+					{!turnstileToken && <Notice id="lobby-turnstile-hint">{t('lobby.turnstileHint')}</Notice>}
 				</TurnstileFooter>
 			)}
 
@@ -669,35 +671,35 @@ function JoinForm({ session, unreachable }) {
 			{/* Its own tab rather than a fourth stamp in the list below — learning the game is a
 			    different kind of choice than picking start-or-join, made before either. */}
 			<RulesTabButton id="lobby-menu-rules" type="button" onClick={() => enterView(RULES)}>
-				<RulesTabEyebrow>Case File</RulesTabEyebrow>
-				<RulesTabTitle>How to Play</RulesTabTitle>
+				<RulesTabEyebrow>{t('lobby.caseFile')}</RulesTabEyebrow>
+				<RulesTabTitle>{t('lobby.howToPlay')}</RulesTabTitle>
 			</RulesTabButton>
 
 			<Section>
 				<MenuList>
 					<Button id="lobby-menu-start" active onClick={() => enterView(START)}>
-						START A GAME
+						{t('lobby.startAGame')}
 					</Button>
 					<Button id="lobby-menu-join" active onClick={() => enterView(JOIN)}>
-						JOIN A GAME
+						{t('lobby.joinAGame')}
 					</Button>
 					{/* A room is the game this is for. One screen passed around a table is the other way
 					    to play it, and it needs nothing but this tab — which is also the answer when no
 					    server answers. */}
 					<Button id="play-hotseat-btn" small active onClick={goHotSeat}>
-						PLAY HOT-SEAT INSTEAD
+						{t('lobby.hotSeatInstead')}
 					</Button>
 				</MenuList>
 
-				{unreachable && (
-					<Notice id="lobby-no-server">No server answered. Hot-seat plays in this tab and needs none.</Notice>
-				)}
+				{unreachable && <Notice id="lobby-no-server">{t('lobby.noServer')}</Notice>}
 			</Section>
 		</Panel>
 	);
 }
 
 function Seats({ seats, hostSeatId, seatId }) {
+	const t = useT();
+
 	return (
 		<SeatList id="lobby-seats">
 			{seats.map(seat => (
@@ -713,13 +715,13 @@ function Seats({ seats, hostSeatId, seatId }) {
 				>
 					<span>
 						{seat.name}
-						{seat.id === seatId ? ' (you)' : ''}
+						{seat.id === seatId ? t('common.you') : ''}
 					</span>
 					<SeatMeta>
 						{Number.isFinite(seat.rating) && <Rating>{seat.rating}</Rating>}
 						<SeatTag>
-							{seat.id === hostSeatId ? 'host' : ''}
-							{seat.connected ? '' : ' offline'}
+							{seat.id === hostSeatId ? t('lobby.host') : ''}
+							{seat.connected ? '' : t('lobby.offline')}
 						</SeatTag>
 					</SeatMeta>
 				</SeatRow>
@@ -729,6 +731,7 @@ function Seats({ seats, hostSeatId, seatId }) {
 }
 
 function WaitingRoom({ session }) {
+	const t = useT();
 	const { code, roomName, roomPrivate, seats, hostSeatId, seatId, actions } = session;
 	const isHost = seatId && seatId === hostSeatId;
 	const enough = seats.length >= MIN_PLAYERS;
@@ -738,16 +741,14 @@ function WaitingRoom({ session }) {
 		<Panel>
 			{/* The name first, then the code. The name is what the table calls itself and what a
 			    latecomer will search the list for; the code is what they will type. */}
-			<Subtitle>{roomPrivate ? 'Private room' : 'Room'}</Subtitle>
+			<Subtitle>{t(roomPrivate ? 'lobby.privateRoom' : 'lobby.room')}</Subtitle>
 			<RoomTitle id="lobby-room-title">{roomName}</RoomTitle>
 
-			<Subtitle>Room code</Subtitle>
+			<Subtitle>{t('lobby.roomCode')}</Subtitle>
 			<RoomCode id="lobby-room-code">{code}</RoomCode>
 			<ShareHint id="lobby-share">{shareUrl}</ShareHint>
 
-			<Subtitle>
-				Players ({seats.length}/{MAX_PLAYERS})
-			</Subtitle>
+			<Subtitle>{t('lobby.players', { count: seats.length, max: MAX_PLAYERS })}</Subtitle>
 			<Seats seats={seats} hostSeatId={hostSeatId} seatId={seatId} />
 
 			{/* Host only, and it renders nothing for anyone else. Changing it here re-dresses the
@@ -758,18 +759,18 @@ function WaitingRoom({ session }) {
 			<Buttons>
 				{isHost ? (
 					<Button id="lobby-start" active={enough} onClick={actions.start}>
-						START
+						{t('lobby.start')}
 					</Button>
 				) : (
-					<Notice id="lobby-waiting">Waiting for the host to start…</Notice>
+					<Notice id="lobby-waiting">{t('lobby.waitingForHost')}</Notice>
 				)}
 
 				{/* No confirmation here, unlike leaving a game: the room stays, its code still joins it, and
 				    the seat count everybody is looking at goes down by one. */}
-				<LeaveGame id="lobby-leave" label="LEAVE ROOM" />
+				<LeaveGame id="lobby-leave" label={t('lobby.leaveRoom')} />
 			</Buttons>
 
-			{isHost && !enough && <Notice>At least {MIN_PLAYERS} players are needed.</Notice>}
+			{isHost && !enough && <Notice>{t('lobby.needMorePlayers', { min: MIN_PLAYERS })}</Notice>}
 		</Panel>
 	);
 }
@@ -779,6 +780,7 @@ function WaitingRoom({ session }) {
 // `./dev.sh`. Both look identical from here: a socket that will not open. Saying so beside the way out
 // is the difference between a dead form and a choice.
 function LobbyPhase() {
+	const t = useT();
 	const session = useSession();
 	const { status, seatId, error, errorSeconds } = session;
 
@@ -791,18 +793,24 @@ function LobbyPhase() {
 		<LobbyContainer>
 			<Title>
 				<Logo />
-				Hidden Agenda
+				{t('app.title')}
 			</Title>
 
-			{status === 'connecting' && <Notice id="lobby-connecting">Connecting…</Notice>}
+			{/* Under the title rather than tucked into one of the panels, because every screen the
+			    lobby can show — the name form, start, join, the whole rule book and the training
+			    course — is rendered below this line. A reader four pages into the file can switch
+			    language and stay on the page they were reading. */}
+			<LanguagePicker />
+
+			{status === 'connecting' && <Notice id="lobby-connecting">{t('lobby.connecting')}</Notice>}
 			{/* Only worth saying to somebody who has a seat to get back to. Unseated, the socket is open
 			    for the room list alone, and "reconnecting" would be the first thing a player reads on a
 			    build that has no server at all — where the useful sentence is the one below (moved into
 			    JoinForm's own menu, alongside the hot-seat door it explains). */}
-			{status === 'reconnecting' && seated && <Notice id="lobby-reconnecting">Reconnecting…</Notice>}
+			{status === 'reconnecting' && seated && <Notice id="lobby-reconnecting">{t('lobby.reconnecting')}</Notice>}
 			{error && (
 				<Notice bad id="lobby-error">
-					{explain(error, errorSeconds)}
+					{explain(t, error, errorSeconds)}
 				</Notice>
 			)}
 

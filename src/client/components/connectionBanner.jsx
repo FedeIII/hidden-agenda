@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import useSession from 'Hooks/useSession';
+import useT from 'Client/i18n';
 
 // Losing a connection is bad news in every skin, so it keeps a warning colour of its own rather
 // than the accent — Vault's accent is brass, and a brass banner reads as decoration.
@@ -18,12 +19,13 @@ const Banner = styled.div`
 	background: ${({ lost }) => (lost ? '#ff9a9a' : '#ffd479')};
 `;
 
+// The three statuses worth a banner, as catalog keys. `displaced` is not an error and not a lost
+// connection: this seat is being played from a window that asked for it more recently. Said plainly,
+// because the alternative is a tab that silently does nothing.
 const MESSAGES = {
-	connecting: 'Connecting…',
-	reconnecting: 'Connection lost — reconnecting…',
-	// Not an error and not a lost connection: this seat is being played from a window that asked for
-	// it more recently. Said plainly, because the alternative is a tab that silently does nothing.
-	displaced: 'This seat is open in another window — play there, or reload here to take it back.',
+	connecting: 'connection.connecting',
+	reconnecting: 'connection.reconnecting',
+	displaced: 'connection.displaced',
 };
 
 // Silent while everything is fine, and absent entirely in a local game. A player whose connection
@@ -35,20 +37,21 @@ const MESSAGES = {
 // message about nothing. The lobby says it in its own words, next to the way out.
 function ConnectionBanner() {
 	const { mode, status, seatId } = useSession();
+	const t = useT();
 
 	if (mode !== 'online' || status === 'ready' || !seatId) {
 		return null;
 	}
 
-	const message = MESSAGES[status];
+	const key = MESSAGES[status];
 
-	if (!message) {
+	if (!key) {
 		return null;
 	}
 
 	return (
 		<Banner id="connection-banner" lost={status !== 'connecting'}>
-			{message}
+			{t(key)}
 		</Banner>
 	);
 }

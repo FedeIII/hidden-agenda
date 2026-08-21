@@ -2,7 +2,8 @@ import { useContext } from 'react';
 import { StateContext } from 'State';
 import useSession from 'Hooks/useSession';
 import py, { BASE_POINTS, REVEAL_COST } from 'Domain/py';
-import teams, { TEAM_NAMES } from 'Domain/teams';
+import teams from 'Domain/teams';
+import useT from 'Client/i18n';
 import {
 	PointsTable,
 	ScoreList,
@@ -36,9 +37,11 @@ function signed(alignment, points) {
 // same frame — what revealing it cost. Grouping the cost with its own alignment is the whole
 // point: which of the two a −50 was paid for was otherwise guesswork.
 function Alignment({ alignment, team, points, revealed }) {
+	const t = useT();
+
 	return (
 		<AlignmentGroup alignment={alignment} data-alignment={alignment}>
-			<AlignmentPill team={team}>{TEAM_NAMES[team]}</AlignmentPill>
+			<AlignmentPill team={team}>{t(`team.${team}`)}</AlignmentPill>
 			{/* data-term marks every signed contribution so a spec can add them up and check they
 			    really do make the total — the breakdown claiming to explain the score is only
 			    worth anything if it agrees with it. */}
@@ -105,6 +108,7 @@ function PlayerScore({ player }) {
 
 function PlayersScore() {
 	const [{ players, pieces }] = useContext(StateContext);
+	const t = useT();
 
 	return (
 		<PointsTable>
@@ -114,7 +118,7 @@ function PlayersScore() {
 				))}
 			</ScoreList>
 
-			<Winner big>Winner: </Winner>
+			<Winner big>{t('end.winner')}</Winner>
 			<PlayerWinner big>{py.getWinner(players, pieces).name}</PlayerWinner>
 		</PointsTable>
 	);

@@ -2,6 +2,8 @@ import { useState, useMemo, useCallback, useContext } from 'react';
 import { startGame } from 'Game/actions';
 import { StateContext } from 'State';
 import useSession from 'Hooks/useSession';
+import useT from 'Client/i18n';
+import LanguagePicker from 'Client/components/languagePicker';
 import { Button, Buttons } from 'Client/components/button';
 import {
 	StartPhaseContainer,
@@ -35,11 +37,12 @@ function NumberPlayersOption({ n, numberPlayers, onChange }) {
 }
 
 function PlayerOptions({ n, onChange }) {
+	const t = useT();
 	const onInputChange = useCallback(event => onChange(event.target.name, event.target.value), [onChange]);
 
 	return (
 		<Player key={`player${n}`}>
-			<Title>PLAYER {n}</Title>
+			<Title>{t('start.player', { n })}</Title>
 			{/* On change, not on blur. A name that has been typed is a name: waiting for focus to leave
 			    meant the last player's name never counted, so GET ALIGNMENTS stayed dead while looking
 			    ready — and clicking it started the game anyway, because the handler never checked. */}
@@ -116,12 +119,17 @@ function StartPhase({ onReady }) {
 	const playersReady = useArePlayersReady(numberOfPlayers, players);
 	const onStart = useStartGame(players, onReady, playersReady);
 	const session = useSession();
+	const t = useT();
 
 	return (
 		<StartPhaseContainer>
+			{/* The hot-seat form is the other front door — a player who arrived on `?hotseat` never
+			    passes the lobby, so this is their only chance to say which language the evening is in. */}
+			<LanguagePicker />
+
 			<Options>
 				<NumberPlayers>
-					<MainTitle>1. NUMBER OF PLAYERS</MainTitle>
+					<MainTitle>{t('start.numberOfPlayers')}</MainTitle>
 					<NumberPlayersOptions>
 						{Array(5)
 							.fill()
@@ -136,7 +144,7 @@ function StartPhase({ onReady }) {
 					</NumberPlayersOptions>
 				</NumberPlayers>
 
-				<MainTitle>2. PLAYERS</MainTitle>
+				<MainTitle>{t('start.players')}</MainTitle>
 
 				<Players>
 					{Array(numberOfPlayers)
@@ -149,14 +157,14 @@ function StartPhase({ onReady }) {
 
 			<Buttons>
 				<Button id="start-btn" active={playersReady} onClick={onStart}>
-					GET ALIGNMENTS
+					{t('start.getAlignments')}
 				</Button>
 			</Buttons>
 
 			{/* Everything above plays hot-seat in this tab. This is the way out to a real room. */}
 			<Buttons>
 				<Button id="play-online-btn" small active onClick={session.actions.goOnline}>
-					PLAY ONLINE INSTEAD
+					{t('start.playOnlineInstead')}
 				</Button>
 			</Buttons>
 		</StartPhaseContainer>

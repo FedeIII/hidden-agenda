@@ -4,6 +4,7 @@ import py from 'Domain/py';
 import { pz, NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END } from 'Domain/pieces';
 import { Button } from 'Client/components/button';
 import { useCanAct } from 'Hooks/useSession';
+import useT from 'Client/i18n';
 import { nextTurn } from 'Game/actions';
 import { Title } from 'Client/components/title';
 import { Cell, CellKey, CellValue, CellMark, Initials, InitialBox } from './components';
@@ -21,6 +22,7 @@ import { Cell, CellKey, CellValue, CellMark, Initials, InitialBox } from './comp
 function TurnStrip() {
 	const [{ players, pieces, hasTurnEnded }, dispatch] = useContext(StateContext);
 	const canAct = useCanAct();
+	const t = useT();
 
 	const turn = py.getTurn(players);
 	const ceosDown = pz.getKilledCeoCount(pieces);
@@ -32,7 +34,7 @@ function TurnStrip() {
 	return (
 		<Title>
 			<Cell>
-				<CellKey>on the desk of</CellKey>
+				<CellKey>{t('play.onTheDeskOf')}</CellKey>
 				<CellValue id="turn-player">{turn}</CellValue>
 				<Initials aria-hidden="true">
 					{players.map((player, at) => (
@@ -45,7 +47,7 @@ function TurnStrip() {
 
 			<Cell>
 				<CellMark>
-					<CellKey>ceos down</CellKey>
+					<CellKey>{t('play.ceosDown')}</CellKey>
 					<CellValue id="ceos-down">
 						{ceosDown} / {NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END}
 					</CellValue>
@@ -59,7 +61,7 @@ function TurnStrip() {
 					active={hasTurnEnded && canAct}
 					onClick={() => hasTurnEnded && dispatch(nextTurn())}
 				>
-					NEXT TURN
+					{t('play.nextTurn')}
 				</Button>
 			</Cell>
 		</Title>

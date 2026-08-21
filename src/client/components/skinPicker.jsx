@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import { SKIN_NAMES } from 'Domain/skins';
+import useT from 'Client/i18n';
 import { narrowOrShort } from './breakpoints';
 import useSkin, { useCanChangeSkin, useSetSkin } from 'Hooks/useSkin';
 
@@ -69,6 +70,7 @@ const Option = styled.button`
 `;
 
 function SkinPicker() {
+	const t = useT();
 	const skin = useSkin();
 	const canChange = useCanChangeSkin();
 	const setSkin = useSetSkin();
@@ -79,7 +81,7 @@ function SkinPicker() {
 
 	return (
 		<Picker id="skin-picker">
-			<Label>Style</Label>
+			<Label>{t('skin.label')}</Label>
 			<Options>
 				{SKIN_NAMES.map(name => (
 					<Option
@@ -90,7 +92,9 @@ function SkinPicker() {
 						aria-pressed={name === skin}
 						onClick={() => setSkin(name)}
 					>
-						{name}
+						{/* The id stays the skin's own name — the wire's name and the specs' — and only
+						    the label is translated. */}
+						{t(`skin.${name}`)}
 					</Option>
 				))}
 			</Options>

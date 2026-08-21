@@ -4,14 +4,15 @@ import { DragProvider } from 'Client/drag';
 import { gameReducer } from 'Game/reducer';
 import { PHASES } from 'Domain/phases';
 import { pz } from 'Domain/pieces';
-import { TEAM_NAMES } from 'Domain/teams';
 import { invalidateStage } from 'Client/three/stage';
+import useT, { useLang } from 'Client/i18n';
 import useSkin from 'Hooks/useSkin';
 import useSnipe from 'Hooks/useSnipe';
 import { useCanAccuse, useCanReveal } from 'Hooks/useSession';
 import { Button, Buttons } from 'Client/components/button';
 import HQs from 'Client/components/hqs';
 import { AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
+import { useRulesPages } from '../rules/content';
 import HQ from 'Phases/playPhase/hq';
 import TableBoard from 'Phases/playPhase/tableBoard';
 import TurnStrip from 'Phases/playPhase/turnStrip';
@@ -19,6 +20,7 @@ import AccuseScreen from 'Phases/playPhase/accuseScreen';
 import RevealScreen from 'Phases/playPhase/revealScreen';
 import { ActionButton } from 'Phases/playPhase/components';
 import { EXERCISES, allowsAction, findExercise, note, NOTE } from './exercises';
+import { exerciseText } from './text';
 import { seedState } from './seed';
 import CoachMarks from './marks';
 import {
@@ -100,12 +102,13 @@ function sightMarks(pieces) {
 // an exercise has anything to say about — but the button itself is the real one, down to the hook
 // that decides whether it may be pressed and whether it now says STAND DOWN.
 function SnipeAction() {
+	const t = useT();
 	const [canSnipe, onSnipe, armed] = useSnipe();
 
 	return (
 		<ExerciseActions>
 			<Button id="snipe" small $primary active={canSnipe} onClick={onSnipe}>
-				{armed ? 'STAND DOWN' : 'SNIPE!'}
+				{t(armed ? 'play.standDown' : 'play.snipe')}
 			</Button>
 		</ExerciseActions>
 	);
@@ -118,6 +121,7 @@ function SnipeAction() {
 const SCREENS = { reveal: RevealScreen, accuse: AccuseScreen };
 
 function ScreenAction({ which, notes, onLook }) {
+	const t = useT();
 	const canReveal = useCanReveal();
 	const canAccuse = useCanAccuse();
 	const Screen = SCREENS[which];
@@ -128,11 +132,11 @@ function ScreenAction({ which, notes, onLook }) {
 			<ExerciseActions>
 				{which === 'reveal' ? (
 					<ActionButton id="reveal" active={canReveal} onClick={() => onLook('open')}>
-						REVEAL
+						{t('play.reveal')}
 					</ActionButton>
 				) : (
 					<ActionButton id="accuse" active={canAccuse} onClick={() => onLook('open')}>
-						ACCUSE
+						{t('play.accuse')}
 					</ActionButton>
 				)}
 			</ExerciseActions>
@@ -145,29 +149,30 @@ function ScreenAction({ which, notes, onLook }) {
 // The first exercise has no board. Two cards face down on the desk, turned over by hand — which is
 // the whole of what a player owns, and the only thing in this game nobody else may see.
 function CardStage({ cards, notes, onLook }) {
+	const t = useT();
 	const seen = { friend: notes.has('friend'), foe: notes.has('foe') };
 
 	return (
 		<CardTable>
 			{seen.friend ? (
 				<AlignmentFriend id="training-card-friend" disabled player={LEARNER} team={cards.friend}>
-					{TEAM_NAMES[cards.friend]}
+					{t(`team.${cards.friend}`)}
 				</AlignmentFriend>
 			) : (
 				<CardBack id="training-card-friend" type="button" onClick={() => onLook('friend')}>
-					<CardSeal>Classified</CardSeal>
-					<CardWord>Card 1 of 2</CardWord>
+					<CardSeal>{t('training.classified')}</CardSeal>
+					<CardWord>{t('training.cardOfTwo', { n: 1 })}</CardWord>
 				</CardBack>
 			)}
 
 			{seen.foe ? (
 				<AlignmentFoe id="training-card-foe" disabled player={LEARNER} team={cards.foe}>
-					{TEAM_NAMES[cards.foe]}
+					{t(`team.${cards.foe}`)}
 				</AlignmentFoe>
 			) : (
 				<CardBack id="training-card-foe" type="button" onClick={() => onLook('foe')}>
-					<CardSeal>Classified</CardSeal>
-					<CardWord>Card 2 of 2</CardWord>
+					<CardSeal>{t('training.classified')}</CardSeal>
+					<CardWord>{t('training.cardOfTwo', { n: 2 })}</CardWord>
 				</CardBack>
 			)}
 		</CardTable>
@@ -356,7 +361,10 @@ function openExerciseAt(exercise) {
  * is exactly the lifetime an exercise wants.
  */
 function ExerciseRunner({ exercise, onNext, onOpenFile, isLast }) {
+	const t = useT();
+	const lang = useLang();
 	const documentSkin = useSkin();
+	const said = useMemo(() => exerciseText(exercise, lang), [exercise, lang]);
 	const runner = useMemo(() => createRunner(exercise), [exercise]);
 	const [{ game: state, notes, step: stepIndex }, dispatch] = useReducer(runner, exercise, openExerciseAt);
 
@@ -429,8 +437,8 @@ function ExerciseRunner({ exercise, onNext, onOpenFile, isLast }) {
 
 		const line = sightMarks(state.pieces);
 
-		return line.length ? { id: line[Math.floor(line.length / 2)].id, text: 'line of fire' } : null;
-	}, [showSight, state.pieces]);
+		return line.length ? { id: line[Math.floor(line.length / 2)].id, text: t('training.lineOfFire') } : null;
+	}, [showSight, state.pieces, t]);
 
 	return (
 		<SessionContext.Provider value={session}>
@@ -439,27 +447,29 @@ function ExerciseRunner({ exercise, onNext, onOpenFile, isLast }) {
 					<StepPlacard onSettled={revealSpotlight}>
 						{finished ? (
 							<Finding id="training-finding">
-								<FindingStamp>Passed</FindingStamp>
-								<FindingLine id="training-finding-line">{exercise.finding}</FindingLine>
+								<FindingStamp>{t('training.passed')}</FindingStamp>
+								<FindingLine id="training-finding-line">{said.finding}</FindingLine>
 								{/* The second line is for the half of a rule the board cannot show. That a reveal
 								    costs fifty points is visible on the screen; that they come *off* is not. */}
-								{exercise.note && <FindingSmall id="training-finding-note">{exercise.note}</FindingSmall>}
+								{said.note && <FindingSmall id="training-finding-note">{said.note}</FindingSmall>}
 								<Buttons>
 									<Button id="training-file" small active onClick={() => onOpenFile(exercise.file)}>
-										Read the file
+										{t('training.readTheFile')}
 									</Button>
 									<Button id="training-next" active onClick={onNext}>
-										{isLast ? 'Finish ›' : 'Next ›'}
+										{t(isLast ? 'training.finish' : 'training.next')}
 									</Button>
 								</Buttons>
 							</Finding>
 						) : (
 							<Slip id="training-slip">
 								<SlipKey id="training-step">
-									Step {stepIndex + 1} / {exercise.steps.length}
+									{t('training.step', { n: stepIndex + 1, total: exercise.steps.length })}
 								</SlipKey>
-								<Verb id="training-verb">{step.verb}</Verb>
-								{step.hint && <Hint id="training-hint">{step.hint}</Hint>}
+								{/* The verb and the hint come from `said`, which is the exercise's own words in the
+								    reader's language, indexed by the same step number the gate is. */}
+								<Verb id="training-verb">{said.steps[stepIndex].verb}</Verb>
+								{said.steps[stepIndex].hint && <Hint id="training-hint">{said.steps[stepIndex].hint}</Hint>}
 							</Slip>
 						)}
 					</StepPlacard>
@@ -492,30 +502,32 @@ function ExerciseRunner({ exercise, onNext, onOpenFile, isLast }) {
 // Passed the whole course. What it never put on a board is named here with the pages that do — a
 // tutorial that pretends it covered everything is worse than one that says what is left. Scoring is
 // the honest gap: it is arithmetic done once, at the end, and there is nothing to click at it.
-const UNCOVERED = [
-	{ slug: 'how-it-ends', title: 'How It Ends' },
-	{ slug: 'playing-online', title: 'Playing Online' },
-];
+const UNCOVERED = ['how-it-ends', 'playing-online'];
 
 function CourseComplete({ onOpenFile, onIndex, onPlay }) {
+	const t = useT();
+	// The two page titles come out of the book rather than being written down again here, which is
+	// also what keeps them in the reader's language: they are the same two buttons in both.
+	const pages = useRulesPages();
+
 	return (
 		<Finding id="training-complete">
-			<FindingStamp>Cleared</FindingStamp>
-			<FindingLine>That is the whole board game.</FindingLine>
-			<FindingNote>Two pages left to read</FindingNote>
+			<FindingStamp>{t('training.cleared')}</FindingStamp>
+			<FindingLine>{t('training.wholeGame')}</FindingLine>
+			<FindingNote>{t('training.pagesLeft')}</FindingNote>
 			<DoneList>
-				{UNCOVERED.map(page => (
-					<Button key={page.slug} id={`training-read-${page.slug}`} small active onClick={() => onOpenFile(page.slug)}>
-						{page.title}
+				{UNCOVERED.map(slug => (
+					<Button key={slug} id={`training-read-${slug}`} small active onClick={() => onOpenFile(slug)}>
+						{(pages.find(page => page.slug === slug) || {}).title}
 					</Button>
 				))}
 			</DoneList>
 			<Buttons>
 				<Button id="training-play" active onClick={onPlay}>
-					Play now
+					{t('training.playNow')}
 				</Button>
 				<Button id="training-back-to-index" small active onClick={onIndex}>
-					Back to the index
+					{t('training.backToIndex')}
 				</Button>
 			</Buttons>
 		</Finding>
@@ -530,6 +542,8 @@ function CourseComplete({ onOpenFile, onIndex, onPlay }) {
  * and it is in the runner's key rather than in its state: rebuilding the component is the reset.
  */
 export default function TrainingCourse({ slug, onOpen, onBack, onIndex, onOpenFile, onPlay }) {
+	const t = useT();
+	const lang = useLang();
 	const exercise = findExercise(slug) || EXERCISES[0];
 	const index = EXERCISES.indexOf(exercise);
 	const isLast = index === EXERCISES.length - 1;
@@ -565,32 +579,36 @@ export default function TrainingCourse({ slug, onOpen, onBack, onIndex, onOpenFi
 			    row of its own beneath the table is a band of the screen the board could have had. */}
 			<Buttons>
 				<Button id="rules-main-menu" small active onClick={onBack}>
-					Main Menu
+					{t('common.mainMenu')}
 				</Button>
 				<Button id="rules-index" small active onClick={onIndex}>
-					Index
+					{t('common.index')}
 				</Button>
 				{!complete && (
 					<Button id="training-restart" small active onClick={() => setAttempt(count => count + 1)}>
-						Start over
+						{t('training.startOver')}
 					</Button>
 				)}
 			</Buttons>
 
 			<HeadRow>
 				<TrainingHead id="training-title">
-					{complete ? 'Field Training' : `${index + 1}. ${exercise.title}`}
+					{complete
+						? t('training.fieldTraining')
+						: t('training.exerciseTitle', { n: index + 1, title: exerciseText(exercise, lang).title })}
 				</TrainingHead>
 
 				<Record id="training-record">
-					<RecordLabel>Record</RecordLabel>
+					<RecordLabel>{t('training.record')}</RecordLabel>
+					{/* Ten titles in a loop, which is why `exerciseText` is a plain function and not a
+					    hook — `useLang()` above supplies the language once for all of them. */}
 					{EXERCISES.map((entry, at) => (
 						<RecordBox
 							key={entry.slug}
 							id={`training-go-${entry.slug}`}
 							type="button"
-							title={entry.title}
-							aria-label={entry.title}
+							title={exerciseText(entry, lang).title}
+							aria-label={exerciseText(entry, lang).title}
 							$done={passed.has(entry.slug)}
 							$current={!complete && entry.slug === exercise.slug}
 							onClick={() => openExercise(entry.slug)}

@@ -2,6 +2,7 @@ import { useContext } from 'react';
 import { StateContext } from 'State';
 import { MIN_PLAYERS } from 'Domain/py';
 import useSession from 'Hooks/useSession';
+import useT from 'Client/i18n';
 import { Button } from 'Client/components/button';
 import { ScreenStyled, ScreenBody, ScreenTitle, ScreenNote, ScreenChoices, VerdictCost } from './components';
 
@@ -13,6 +14,7 @@ import { ScreenStyled, ScreenBody, ScreenTitle, ScreenNote, ScreenChoices, Verdi
 // It also sits over NEXT TURN, like every other screen here, so the turn cannot move while somebody is
 // deciding. See the note in alignmentScreen.jsx.
 function LeaveScreen({ onClose }) {
+	const t = useT();
 	const [{ players }] = useContext(StateContext);
 	const { actions } = useSession();
 
@@ -22,37 +24,33 @@ function LeaveScreen({ onClose }) {
 	const strands = players.length - 1 < MIN_PLAYERS;
 
 	return (
-		<ScreenStyled id="leave-screen" role="dialog" aria-modal="true" aria-label="Leave the game">
+		<ScreenStyled id="leave-screen" role="dialog" aria-modal="true" aria-label={t('leaveScreen.title')}>
 			<ScreenBody>
-				<ScreenTitle>{strands ? 'End the game?' : 'Leave the game?'}</ScreenTitle>
+				<ScreenTitle>{t(strands ? 'leaveScreen.endTitle' : 'leaveScreen.leaveTitle')}</ScreenTitle>
 
 				<ScreenNote id="leave-note">
-					{strands
-						? `a game needs ${MIN_PLAYERS}, so the last player leaves with you`
-						: 'the game carries on without you'}
+					{strands ? t('leaveScreen.strandsNote', { min: MIN_PLAYERS }) : t('leaveScreen.carriesOnNote')}
 				</ScreenNote>
 
 				<VerdictCost id="leave-cost">
-					{strands
-						? 'nobody scores, and the room is gone'
-						: 'a started room takes no new seats, so there is no way back'}
+					{t(strands ? 'leaveScreen.strandsCost' : 'leaveScreen.noWayBackCost')}
 				</VerdictCost>
 
 				{/* The rest of the price, added when leaving started costing rating. This screen exists to
 				    name the price, so a cost it did not mention would be the one thing it got wrong — and
 				    the wait is the half a player is most likely to be surprised by. Not gated on the mode:
 				    LeaveGame renders nothing at all in hot-seat, so there is no local way to reach here. */}
-				<VerdictCost id="leave-rating-cost">counts as a loss, and the next game waits on a timer</VerdictCost>
+				<VerdictCost id="leave-rating-cost">{t('leaveScreen.ratingCost')}</VerdictCost>
 
 				{/* ScreenChoices rather than Buttons: two controls side by side need the gap, and in Dossier
 				    they are stamps that would otherwise share an edge. Neither is louder than the other —
 				    both are decisions, which is the point of the screen. */}
 				<ScreenChoices>
 					<Button id="leave-confirm" active onClick={actions.leave}>
-						{strands ? 'END IT' : 'LEAVE'}
+						{t(strands ? 'leaveScreen.endIt' : 'leaveScreen.leave')}
 					</Button>
 					<Button id="leave-close" active onClick={onClose}>
-						BACK TO THE BOARD
+						{t('common.backToBoard')}
 					</Button>
 				</ScreenChoices>
 			</ScreenBody>

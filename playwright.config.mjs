@@ -61,6 +61,15 @@ export default defineConfig({
 		trace: 'on-first-retry',
 		video: 'retain-on-failure',
 		screenshot: 'only-on-failure',
+
+		// Pinned for the same reason the viewport and the skin are: the app picks its language from
+		// `navigator.languages` when the visitor has never chosen one, so an unpinned locale means the
+		// suite reads the interface in whatever language the machine running it is set to — and every
+		// assertion here is written against the English strings. On a Spanish laptop the suite would
+		// fail wholesale, in a way that names a button rather than a locale.
+		//
+		// A spec that wants the other language asks for it with `?lang=es`, which overrides this.
+		locale: 'en-US',
 	},
 
 	projects: [

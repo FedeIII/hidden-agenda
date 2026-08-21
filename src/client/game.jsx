@@ -7,6 +7,8 @@ import { pz } from 'Domain/pieces';
 import { PHASES } from 'Domain/phases';
 import useSession from 'Hooks/useSession';
 import useSkin, { useSkinAttribute } from 'Hooks/useSkin';
+import useT, { useLangAttribute } from 'Client/i18n';
+import SkinWords from 'Client/theme/skinWords';
 import { Title } from 'Client/components/title';
 import ConnectionBanner from 'Client/components/connectionBanner';
 import LobbyPhase from 'Phases/lobbyPhase';
@@ -25,12 +27,18 @@ const NEEDS_GAME_STATE = [ALIGNMENT, PLAY, END];
 function Game() {
 	const [{ pieces }] = useContext(StateContext);
 	const session = useSession();
+	const t = useT();
 	const online = session.mode === 'online';
 
 	// One attribute on <html>, and every token in the app resolves against it. Locally the session
 	// draws it on the way into the alignment phase; online it is the room's, so the whole table
 	// changes together the moment the room frame lands.
 	useSkinAttribute(useSkin());
+
+	// The other attribute on <html>. Unlike the skin, the language is nobody's business but this
+	// browser's — the server neither sends one nor needs to know, so two people can read the same
+	// room in two languages.
+	useLangAttribute();
 
 	// Was a <Redirect> inside PlayPhase. Deriving it keeps it idempotent. Online the server says
 	// so instead, since it is the one that knows the game is over.
@@ -49,10 +57,11 @@ function Game() {
 	return (
 		<DragProvider>
 			<GlobalStyle />
+			<SkinWords />
 			<ConnectionBanner />
 
 			{waitingForState ? (
-				<Title>Loading the game…</Title>
+				<Title>{t('app.loading')}</Title>
 			) : (
 				<>
 					{(phase === START || phase === null) && preGame}

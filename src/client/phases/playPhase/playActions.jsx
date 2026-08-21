@@ -2,6 +2,7 @@ import useBooleanState from 'Hooks/useBooleanState';
 import { useCanAccuse, useCanReveal } from 'Hooks/useSession';
 import useSnipe from 'Hooks/useSnipe';
 import { Button } from 'Client/components/button';
+import useT from 'Client/i18n';
 import LeaveGame from 'Client/components/leaveGame';
 import { Actions, Action, ActionButton } from './components';
 import AccuseScreen from './accuseScreen';
@@ -30,6 +31,7 @@ function useScreens() {
 }
 
 function PlayActions() {
+	const t = useT();
 	const [canSnipe, onSnipe, isSnipeArmed] = useSnipe();
 	const canReveal = useCanReveal();
 	const canAccuse = useCanAccuse();
@@ -42,16 +44,16 @@ function PlayActions() {
 				    stand down, and standing down is what gives the turn back to the player who
 				    moved. */}
 				<Button id="snipe" small $primary active={canSnipe} onClick={onSnipe}>
-					{isSnipeArmed ? 'STAND DOWN' : 'SNIPE!'}
+					{t(isSnipeArmed ? 'play.standDown' : 'play.snipe')}
 				</Button>
 			</Action>
 
 			<Action>
 				<ActionButton id="accuse" active={canAccuse} onClick={() => canAccuse && screens.accuse.show()}>
-					ACCUSE
+					{t('play.accuse')}
 				</ActionButton>
 				<ActionButton id="reveal" active={canReveal} onClick={() => canReveal && screens.reveal.show()}>
-					REVEAL
+					{t('play.reveal')}
 				</ActionButton>
 			</Action>
 
@@ -61,7 +63,7 @@ function PlayActions() {
 			    has no slack to give. LEAVE renders nothing at all in a hot-seat game. */}
 			<Action>
 				<Button id="friend-foe" small active onClick={screens.alignment.show}>
-					FRIEND &amp; FOE
+					{t('play.friendFoe')}
 				</Button>
 				<LeaveGame onClick={screens.leave.show} />
 			</Action>

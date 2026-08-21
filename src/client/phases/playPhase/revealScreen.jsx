@@ -1,8 +1,8 @@
 import { useCallback, useContext } from 'react';
 import { StateContext } from 'State';
 import py, { REVEAL_COST } from 'Domain/py';
-import { TEAM_NAMES } from 'Domain/teams';
 import { revealFriend, revealFoe } from 'Game/actions';
+import useT from 'Client/i18n';
 import { Button, Buttons } from 'Client/components/button';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
 import { ScreenStyled, ScreenBody, ScreenTitle, ScreenNote, VerdictCost } from './components';
@@ -17,6 +17,7 @@ import { ScreenStyled, ScreenBody, ScreenTitle, ScreenNote, VerdictCost } from '
 // The cards are the ones the game deals, at the size it deals them, and a revealed one stays on
 // screen turned face up — so the screen is also the answer to "what have I already given away".
 function RevealScreen({ onClose }) {
+	const t = useT();
 	const [{ players }, dispatch] = useContext(StateContext);
 
 	const player = players.find(entry => entry.turn);
@@ -29,12 +30,12 @@ function RevealScreen({ onClose }) {
 	const both = friendRevealed && foeRevealed;
 
 	return (
-		<ScreenStyled id="reveal-screen" role="dialog" aria-modal="true" aria-label="Reveal an alignment">
+		<ScreenStyled id="reveal-screen" role="dialog" aria-modal="true" aria-label={t('revealScreen.title')}>
 			<ScreenBody>
-				<ScreenTitle>{both ? 'Both are public now' : 'Reveal an alignment'}</ScreenTitle>
+				<ScreenTitle>{t(both ? 'revealScreen.bothTitle' : 'revealScreen.title')}</ScreenTitle>
 
 				<ScreenNote id="reveal-note">
-					{both ? 'nothing left to give away' : `costs ${REVEAL_COST} points, and hands you that team at once`}
+					{both ? t('revealScreen.bothNote') : t('revealScreen.note', { points: REVEAL_COST })}
 				</ScreenNote>
 
 				<Alignments>
@@ -46,7 +47,7 @@ function RevealScreen({ onClose }) {
 						team={friendRevealed ? player.alignment.friend : undefined}
 						onClick={onFriend}
 					>
-						{friendRevealed ? TEAM_NAMES[player.alignment.friend] : null}
+						{friendRevealed ? t(`team.${player.alignment.friend}`) : null}
 					</AlignmentFriend>
 					<AlignmentFoe
 						id="reveal-foe"
@@ -56,7 +57,7 @@ function RevealScreen({ onClose }) {
 						team={foeRevealed ? player.alignment.foe : undefined}
 						onClick={onFoe}
 					>
-						{foeRevealed ? TEAM_NAMES[player.alignment.foe] : null}
+						{foeRevealed ? t(`team.${player.alignment.foe}`) : null}
 					</AlignmentFoe>
 				</Alignments>
 
@@ -64,13 +65,13 @@ function RevealScreen({ onClose }) {
 				    what the next one would cost. */}
 				{(friendRevealed || foeRevealed) && (
 					<VerdictCost id="reveal-spent">
-						−{REVEAL_COST * (Number(friendRevealed) + Number(foeRevealed))} points spent on revealing
+						{t('revealScreen.spent', { points: REVEAL_COST * (Number(friendRevealed) + Number(foeRevealed)) })}
 					</VerdictCost>
 				)}
 
 				<Buttons>
 					<Button id="reveal-close" active onClick={onClose}>
-						{friendRevealed || foeRevealed ? 'BACK TO THE BOARD' : 'REVEAL NOTHING'}
+						{t(friendRevealed || foeRevealed ? 'common.backToBoard' : 'revealScreen.revealNothing')}
 					</Button>
 				</Buttons>
 			</ScreenBody>

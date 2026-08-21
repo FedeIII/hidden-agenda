@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Button, Buttons } from 'Client/components/button';
 import { Subtitle } from 'Client/components/title';
-import { RULES_PAGES, GROUPS, findRulePage } from './content';
+import useT from 'Client/i18n';
+import { useRulesPages, useRuleGroups } from './content';
 import { EXERCISES } from '../training/exercises';
 import {
 	RulesPanel,
@@ -83,7 +84,7 @@ function renderInline(text) {
 	return nodes;
 }
 
-function RuleBlock({ block }) {
+function RuleBlock({ block, buffLabel }) {
 	if (block.p) {
 		return <p>{renderInline(block.p)}</p>;
 	}
@@ -101,7 +102,7 @@ function RuleBlock({ block }) {
 	if (block.note) {
 		return (
 			<RuleNote>
-				{block.buff && <BuffBadge>CEO Buff</BuffBadge>}
+				{block.buff && <BuffBadge>{buffLabel}</BuffBadge>}
 				{renderInline(block.note)}
 			</RuleNote>
 		);
@@ -114,7 +115,7 @@ function RuleBlock({ block }) {
 // is built this way rather than a plain <img>. `index` decides which side it floats to (and which
 // way it leans), so consecutive pages alternate rather than the text always reading past it the
 // same side twenty times running.
-function Exhibit({ image, index, onZoom }) {
+function Exhibit({ image, index, onZoom, figure }) {
 	const reverse = index % 2 === 1;
 
 	return (
@@ -123,7 +124,7 @@ function Exhibit({ image, index, onZoom }) {
 			<ExhibitTape $side="right" />
 			<ExhibitImage src={`img/rules/${image.file}`} alt={image.alt} onClick={() => onZoom(image)} />
 			<ExhibitTag>
-				<ExhibitLabel>Fig. {index + 1}</ExhibitLabel>
+				<ExhibitLabel>{figure(index + 1)}</ExhibitLabel>
 				<ExhibitCaption>{image.caption}</ExhibitCaption>
 			</ExhibitTag>
 		</ExhibitFrame>
@@ -134,7 +135,7 @@ function Exhibit({ image, index, onZoom }) {
 // than the single full-board print the narrative pages use. Cropped tight on purpose: an HQ, a
 // header, or a hexagon that isn't part of the play would only be noise next to a picture this
 // small.
-function ExhibitPair({ images, index, onZoom, full }) {
+function ExhibitPair({ images, index, onZoom, full, figure }) {
 	const reverse = index % 2 === 1;
 
 	return (
@@ -150,7 +151,7 @@ function ExhibitPair({ images, index, onZoom, full }) {
 				))}
 			</ExhibitPairRow>
 			<ExhibitTag>
-				<ExhibitLabel>Fig. {index + 1}</ExhibitLabel>
+				<ExhibitLabel>{figure(index + 1)}</ExhibitLabel>
 				<ExhibitCaption>{images.map(image => image.caption).join(' · ')}</ExhibitCaption>
 			</ExhibitTag>
 		</ExhibitPairFrame>
@@ -163,6 +164,8 @@ function ExhibitPair({ images, index, onZoom, full }) {
 // the click that opens the lightbox would also be the click on the overlay that closes it, and
 // clicking the print to look closer would immediately dismiss it.
 function RuleLightbox({ image, onClose }) {
+	const t = useT();
+
 	useEffect(() => {
 		function onKeyDown(event) {
 			if (event.key === 'Escape') {
@@ -177,7 +180,7 @@ function RuleLightbox({ image, onClose }) {
 	return (
 		<LightboxOverlay id="rules-lightbox" onClick={onClose}>
 			<LightboxImage src={`img/rules/${image.file}`} alt={image.alt} onClick={event => event.stopPropagation()} />
-			<LightboxHint>Esc or click outside to close</LightboxHint>
+			<LightboxHint>{t('rules.lightboxHint')}</LightboxHint>
 		</LightboxOverlay>
 	);
 }
@@ -217,19 +220,20 @@ function TrainingDiagram() {
 // The table of contents. Grouped rather than one long list of twenty, because a stranger to the
 // game should be able to tell at a glance which door leads to what they actually want to know.
 export function RulesIndex({ onOpen, onTrain, onBack }) {
+	const t = useT();
+	const pages = useRulesPages();
+	const groups = useRuleGroups();
+
 	return (
 		<RulesPanel>
 			<Buttons>
 				<Button id="rules-main-menu" small active onClick={onBack}>
-					Main Menu
+					{t('common.mainMenu')}
 				</Button>
 			</Buttons>
 
-			<Subtitle>How to Play</Subtitle>
-			<RulesIntro>
-				Everybody moves everybody's pieces. Only two cards, held in secret, say whose side you are really on. Here is
-				the whole game, in plain words — pick a page, or read it start to finish.
-			</RulesIntro>
+			<Subtitle>{t('rules.howToPlay')}</Subtitle>
+			<RulesIntro>{t('rules.intro')}</RulesIntro>
 
 			{/* Above the reading, because for most people it is the better door: eight short exercises
 			    on the real board beat twenty pages, and the pages are still here for afterwards. */}
@@ -242,32 +246,41 @@ export function RulesIndex({ onOpen, onTrain, onBack }) {
 				<TrainingWords>
 					{/* Counted rather than written down: the course grows and a card that still says
 					    eight is a card nobody thought to look at. */}
-					<TrainingEyebrow>{EXERCISES.length} exercises</TrainingEyebrow>
-					<TrainingTitle>Learn by Playing</TrainingTitle>
-					<TrainingTeaser>Almost nothing to read. Click your way through it.</TrainingTeaser>
+					<TrainingEyebrow>{t('rules.exerciseCount', { count: EXERCISES.length })}</TrainingEyebrow>
+					<TrainingTitle>{t('rules.learnByPlaying')}</TrainingTitle>
+					<TrainingTeaser>{t('rules.learnTeaser')}</TrainingTeaser>
 				</TrainingWords>
+				{/* Two lines, broken where the stamp is narrowest — which is a different place in each
+				    language, so both halves are their own key rather than one string split on a space. */}
 				<TrainingStamp>
-					Field
+					{t('rules.trainingStampTop')}
 					<br />
-					Training
+					{t('rules.trainingStampBottom')}
 				</TrainingStamp>
 			</TrainingFile>
 
 			<CheatSheetLink id="rules-open-cheat-sheet" type="button" onClick={() => onOpen('cheat-sheet')}>
-				<CheatSheetLinkTitle>Cheat Sheet</CheatSheetLinkTitle>
-				<CheatSheetLinkTeaser>Every rule, one screen, no scrolling</CheatSheetLinkTeaser>
+				<CheatSheetLinkTitle>{t('rules.cheatSheetTitle')}</CheatSheetLinkTitle>
+				<CheatSheetLinkTeaser>{t('rules.cheatSheetTeaser')}</CheatSheetLinkTeaser>
 			</CheatSheetLink>
 
-			{GROUPS.map(group => (
+			{groups.map(group => (
 				<Fragment key={group}>
 					<GroupHeading>{group}</GroupHeading>
 					<RuleCardList>
-						{RULES_PAGES.filter(page => page.group === group).map(page => (
-							<RuleCard id={`rules-open-${page.slug}`} key={page.slug} type="button" onClick={() => onOpen(page.slug)}>
-								<RuleCardTitle>{page.title}</RuleCardTitle>
-								<RuleCardTeaser>{page.teaser}</RuleCardTeaser>
-							</RuleCard>
-						))}
+						{pages
+							.filter(page => page.group === group)
+							.map(page => (
+								<RuleCard
+									id={`rules-open-${page.slug}`}
+									key={page.slug}
+									type="button"
+									onClick={() => onOpen(page.slug)}
+								>
+									<RuleCardTitle>{page.title}</RuleCardTitle>
+									<RuleCardTeaser>{page.teaser}</RuleCardTeaser>
+								</RuleCard>
+							))}
 					</RuleCardList>
 				</Fragment>
 			))}
@@ -278,13 +291,15 @@ export function RulesIndex({ onOpen, onTrain, onBack }) {
 // Leaving the book, which is a different kind of decision from turning a page in it — so it keeps
 // its own row, at the top, and is not repeated at the foot.
 function PageChrome({ onBack, onIndex }) {
+	const t = useT();
+
 	return (
 		<Buttons>
 			<Button id="rules-main-menu" small active onClick={onBack}>
-				Main Menu
+				{t('common.mainMenu')}
 			</Button>
 			<Button id="rules-index" small active onClick={onIndex}>
-				Index
+				{t('common.index')}
 			</Button>
 		</Buttons>
 	);
@@ -301,6 +316,8 @@ function PageChrome({ onBack, onIndex }) {
 // `top`/`bottom` are in the ids because these are two real sets of buttons, not one drawn twice:
 // duplicate ids would be invalid, and a strict-mode locator resolves to neither.
 function RunningHead({ title, prev, next, onOpen }) {
+	const t = useT();
+
 	return (
 		<PageHead>
 			<HeadStep>
@@ -309,7 +326,7 @@ function RunningHead({ title, prev, next, onOpen }) {
 						id="rules-prev-top"
 						small
 						active
-						aria-label={`Back to ${prev.title}`}
+						aria-label={t('rules.backTo', { title: prev.title })}
 						title={prev.title}
 						onClick={() => onOpen(prev.slug)}
 					>
@@ -326,7 +343,7 @@ function RunningHead({ title, prev, next, onOpen }) {
 						id="rules-next-top"
 						small
 						active
-						aria-label={`On to ${next.title}`}
+						aria-label={t('rules.onTo', { title: next.title })}
 						title={next.title}
 						onClick={() => onOpen(next.slug)}
 					>
@@ -363,21 +380,27 @@ function PageSteps({ prev, next, onOpen }) {
 // One topic, start to finish, with a way to step to the next one without going back through the
 // index — a rulebook you can read straight through if that is the mood you are in.
 export function RulePage({ slug, onOpen, onBack, onIndex }) {
-	const page = findRulePage(slug);
+	const t = useT();
+	const pages = useRulesPages();
 	const [zoomed, setZoomed] = useState(null);
+
+	// One closure rather than `t` threaded into four components: the figure number is the only string
+	// an exhibit says, and every one of them says it the same way.
+	const figure = n => t('rules.figure', { n });
+	const page = pages.find(candidate => candidate.slug === slug) || null;
 
 	if (!page) {
 		return (
 			<RulesPanel>
 				<PageChrome onBack={onBack} onIndex={onIndex} />
-				<Subtitle>That page isn't here</Subtitle>
+				<Subtitle>{t('rules.missingPage')}</Subtitle>
 			</RulesPanel>
 		);
 	}
 
-	const pageIndex = RULES_PAGES.findIndex(candidate => candidate.slug === slug);
-	const prev = RULES_PAGES[pageIndex - 1];
-	const next = RULES_PAGES[pageIndex + 1];
+	const pageIndex = pages.findIndex(candidate => candidate.slug === slug);
+	const prev = pages[pageIndex - 1];
+	const next = pages[pageIndex + 1];
 
 	// The summary reads as a grid rather than a topic with a photograph — see the component file
 	// for why it gets its own layout instead of an `image`/`body` pair with nothing in either.
@@ -417,11 +440,15 @@ export function RulePage({ slug, onOpen, onBack, onIndex }) {
 				{/* Most pages float their exhibit beside the prose. A page whose images are the whole
 				    story (a five-beat sequence, a full board) reads better as a strip after the words
 				    instead, full width rather than squeezed into a float's column. */}
-				{!page.imagesAtEnd && page.images && <ExhibitPair images={page.images} index={pageIndex} onZoom={setZoomed} />}
-				{!page.imagesAtEnd && page.image && <Exhibit image={page.image} index={pageIndex} onZoom={setZoomed} />}
+				{!page.imagesAtEnd && page.images && (
+					<ExhibitPair images={page.images} index={pageIndex} onZoom={setZoomed} figure={figure} />
+				)}
+				{!page.imagesAtEnd && page.image && (
+					<Exhibit image={page.image} index={pageIndex} onZoom={setZoomed} figure={figure} />
+				)}
 				<RuleBody>
 					{page.body.map((block, index) => (
-						<RuleBlock key={index} block={block} />
+						<RuleBlock key={index} block={block} buffLabel={t('rules.ceoBuff')} />
 					))}
 					{page.table && (
 						<RuleTable>
@@ -445,16 +472,25 @@ export function RulePage({ slug, onOpen, onBack, onIndex }) {
 					)}
 				</RuleBody>
 				{page.imagesAtEnd && page.images && (
-					<ExhibitPair images={page.images} index={pageIndex} onZoom={setZoomed} full />
+					<ExhibitPair images={page.images} index={pageIndex} onZoom={setZoomed} full figure={figure} />
 				)}
 				{page.imagesAtEnd && page.imageGroups && (
 					<ExhibitGroupRow>
 						{page.imageGroups.map((group, groupIndex) => (
-							<ExhibitPair key={group[0].file} images={group} index={pageIndex + groupIndex} onZoom={setZoomed} full />
+							<ExhibitPair
+								key={group[0].file}
+								images={group}
+								index={pageIndex + groupIndex}
+								onZoom={setZoomed}
+								full
+								figure={figure}
+							/>
 						))}
 					</ExhibitGroupRow>
 				)}
-				{page.imagesAtEnd && page.image && <Exhibit image={page.image} index={pageIndex} onZoom={setZoomed} />}
+				{page.imagesAtEnd && page.image && (
+					<Exhibit image={page.image} index={pageIndex} onZoom={setZoomed} figure={figure} />
+				)}
 			</RuleContent>
 
 			<PageSteps prev={prev} next={next} onOpen={onOpen} />

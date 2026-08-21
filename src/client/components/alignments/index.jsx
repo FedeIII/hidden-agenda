@@ -1,4 +1,4 @@
-import { TEAM_NAMES } from 'Domain/teams';
+import useT from 'Client/i18n';
 import {
 	AlignmentCardStyled,
 	AlignmentLabel,
@@ -13,13 +13,6 @@ import {
 } from './components';
 export { Alignments } from './components';
 
-const WORD = { friend: 'Friend', foe: 'Foe' };
-
-// What the alignment does to your score, which is the whole of what friend and foe mean and the one
-// thing about them nobody can infer from green and red. `py.getPoints` adds the friend team's points
-// and subtracts the foe team's; the card says so in the words the table would use.
-const NOTE = { friend: 'their points are yours', foe: 'their points come off yours' };
-
 // A card says which of the two it is, in words.
 //
 // Green and red have carried that on their own since the first version, and colour alone is a poor
@@ -33,12 +26,13 @@ const NOTE = { friend: 'their points are yours', foe: 'their points come off you
 // card's innerText meant round-tripping through a display string, and the moment the card had a second
 // word in it that broke — see the helper in tests/helpers/navigation.js.
 function AlignmentCard(props) {
+	const t = useT();
 	const { children, team, alignment } = props;
 	const named = !!children && team !== undefined && team !== null;
 
 	return (
 		<AlignmentCardStyled {...props}>
-			<AlignmentLabel alignment={alignment}>{WORD[alignment]}</AlignmentLabel>
+			<AlignmentLabel alignment={alignment}>{t(`alignment.${alignment}.card`)}</AlignmentLabel>
 
 			{named && (
 				<AlignmentBody>
@@ -48,14 +42,18 @@ function AlignmentCard(props) {
 					<AlignmentSwatch>
 						<AlignmentChip team={team} />
 						<AlignmentSwatchLabel>
-							<AlignmentSwatchRef>team {team}</AlignmentSwatchRef>
-							<AlignmentSwatchName>{TEAM_NAMES[team]}</AlignmentSwatchName>
+							<AlignmentSwatchRef>{t('play.teamRef', { team })}</AlignmentSwatchRef>
+							<AlignmentSwatchName>{t(`team.${team}`)}</AlignmentSwatchName>
 						</AlignmentSwatchLabel>
 					</AlignmentSwatch>
 				</AlignmentBody>
 			)}
 
-			<AlignmentFoot>{NOTE[alignment]}</AlignmentFoot>
+			{/* What the alignment does to your score, which is the whole of what friend and foe mean and
+			    the one thing about them nobody can infer from green and red. `py.getPoints` adds the
+			    friend team's points and subtracts the foe team's; the card says so in the words the
+			    table would use. */}
+			<AlignmentFoot>{t(`alignment.${alignment}.note`)}</AlignmentFoot>
 		</AlignmentCardStyled>
 	);
 }
