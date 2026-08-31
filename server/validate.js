@@ -1,6 +1,7 @@
 import { PHASES } from 'Domain/phases';
 import { pz } from 'Domain/pieces';
 import py from 'Domain/py';
+import { getMover } from 'Domain/snipeWindow';
 import { areCoordsInList } from 'Domain/utils';
 import {
 	TOGGLE_PIECE,
@@ -111,9 +112,9 @@ function isSnipeAction(action, state) {
 		return false;
 	}
 
-	const piece = pz.getPieceById(action.payload?.pieceId, state.pieces);
-
-	return !!state.snipe && !!piece && !!piece.highlight && pz.isSniper(piece.id);
+	// The domain's own reading of the shot, so what the server lets through and what the reducer
+	// then does with it cannot come apart.
+	return pz.isSnipeShot(state, action.payload?.pieceId);
 }
 
 // Legality, re-derived from the authoritative state with the same domain code the UI uses to
@@ -164,13 +165,14 @@ export function validateAction({ action, room, seat, turnGraceExpired = false })
 	const turnHolder = py.getTurn(room.state.players);
 	const isSnipe = isSnipeAction(action, room.state);
 
-	if (seat.name === turnHolder) {
+	if (isSnipe) {
 		// The exception, and it points the other way: a player cannot answer their own move. The
-		// snipe belongs to every seat at the table except the one that provoked it.
-		if (isSnipe) {
+		// snipe belongs to every seat at the table except the one that provoked it — which is the
+		// turn holder until the shot outlives their turn, and the mover after that.
+		if (seat.name === getMover(room.state)) {
 			return reject('not_your_snipe');
 		}
-	} else if (!isSnipe) {
+	} else if (seat.name !== turnHolder) {
 		// The other escape hatch: if the turn holder has been gone long enough, anyone may pass
 		// the turn on, so a closed laptop cannot end the game permanently.
 		const isForcedPass = action.type === NEXT_TURN && turnGraceExpired;

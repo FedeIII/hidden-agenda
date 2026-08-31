@@ -1,5 +1,6 @@
 import { START_GAME, NEXT_TURN, TOGGLE_PIECE, MOVE_PIECE, SNIPE } from 'Game/actions';
 import { pz, TYPES, STATES } from 'Domain/pieces';
+import { isAnsweringTurnHolder } from 'Domain/snipeWindow';
 
 const { AGENT, CEO, SPY, SNIPER } = TYPES;
 const { MOVEMENT, PLACEMENT } = STATES;
@@ -70,12 +71,17 @@ function isPieceSettledByMove(state, { pieceId, coords }) {
 	return pz.hasBoardChanged(pz.move(state.pieces, pieceId, coords, state.pieceState), state.piecesPrevState);
 }
 
-function isSniperSelectedForSnipe(snipe, pieceId) {
-	return snipe && pz.isSniper(pieceId);
+// Firing spends the turn the move was made in: that move is undone and play moves on.
+//
+// A shot taken after the mover has already passed the turn on spends nothing. Whoever is holding it
+// now has not moved yet, and ending their turn for answering somebody else's move would charge them
+// a turn for pressing the button — see Domain/snipeWindow.
+function isSniperSelectedForSnipe(state, pieceId) {
+	return pz.isSnipeShot(state, pieceId) && isAnsweringTurnHolder(state);
 }
 
 function togglePieceState(state, pieceId) {
-	return isPieceBeingDropped(state, pieceId) || isSniperSelectedForSnipe(state.snipe, pieceId);
+	return isPieceBeingDropped(state, pieceId) || isSniperSelectedForSnipe(state, pieceId);
 }
 
 // Lining a shot up takes the turn back off the player who just moved: they may not pass it on

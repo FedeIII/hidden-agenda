@@ -1,4 +1,5 @@
 import { pz } from 'Domain/pieces';
+import { isAnsweringTurnHolder } from 'Domain/snipeWindow';
 import { TOGGLE_PIECE, MOVE_PIECE, DIRECT_PIECE, NEXT_TURN, SNIPE, CLAIM_CONTROL, CANCEL_CONTROL } from 'Game/actions';
 
 function toggledPieceState(state, pieceId) {
@@ -13,8 +14,16 @@ function directedPieceState(pieces, direction) {
 	return pz.changeSelectedPieceDirection(pieces, direction);
 }
 
-function nextTurnState(pieces) {
-	return pz.removeIsThroughSniperLine(pieces).map(pz.setCeoBuffs);
+// The marks a shot is read from outlive the turn that made them: whoever is handed the turn has
+// until they move something. So this NEXT_TURN keeps them when it is the one passing the shot on,
+// and the next one wipes them — the same window snipeWindowReducer keeps the shot itself open for,
+// asked of the same predicate so the marks and the shot cannot survive different lengths of time.
+//
+// The other way they go is the mover's own move, which pz.move wipes them in.
+function nextTurnState(state) {
+	const pieces = isAnsweringTurnHolder(state) ? state.pieces : pz.removeIsThroughSniperLine(state.pieces);
+
+	return pieces.map(pz.setCeoBuffs);
 }
 
 // SNIPE is a toggle: pressing it lines the shot up, pressing it again puts it away. `state` is
@@ -42,7 +51,7 @@ function piecesReducer(state, action) {
 		case DIRECT_PIECE:
 			return [...directedPieceState(state.pieces, action.payload)];
 		case NEXT_TURN:
-			return [...nextTurnState(state.pieces)];
+			return [...nextTurnState(state)];
 		case SNIPE:
 			return [...snipeState(state)];
 		case CLAIM_CONTROL:

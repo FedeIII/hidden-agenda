@@ -8,6 +8,7 @@ import pieces from './reducers/piecesReducer';
 import pieceState from './reducers/pieceStateReducer';
 import followMouse from './reducers/followMouseReducer';
 import snipe from './reducers/snipeReducer';
+import snipeWindow from './reducers/snipeWindowReducer';
 import piecesPrevState from './reducers/piecesPrevStateReducer';
 import teamControl from './reducers/teamControlReducer';
 
@@ -22,6 +23,7 @@ const reducers = {
 	pieceState,
 	followMouse,
 	snipe,
+	snipeWindow,
 	piecesPrevState,
 	teamControl,
 };
@@ -47,6 +49,8 @@ export function createInitialState() {
 		pieceState: undefined,
 		followMouse: false,
 		snipe: false,
+		// No shot on the table. See Domain/snipeWindow for what it holds when there is one.
+		snipeWindow: null,
 		piecesPrevState: pz.init(),
 		teamControl: teams.initControl(),
 	};

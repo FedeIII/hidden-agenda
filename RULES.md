@@ -116,9 +116,9 @@ On your turn you take **exactly one piece action**, plus as many free actions as
 Then press **NEXT TURN** and play passes to the next player in seating order, cyclically
 (`py.js#nextTurn`).
 
-**One button on that screen is not yours.** `SNIPE!` belongs to every player *except* the one on
-turn — it is how the rest of the table answers the move that has just been made, and it can be
-pressed at any point during somebody else's turn. See §9.
+**One button on that screen is not yours.** `SNIPE!` belongs to every player *except* the one whose
+move it answers — it is how the rest of the table answers the move that has just been made, and it
+can be pressed at any point during somebody else's turn, and for a little while after it. See §9.
 
 Two consequences worth stating plainly:
 
@@ -320,35 +320,54 @@ just its endpoints — a piece that crosses a line and keeps going is just as ma
 in it. Snipers only ever mark **enemy** pieces, and only movement marks: a piece that turns on the
 spot has crossed nothing, even one standing in a line already.
 
-**Whose shot it is.** `SNIPE!` belongs to **everyone except the player on turn**. A sniper answers a
-move, so the player who made that move is the one person who may not take the shot — and every other
-player may, without waiting for a turn of their own. Nobody owns a sniper any more than they own any
-other piece: whoever is not on turn may fire whichever one has a target.
+**Whose shot it is.** `SNIPE!` belongs to **everyone except the player whose move it answers**. A
+sniper answers a move, so the player who made that move is the one person who may not take the shot
+— and every other player may, without waiting for a turn of their own. Nobody owns a sniper any more
+than they own any other piece.
 
-* **Online** — the button is dead for the seat on turn and live for everybody else, and the server
-  refuses it either way round (`server/validate.js#isSnipeAction`). The same goes for the click that
-  fires: the lit sniper answers to the other seats, not to the mover.
+That player is the one on turn while the shot is being lined up inside their own turn, and stays
+that player once they have passed the turn on — see **Timing** below. `domain/snipeWindow.js#getMover`
+is the single reading of it, used by the button, by the server and by the note described next.
+
+* **Online** — the button is dead for the seat being answered and live for everybody else, and the
+  server refuses it either way round (`server/validate.js#isSnipeAction`). The same goes for the
+  click that fires: the lit sniper answers to the other seats, not to the mover.
 * **Hot-seat** — one screen, one mouse, and the app cannot tell who reached for it, so the button
-  stays live. Who presses it is a rule between the people in the room: whoever is not on turn.
+  stays live for everybody, the player being answered included. Who presses it is a rule between the
+  people in the room, and the screen now says which rule: a note beside the button naming **the one
+  other player**, when there is only one, or naming **the player who may not**, when naming the rest
+  would be a list (`useSnipe.js#useSnipeNote`).
 
-**Firing.** Press **`SNIPE!`** — available whenever any sniper is on the board. Every sniper that has
+**Firing.** Press **`SNIPE!`** — available whenever a shot is there to line up. Every sniper that has
 a marked target lights up. Clicking a lit sniper fires it, and three things happen at once
 (`pz.js#killSnipedPiece`):
 
 1. **Every marked piece dies**, credited to the sniper that was clicked.
-2. **The rest of the board rolls back to how it stood at the start of the turn.** The victim's move is
-   undone, along with everything that move did — a piece it killed on the way is alive again and
-   standing where it was, and if it killed a CEO, that team's HQ is back too.
-3. **The turn ends**, and the player who was on turn passes it on as usual.
+2. **The rest of the board rolls back to how it stood at the start of the marked move.** That move is
+   undone, along with everything it did — a piece it killed on the way is alive again and standing
+   where it was, and if it killed a CEO, that team's HQ is back too.
+3. **The turn the move was made in ends**, and that player passes it on as usual. A shot taken after
+   they have already passed it on ends nothing: whoever is holding the turn now has not moved yet.
 
-**Timing.** The window is the turn the movement happened in. Marks are wiped when the turn passes
-(`piecesReducer.js#nextTurnState`), so the shot has to be taken before play moves on — notice it or
-lose it. There is no holding fire until later.
+**A sniper killed by the very move it saw fires from the cell it stood in.** The mover walks its line
+and ends the walk on its cell, so the shot is owed to a piece that is in the cemetery and has no
+token left on the board to click. That cell answers for it: while the snipe is armed it carries a
+ring, a label and an arrow saying so (`pz.js#getFallenSnipers`). Firing it rolls the board back like
+any other shot — which brings the sniper back to life, standing where it was, and kills the piece
+that had killed it.
+
+**Timing.** The window is the turn the movement happened in **and lasts until the next player moves
+something**. Passing the turn on is not the end of it: whoever is handed the turn may still line the
+shot up, and so may everybody else, right up to the moment somebody moves a piece. Picking pieces up
+and putting them down does not count — only a move closes it. It survives exactly one turn change,
+so a seat that is passed over rather than moving does not hold the shot open forever
+(`domain/snipeWindow.js`). Notice it or lose it; there is no holding fire past that.
 
 **Pressing `SNIPE!` freezes the turn.** A turn that had ended counts as unfinished again, so NEXT TURN
 goes dead, and while the snipe is armed nothing on the board can be selected except a lit sniper
 (`hasTurnEndedReducer.js#snipeState`, `pz.js#hasToToggle`). Once the table has reached for the button,
-the shot happens — there is no arming it and then thinking better of it.
+the shot happens — there is no arming it and then thinking better of it. Firing puts the snipe away
+again, which is what hands the board back when the shot was taken on somebody else's turn.
 
 **Deployment is protected.** No piece may be deployed into an enemy sniper's line of fire, so nothing
 ever arrives already marked.

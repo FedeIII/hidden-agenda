@@ -569,9 +569,9 @@ function init$1() {
 	return IDS.map((id) => createPiece(id));
 }
 function toggle(state, pieceId) {
-	const { hasTurnEnded, pieces, piecesPrevState } = state;
+	const { hasTurnEnded, pieces, snipeWindow } = state;
 	if (hasTurnEnded) return pieces;
-	if (isSniper(pieceId) && getPieceById(pieceId, pieces).highlight) return killSnipedPiece(pieces, piecesPrevState, pieceId);
+	if (isSnipeShot(state, pieceId)) return killSnipedPiece(pieces, snipeWindow.pieces, pieceId);
 	if (hasToToggle(pieceId, getSelectedPiece(pieces), state)) return pieces.map((piece) => piece.id === pieceId ? toggledPiece(piece) : piece);
 	return pieces;
 }
@@ -627,7 +627,7 @@ function getInitialLocationCells(pieces) {
 	return cells_default.getAllAvailablePositions().filter((position) => !hasPiece(position, pieces)).filter((position) => !isPositionInEnemySniperLine(position, pieces));
 }
 function move(pieces, id, toPosition, pieceState) {
-	let movedPieces = movePieces(pieces, id, toPosition, pieceState);
+	let movedPieces = movePieces(removeIsThroughSniperLine(pieces), id, toPosition, pieceState);
 	movedPieces = killPieces(movedPieces, id);
 	return movedPieces;
 }
@@ -957,13 +957,42 @@ function removeIsThroughSniperLine(pieces) {
 }
 function killSnipedPiece(pieces, prevPieces, sniperId) {
 	return cascadeCeoKills(pieces.map((piece) => {
-		if (piece.throughSniperLineOf.length) return killedPiece(piece, sniperId);
-		if (piece.highlight) return {
-			...piece,
+		if (piece.throughSniperLineOf.length) return {
+			...killedPiece(piece, sniperId),
+			throughSniperLineOf: []
+		};
+		return {
+			...getPieceById(piece.id, prevPieces),
 			highlight: false
 		};
-		return getPieceById(piece.id, prevPieces);
 	}));
+}
+function isSnipeShot({ snipe, pieces, snipeWindow }, pieceId) {
+	const piece = getPieceById(pieceId, pieces);
+	return !!snipe && !!snipeWindow && !!piece && !!piece.highlight && isSniper(piece.id);
+}
+/**
+* Snipers that are lit for a shot and have no token left on the board to click.
+*
+* A sniper marks a piece that moves through its line and is then killed by that very move — the
+* mover walked the line and ended the walk on the sniper's own cell. The shot is still there to
+* take, and until now there was no way to take it: SNIPE lit a piece that had already gone to the
+* cemetery, and the rest of the table could only stand down.
+*
+* The cell each one stood in comes from the board the shot rolls back to, which is exactly where
+* firing puts it back.
+*
+* @returns {{id: string, position: number[]}[]}
+*/
+function getFallenSnipers(pieces, prevPieces) {
+	return pieces.filter((piece) => piece.highlight && isSniper(piece.id) && !cells_default.inBoard(piece.position)).map((piece) => ({
+		id: piece.id,
+		position: getPieceById(piece.id, prevPieces).position
+	})).filter(({ position }) => cells_default.inBoard(position));
+}
+function getFallenSniperAt(position, pieces, prevPieces) {
+	const fallen = getFallenSnipers(pieces, prevPieces).find((sniper) => areCoordsEqual(position, sniper.position));
+	return fallen && fallen.id;
 }
 function getSnipedPositions(pieces, piece) {
 	return pieces.filter((eachPiece) => isSniper(eachPiece.id) && !isSameTeam(piece, eachPiece) && eachPiece.position).reduce((snipedPositions, sniper) => ({
@@ -1002,6 +1031,9 @@ function clearSniperSights(pieces) {
 }
 function isSniperOnBoard(pieces) {
 	return !!pieces.find((piece) => getType(piece.id) === SNIPER$2 && cells_default.inBoard(piece.position));
+}
+function isSnipeAvailable(pieces) {
+	return isSniperOnBoard(pieces) || isAnyPieceThroughSniperLine(pieces);
 }
 function isInSniperSight(piece) {
 	return !!piece.throughSniperLineOf.length;
@@ -1193,6 +1225,10 @@ var pz = {
 	isInSniperSight,
 	isAnyPieceThroughSniperLine,
 	clearSniperSights,
+	isSnipeShot,
+	isSnipeAvailable,
+	getFallenSnipers,
+	getFallenSniperAt,
 	canClaimControl,
 	claimControl: claimControl$1,
 	claimControlPieceState,
@@ -1718,6 +1754,66 @@ function playersReducer({ players }, action) {
 	}
 }
 //#endregion
+//#region src/domain/snipeWindow.js
+/**
+* The shot the table is still owed.
+*
+* `null` when there is none. Otherwise `{ pieces, player }` — the board the shot rolls back to, and
+* the player whose move it answers.
+*
+* It exists because a shot outlives the turn it was provoked in. The marks are made during one
+* player's turn and stay readable until the next player actually moves something, so from the moment
+* NEXT TURN is pressed neither of those two facts can be read off the board any more:
+*
+* - **The rollback board.** `piecesPrevState` is the board as the CURRENT turn found it, and every
+*   "did this turn change anything" question in the game is asked against it. Freezing it for the
+*   sake of a pending shot would tell the player who has just been handed the turn that they had
+*   already moved — NEXT TURN would light up for them and putting a sniper back down would spend
+*   their turn. So the shot carries its own snapshot instead, and `piecesPrevState` keeps its
+*   meaning exactly.
+* - **Who may not fire.** The snipe belongs to everyone except the player being answered, and once
+*   the turn has passed that is no longer the player on turn. Reading it off `py.getTurn` would let
+*   the mover answer their own move the instant they pressed NEXT TURN, and refuse the shot to the
+*   one seat that has done nothing at all.
+*
+* Nothing here knows about sockets or React: the server runs the same reducer over the same slice.
+*/
+function open(state) {
+	return {
+		pieces: state.piecesPrevState,
+		player: py_default.getTurn(state.players)
+	};
+}
+/**
+* Whether the shot on the table answers the move of whoever is holding the turn right now.
+*
+* Two rules read this one fact, and they have to agree.
+*
+* It is what firing spends a turn on: the mover's action is undone and play moves on, so the shot
+* ends their turn. A shot taken after they passed it on ends nothing — the player holding the turn
+* now has not moved yet, and taking the turn off them for answering somebody else's move would be a
+* punishment for using the button.
+*
+* And it is what a NEXT_TURN keeps the shot alive through. The shot survives exactly one: the seat
+* it is handed to has until they move. Once the turn has already left the player being answered,
+* passing it on again is the end of it — which is also what closes the window when a disconnected
+* seat is passed over by the server rather than moving.
+*/
+function isAnsweringTurnHolder(state) {
+	return !!state.snipeWindow && state.snipeWindow.player === py_default.getTurn(state.players);
+}
+/**
+* The one seat the snipe is refused to: the player whose move it answers.
+*
+* That is the player on turn while the shot is being lined up inside their own turn, and stays that
+* player after they have handed the turn on. With no shot on the table there is nothing to answer,
+* so the turn holder stands in and the rule reads as it always did — pressing SNIPE with nothing
+* marked lines nothing up either way.
+*/
+function getMover(state) {
+	return state.snipeWindow && state.snipeWindow.player || py_default.getTurn(state.players);
+}
+//#endregion
 //#region src/game/reducers/hasTurnEndedReducer.js
 var { AGENT: AGENT$1, CEO: CEO$1, SPY: SPY$1, SNIPER: SNIPER$1 } = TYPES;
 var { MOVEMENT, PLACEMENT } = STATES;
@@ -1743,11 +1839,11 @@ function isPieceSettledByMove(state, { pieceId, coords }) {
 	if (!pz.isSettledByMove(pz.getPieceById(pieceId, state.pieces), state.pieceState)) return false;
 	return pz.hasBoardChanged(pz.move(state.pieces, pieceId, coords, state.pieceState), state.piecesPrevState);
 }
-function isSniperSelectedForSnipe(snipe, pieceId) {
-	return snipe && pz.isSniper(pieceId);
+function isSniperSelectedForSnipe(state, pieceId) {
+	return pz.isSnipeShot(state, pieceId) && isAnsweringTurnHolder(state);
 }
 function togglePieceState(state, pieceId) {
-	return isPieceBeingDropped(state, pieceId) || isSniperSelectedForSnipe(state.snipe, pieceId);
+	return isPieceBeingDropped(state, pieceId) || isSniperSelectedForSnipe(state, pieceId);
 }
 function snipeState$2(state) {
 	if (state.snipe) return !pz.getSelectedPiece(state.pieces) && pz.hasBoardChanged(state.pieces, state.piecesPrevState);
@@ -1775,8 +1871,8 @@ function movedPieceState$1({ pieces, pieceState }, { pieceId, coords }) {
 function directedPieceState(pieces, direction) {
 	return pz.changeSelectedPieceDirection(pieces, direction);
 }
-function nextTurnState(pieces) {
-	return pz.removeIsThroughSniperLine(pieces).map(pz.setCeoBuffs);
+function nextTurnState(state) {
+	return (isAnsweringTurnHolder(state) ? state.pieces : pz.removeIsThroughSniperLine(state.pieces)).map(pz.setCeoBuffs);
 }
 function snipeState$1({ pieces, snipe }) {
 	return snipe ? pz.clearSniperSights(pieces) : pz.highlightSnipersWithSight(pieces);
@@ -1794,7 +1890,7 @@ function piecesReducer(state, action) {
 		case TOGGLE_PIECE: return [...toggledPieceState(state, action.payload.pieceId)];
 		case MOVE_PIECE: return [...movedPieceState$1(state, action.payload)];
 		case DIRECT_PIECE: return [...directedPieceState(state.pieces, action.payload)];
-		case NEXT_TURN: return [...nextTurnState(state.pieces)];
+		case NEXT_TURN: return [...nextTurnState(state)];
 		case SNIPE: return [...snipeState$1(state)];
 		case CLAIM_CONTROL: return [...claimControlState(action.payload, state)];
 		case CANCEL_CONTROL: return [...cancelControlState(action.payload, state)];
@@ -1876,8 +1972,23 @@ function snipeState(pieces) {
 function snipeReducer(state, action) {
 	switch (action.type) {
 		case SNIPE: return state.snipe ? false : snipeState(state.pieces);
+		case TOGGLE_PIECE: return pz.isSnipeShot(state, action.payload.pieceId) ? false : state.snipe;
 		case NEXT_TURN: return false;
 		default: return state.snipe;
+	}
+}
+//#endregion
+//#region src/game/reducers/snipeWindowReducer.js
+function snipeWindowReducer(state, action) {
+	switch (action.type) {
+		case START_GAME: return null;
+		case MOVE_PIECE: {
+			const moved = pz.move(state.pieces, action.payload.pieceId, action.payload.coords, state.pieceState);
+			return pz.isAnyPieceThroughSniperLine(moved) ? open(state) : null;
+		}
+		case TOGGLE_PIECE: return pz.isSnipeShot(state, action.payload.pieceId) ? null : state.snipeWindow;
+		case NEXT_TURN: return isAnsweringTurnHolder(state) ? state.snipeWindow : null;
+		default: return state.snipeWindow;
 	}
 }
 //#endregion
@@ -1910,6 +2021,7 @@ var reducers = {
 	pieceState: pieceStateReducer,
 	followMouse: followMouseReducer,
 	snipe: snipeReducer,
+	snipeWindow: snipeWindowReducer,
 	piecesPrevState: piecesPrevStateReducer,
 	teamControl: teamControlReducer
 };
@@ -1927,6 +2039,7 @@ function createInitialState() {
 		pieceState: void 0,
 		followMouse: false,
 		snipe: false,
+		snipeWindow: null,
 		piecesPrevState: pz.init(),
 		teamControl: teams_default.initControl()
 	};
@@ -2228,8 +2341,7 @@ function validateShape(action, state) {
 function isSnipeAction(action, state) {
 	if (action.type === "SNIPE") return true;
 	if (action.type !== "TOGGLE_PIECE") return false;
-	const piece = pz.getPieceById(action.payload?.pieceId, state.pieces);
-	return !!state.snipe && !!piece && !!piece.highlight && pz.isSniper(piece.id);
+	return pz.isSnipeShot(state, action.payload?.pieceId);
 }
 function validateLegality(action, state) {
 	switch (action.type) {
@@ -2251,10 +2363,9 @@ function validateAction({ action, room, seat, turnGraceExpired = false }) {
 	if (room.phase !== PHASES.PLAY) return reject("wrong_phase");
 	if (!PLAY_ACTIONS.has(action.type)) return reject("action_not_allowed");
 	const turnHolder = py_default.getTurn(room.state.players);
-	const isSnipe = isSnipeAction(action, room.state);
-	if (seat.name === turnHolder) {
-		if (isSnipe) return reject("not_your_snipe");
-	} else if (!isSnipe) {
+	if (isSnipeAction(action, room.state)) {
+		if (seat.name === getMover(room.state)) return reject("not_your_snipe");
+	} else if (seat.name !== turnHolder) {
 		if (!(action.type === "NEXT_TURN" && turnGraceExpired)) return reject("not_your_turn");
 	}
 	if (action.type === "ACCUSE" && action.payload?.accuser !== seat.name) return reject("accuser_mismatch");

@@ -170,6 +170,31 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.17.0
+* **A sniper killed by the very move it saw can be fired at last.** The mover walks its line and ends
+  the walk on its cell, so the shot was owed to a piece already in the cemetery: `SNIPE!` lit a token
+  that was not on the board and the rest of the table could only stand down. The cell it stood in
+  answers for it now, ringed and labelled with an arrow, and firing brings the sniper back to life
+  standing where it was
+* Two bugs, not one. The rollback kept a lit sniper as it stood and merely put its light out — the
+  same piece in every case except this one, so the shot that answered its own death left the sniper
+  dead. And `SNIPE!` asked whether a sniper was *standing on the board*, so a table whose last sniper
+  died to the move it marked found the button inert
+* **The shot outlives the turn it answers.** `NEXT TURN` used to take the answer off the table; the
+  window now runs until the next player moves something. Picking pieces up and putting them down does
+  not close it — only a move does. It survives exactly one turn change, so a seat passed over by the
+  server rather than moving cannot hold it open forever
+* Which makes "whose shot is it" a question about the move rather than about the turn, and the two
+  stop being the same player at `NEXT TURN`. Read once, in `domain/snipeWindow.js`, by the button, by
+  the server and by the note below. Answering a move after its player has passed the turn on costs the
+  player holding it nothing: their turn is still theirs to spend
+* **Hot-seat says whose shot it is**, beside the button, because one screen and one mouse cannot tell
+  who reached for it. The one other player by name when there is only one — *SARA's shot* — and the
+  player who may not when naming the rest would be a list: *anyone but FEDE*. Online it stays absent:
+  the button is simply dead for the seat that may not press it
+* Twenty-eight new specs, sixteen of them with no browser: the shot played through the real reducer,
+  the window opening and closing, and the fallen sniper's cell offered, fired and taken away again
+
 ### v3.16.0
 * **A training lesson is two boxes now: a folder and a mat.** The folder is the course — manila stock,
   a tab, a shadow — and it holds the exercise, the order slip and the ways out. The mat below it is

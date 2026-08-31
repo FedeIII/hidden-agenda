@@ -309,6 +309,7 @@ export default {
 	pieceState: 'deselection',
 	followMouse: false,
 	snipe: false,
+	snipeWindow: null,
 	piecesPrevState: [
 		{
 			id: '0-A1',

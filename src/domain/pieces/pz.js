@@ -36,13 +36,16 @@ function init() {
 //////////////
 
 function toggle(state, pieceId) {
-	const { hasTurnEnded, pieces, piecesPrevState } = state;
+	const { hasTurnEnded, pieces, snipeWindow } = state;
 	if (hasTurnEnded) {
 		return pieces;
 	}
 
-	if (isSniper(pieceId) && getPieceById(pieceId, pieces).highlight) {
-		return killSnipedPiece(pieces, piecesPrevState, pieceId);
+	// The board the shot rolls back to comes from the shot rather than from piecesPrevState, because
+	// the two stopped being the same thing when a shot was allowed to outlive the turn it answers.
+	// See domain/snipeWindow.js.
+	if (isSnipeShot(state, pieceId)) {
+		return killSnipedPiece(pieces, snipeWindow.pieces, pieceId);
 	}
 
 	const selectedPiece = getSelectedPiece(pieces);
@@ -183,7 +186,14 @@ function getInitialLocationCells(pieces) {
 //////////////
 
 function move(pieces, id, toPosition, pieceState) {
-	let movedPieces = movePieces(pieces, id, toPosition, pieceState);
+	// A mark belongs to the move that made it, and moving is what wipes the ones it did not.
+	//
+	// That wipe used to happen on NEXT_TURN and cannot any more: a shot outlives the turn it answers,
+	// so the marks it is read from have to survive the turn change and go the moment the player who
+	// was handed them moves something. Stating it here rather than in piecesReducer keeps the two
+	// other callers that re-run this move — hasTurnEndedReducer and snipeWindowReducer — reading the
+	// same board the game is about to keep.
+	let movedPieces = movePieces(removeIsThroughSniperLine(pieces), id, toPosition, pieceState);
 	movedPieces = killPieces(movedPieces, id);
 
 	return movedPieces;
@@ -771,22 +781,61 @@ function removeIsThroughSniperLine(pieces) {
 function killSnipedPiece(pieces, prevPieces, sniperId) {
 	// The rollback runs first: every survivor goes back to its previous-turn self, so the cascade
 	// then reads the HQ as it stood before the sniped move, which is the state that survives.
+	//
+	// A lit sniper is rolled back like everything else, and that is the whole of a real bug. It used
+	// to be kept as it stood and merely un-highlighted, which is the same piece in every case but
+	// one: a sniper the move it saw had killed on its way past stayed dead, so the shot that answered
+	// its own death left it in the cemetery. The snapshot carries no highlight, so going back to it
+	// puts the light out as well.
 	const withKills = pieces.map(piece => {
 		if (piece.throughSniperLineOf.length) {
-			return killedPiece(piece, sniperId);
+			// The mark goes with the piece. A shot is spent once it is taken, and a corpse still
+			// carrying the mark that killed it is a shot SNIPE would happily arm on all over again.
+			return { ...killedPiece(piece, sniperId), throughSniperLineOf: [] };
 		}
 
-		if (piece.highlight) {
-			return {
-				...piece,
-				highlight: false,
-			};
-		}
-
-		return getPieceById(piece.id, prevPieces);
+		return { ...getPieceById(piece.id, prevPieces), highlight: false };
 	});
 
 	return cascadeCeoKills(withKills);
+}
+
+// The click that fires, and the one click on a piece that does not belong to the player on turn.
+//
+// Stated once because three readings of it would be three readings that can disagree: the domain
+// takes the shot on it, hasTurnEndedReducer decides whose turn it spends, and the server asks it of
+// an incoming action to know which ownership rule to apply.
+function isSnipeShot({ snipe, pieces, snipeWindow }, pieceId) {
+	const piece = getPieceById(pieceId, pieces);
+
+	return !!snipe && !!snipeWindow && !!piece && !!piece.highlight && isSniper(piece.id);
+}
+
+/**
+ * Snipers that are lit for a shot and have no token left on the board to click.
+ *
+ * A sniper marks a piece that moves through its line and is then killed by that very move — the
+ * mover walked the line and ended the walk on the sniper's own cell. The shot is still there to
+ * take, and until now there was no way to take it: SNIPE lit a piece that had already gone to the
+ * cemetery, and the rest of the table could only stand down.
+ *
+ * The cell each one stood in comes from the board the shot rolls back to, which is exactly where
+ * firing puts it back.
+ *
+ * @returns {{id: string, position: number[]}[]}
+ */
+function getFallenSnipers(pieces, prevPieces) {
+	return pieces
+		.filter(piece => piece.highlight && isSniper(piece.id) && !cells.inBoard(piece.position))
+		.map(piece => ({ id: piece.id, position: getPieceById(piece.id, prevPieces).position }))
+		.filter(({ position }) => cells.inBoard(position));
+}
+
+// Which of them, if any, a click on this cell fires.
+function getFallenSniperAt(position, pieces, prevPieces) {
+	const fallen = getFallenSnipers(pieces, prevPieces).find(sniper => areCoordsEqual(position, sniper.position));
+
+	return fallen && fallen.id;
 }
 
 function getSnipedPositions(pieces, piece) {
@@ -861,6 +910,13 @@ function clearSniperSights(pieces) {
 
 function isSniperOnBoard(pieces) {
 	return !!pieces.find(piece => getType(piece.id) === SNIPER && cells.inBoard(piece.position));
+}
+
+// Whether pressing SNIPE has anything to line up. Not simply "is a sniper standing there": one that
+// has just been killed by the move it saw is off the board and still holds its shot, so a table
+// whose last sniper died to the very move it marked would have found the button inert.
+function isSnipeAvailable(pieces) {
+	return isSniperOnBoard(pieces) || isAnyPieceThroughSniperLine(pieces);
 }
 
 function isInSniperSight(piece) {
@@ -1200,6 +1256,10 @@ export const pz = {
 	isInSniperSight,
 	isAnyPieceThroughSniperLine,
 	clearSniperSights,
+	isSnipeShot,
+	isSnipeAvailable,
+	getFallenSnipers,
+	getFallenSniperAt,
 
 	// CLAIM CONTROL
 	canClaimControl,

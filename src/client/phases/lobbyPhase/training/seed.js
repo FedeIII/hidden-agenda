@@ -65,9 +65,12 @@ export function seedState({ players = ['YOU'], alignments = {}, board = {} } = {
 		pieceState: undefined,
 		followMouse: false,
 		snipe: false,
-		// The board as the turn found it. The sniper rollback restores every survivor from this, so
-		// it has to carry all 32 ids — and it has to be *this* board, or the first exercise move
-		// would look to the game like something the previous turn had already done.
+		// No shot on the table yet. The one lesson that takes a shot opens its own window by playing
+		// the move that provokes it, exactly as a game does — see Domain/snipeWindow.
+		snipeWindow: null,
+		// The board as the turn found it. Every "did this turn change anything" question is asked
+		// against this, so it has to carry all 32 ids — and it has to be *this* board, or the first
+		// exercise move would look to the game like something the previous turn had already done.
 		piecesPrevState: [...pieces],
 		// Derived rather than left at the initial `true`, exactly as every writer in `teams.js` does
 		// it: a team whose CEO is standing on the board cannot be claimed by anybody, and an HQ card

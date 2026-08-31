@@ -188,6 +188,10 @@ export default {
 
 		snipe: '¡DISPARO!',
 		standDown: 'ALTO EL FUEGO',
+		snipeOnly: 'el disparo es de {name}',
+		snipeNot: 'cualquiera menos {name}',
+		fallenSniper: 'FRANCOTIRADOR ABATIDO',
+		fallenSniperNote: 'pulsa su casilla para disparar',
 		accuse: 'ACUSAR',
 		reveal: 'REVELAR',
 		friendFoe: 'AMIGO Y ENEMIGO',

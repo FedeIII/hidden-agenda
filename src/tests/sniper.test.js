@@ -517,6 +517,132 @@ test.describe('SNIPER', () => {
 		});
 	});
 
+	// A sniper can be killed by the very move it saw: the mover walks its line and ends the walk on
+	// its cell. The shot is still owed, and SNIPE lit a piece that was already in the cemetery — so
+	// there was nothing on the board to click and the rest of the table could only stand down.
+	test.describe('a sniper killed by the move it saw', () => {
+		// 0-N watches [3, 2] and [3, 1] from [3, 3]. 1-A1 stands on [3, 1] and moves the two cells an
+		// agent moves: it crosses [3, 2], which marks it, and lands on the sniper, which kills it.
+		async function anAgentWalkingOntoTheSniper(page, clickOn) {
+			await clickOn.team(1).agent(1);
+			await clickOn.cell(3, 1);
+			await clickOn.cell(3, 2);
+
+			await page.click('#next-turn');
+
+			await clickOn.team(0).sniper();
+			await clickOn.cell(3, 3);
+			await clickOn.cell(3, 2);
+
+			await page.click('#next-turn');
+
+			await clickOn.team(1).agent(1);
+			await clickOn.cell(3, 3);
+			await clickOn.cell(3, 3);
+		}
+
+		test('offers the cell it stood in, with a label saying so', async ({ page, clickOn, get }) => {
+			await anAgentWalkingOntoTheSniper(page, clickOn);
+
+			// Nothing before the table reaches for the button: a mark on the board would be telling
+			// everybody a shot is there before anybody has spotted it.
+			await expect(page.locator('#snipe-fallen-0-N')).toHaveCount(0);
+
+			await page.click('#snipe');
+
+			await expect(page.locator('#snipe-fallen-0-N')).toBeVisible();
+			await expect(page.locator('#snipe-fallen-0-N')).toContainText('SNIPER DOWN');
+			await expect(page.locator('#snipe-fallen-0-N')).toContainText('click its cell to fire');
+
+			// It is the agent standing on that cell that fires the shot when clicked, so the mark
+			// cannot be in the way of it.
+			expect(await get.cell(3, 3).isEmpty).toBe(false);
+		});
+
+		test('fires from that cell, and the sniper comes back to life', async ({ page, clickOn, get }) => {
+			await anAgentWalkingOntoTheSniper(page, clickOn);
+			await page.click('#snipe');
+
+			await clickOn.cell(3, 3);
+
+			expect(await get.pieceIn(3, 3).id).toEqual('pz-0-N');
+			expect(await get.cementery(0).agent).toEqual('x 1');
+			expect(await get.nextTurn.isActive).toBe(true);
+		});
+
+		test('and the mark goes with the shot', async ({ page, clickOn }) => {
+			await anAgentWalkingOntoTheSniper(page, clickOn);
+			await page.click('#snipe');
+			await clickOn.cell(3, 3);
+
+			await expect(page.locator('#snipe-fallen-0-N')).toHaveCount(0);
+			await expect(page.locator('#snipe')).toHaveText('SNIPE!');
+		});
+
+		test('standing down leaves it dead and the cell ordinary again', async ({ page, clickOn, get }) => {
+			await anAgentWalkingOntoTheSniper(page, clickOn);
+			await page.click('#snipe');
+			await page.click('#snipe');
+
+			await expect(page.locator('#snipe-fallen-0-N')).toHaveCount(0);
+
+			// The cell is the agent's again, and clicking it does not fire anything.
+			await clickOn.cell(3, 3);
+			expect(await get.pieceIn(3, 3).id).toEqual('pz-1-A1');
+			expect(await get.nextTurn.isActive).toBe(true);
+		});
+
+		// The window a shot is taken in used to be the turn it was provoked in. It runs until the
+		// next player moves now, so NEXT TURN no longer takes the answer away from the table.
+		test('can still be answered after the turn has been passed on', async ({ page, clickOn, get }) => {
+			await anAgentWalkingOntoTheSniper(page, clickOn);
+			await page.click('#next-turn');
+
+			await expect(page.locator('#turn-player')).toHaveText('SARA');
+
+			await page.click('#snipe');
+			await expect(page.locator('#snipe-fallen-0-N')).toBeVisible();
+
+			await clickOn.cell(3, 3);
+
+			expect(await get.pieceIn(3, 3).id).toEqual('pz-0-N');
+			expect(await get.cementery(0).agent).toEqual('x 1');
+		});
+
+		test('and answering costs the next player nothing: the turn is still theirs to spend', async ({
+			page,
+			clickOn,
+			get,
+		}) => {
+			await anAgentWalkingOntoTheSniper(page, clickOn);
+			await page.click('#next-turn');
+			await page.click('#snipe');
+			await clickOn.cell(3, 3);
+
+			await expect(page.locator('#turn-player')).toHaveText('SARA');
+			expect(await get.nextTurn.isActive).toBe(false);
+
+			// The board is theirs again — an armed snipe is the state in which nothing can be
+			// picked up, and firing has to be the end of that.
+			await clickOn.team(2).agent(1);
+			expect(await get.team(2).agent(1).isHighlighted).toBe(true);
+		});
+
+		test('is gone once that player has moved something', async ({ page, clickOn, get }) => {
+			await anAgentWalkingOntoTheSniper(page, clickOn);
+			await page.click('#next-turn');
+
+			await clickOn.team(2).agent(1);
+			await clickOn.cell(1, 1);
+			await clickOn.cell(0, 1);
+
+			await page.click('#snipe');
+
+			await expect(page.locator('#snipe-fallen-0-N')).toHaveCount(0);
+			expect(await get.pieceIn(3, 3).id).toEqual('pz-1-A1');
+		});
+	});
+
 	test.describe('CEO buff', () => {
 		test.beforeEach(async ({ page, clickOn, get, drag, goToPlay }) => {
 			await clickOn.team(0).ceo();
@@ -559,5 +685,66 @@ test.describe('SNIPER', () => {
 			const agentCount = await get.cementery(0).agent;
 			expect(agentCount).toEqual('x 1');
 		});
+	});
+});
+
+// One screen and one mouse, so the app cannot tell which of the people in the room reached for
+// SNIPE — the button stays live for everybody, including the player on turn, and until now nothing
+// on screen said whose shot it actually was. Hot-seat only: online the button is simply dead for
+// the seat that may not press it, which says it without words.
+test.describe('SNIPE, in hot-seat, says whose it is', () => {
+	test('names the one other player when there is only one', async ({ page, goToPlay }) => {
+		await goToPlay(2);
+
+		await expect(page.locator('#turn-player')).toHaveText('FEDE');
+		await expect(page.locator('#snipe-note')).toHaveText("SARA's shot");
+	});
+
+	test('names the one who may not, when naming the rest would be a list', async ({ page, goToPlay }) => {
+		// The seat count is the form's, not goToPlay's — same as the six-player spec in responsive.
+		await page.click('#players3');
+		await goToPlay(3);
+
+		await expect(page.locator('#turn-player')).toHaveText('FEDE');
+		await expect(page.locator('#snipe-note')).toHaveText('anyone but FEDE');
+	});
+
+	test('follows the turn', async ({ page, goToPlay, clickOn }) => {
+		await goToPlay(2);
+
+		await clickOn.team(0).agent(1);
+		await clickOn.cell(1, 1);
+		await clickOn.cell(0, 1);
+		await page.click('#next-turn');
+
+		await expect(page.locator('#turn-player')).toHaveText('SARA');
+		await expect(page.locator('#snipe-note')).toHaveText("FEDE's shot");
+	});
+
+	// And follows the shot rather than the turn once there is one, which is the whole point of
+	// saying it: the player being answered has already handed the turn on.
+	test('stays with the player being answered after they pass the turn', async ({ page, goToPlay, clickOn }) => {
+		await goToPlay(2);
+
+		await clickOn.team(1).agent(1);
+		await clickOn.cell(3, 1);
+		await clickOn.cell(3, 2);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(0).sniper();
+		await clickOn.cell(3, 3);
+		await clickOn.cell(3, 2);
+
+		await page.click('#next-turn');
+
+		await clickOn.team(1).agent(1);
+		await clickOn.cell(3, 3);
+		await clickOn.cell(3, 3);
+
+		await page.click('#next-turn');
+
+		await expect(page.locator('#turn-player')).toHaveText('SARA');
+		await expect(page.locator('#snipe-note')).toHaveText("SARA's shot");
 	});
 });

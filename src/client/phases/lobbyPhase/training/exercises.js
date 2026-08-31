@@ -49,8 +49,6 @@ const isDown = (state, id) => !pieceOf(state, id).selected;
 const stands = (state, id, cell) => !!areCoordsEqual(pieceOf(state, id).position, cell);
 const isDead = (state, id) => !!pieceOf(state, id).killed;
 const isLit = (state, id) => !!pieceOf(state, id).highlight;
-// A shot that has been lined up, or taken and not yet passed on. Either way the board is held still.
-const isArmed = state => !!state.snipe;
 const isBuffed = (state, id) => !!pieceOf(state, id).buffed;
 const turnIs = (state, name) => py.getTurn(state.players) === name;
 const holds = (state, team) => !!state.teamControl[team].controlling;
@@ -364,11 +362,14 @@ export const EXERCISES = [
 			//
 			// A shot taken is a turn spent, and a spent turn holds the board still — nothing can be
 			// picked up until it is passed on. So the second half opens the only way it can.
+			//
+			// Read off the turn rather than off `snipe`, which is put away by the shot itself now:
+			// what this step is waiting for is the turn coming back, not the button changing.
 			{
 				verb: 'PASS',
 				marks: [{ control: 'next-turn' }],
 				allows: presses(NEXT_TURN),
-				done: state => !isArmed(state),
+				done: state => !turnSpent(state),
 			},
 			{
 				verb: 'SELECT',

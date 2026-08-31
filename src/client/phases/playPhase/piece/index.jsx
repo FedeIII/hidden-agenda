@@ -27,8 +27,13 @@ function Piece({ id, selectedDirection, selected, highlight, box }) {
 	// Clicking a lit sniper is the second half of the snipe, and the snipe belongs to the players
 	// who are not on turn. It is the one click on a piece that is theirs rather than the mover's,
 	// so it asks a different question of the session than every other click does.
+	//
+	// And with a shot lined up, a lit sniper is the only thing on the board that answers a click at
+	// all. The domain refuses the rest either way; not sending them matters because a piece standing
+	// on the cell a fallen sniper is fired from would otherwise put a doomed action on the wire in
+	// front of the shot that click is actually taking.
 	const isSnipeShot = snipe && highlight && pz.isSniper(id);
-	const canToggle = isSnipeShot ? canSnipe : canAct;
+	const canToggle = isSnipeShot ? canSnipe : canAct && !snipe;
 
 	const onClick = useCallback(() => {
 		if (isClickSuppressed() || !canToggle) {

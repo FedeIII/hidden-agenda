@@ -73,13 +73,15 @@ test.describe('turn ownership', () => {
 // that was just made, so it belongs to every seat except the one that made it. This was lost when
 // the turn rule was written — it let the mover shoot their own piece and nobody else shoot at all.
 test.describe('the snipe belongs to the seats not on turn', () => {
-	// A sniper lit up by SNIPE, which is the state in which clicking it fires.
-	function armedRoom() {
+	// A sniper lit up by SNIPE, which is the state in which clicking it fires. `snipeWindow` is what
+	// says there is a shot on the table at all — a lit sniper without one is left-over paint.
+	function armedRoom(mover = 'ANA') {
 		const room = playingRoom();
 
 		room.state = {
 			...room.state,
 			snipe: true,
+			snipeWindow: { pieces: room.state.pieces, player: mover },
 			pieces: room.state.pieces.map(piece => {
 				if (piece.id === '0-N') {
 					return { ...piece, position: [3, 0], direction: [0, 0], highlight: true };
@@ -120,8 +122,38 @@ test.describe('the snipe belongs to the seats not on turn', () => {
 		expect(check({ ...room, state: { ...room.state, snipe: false } }, 'BEA', togglePiece('0-N')).reason).toEqual(
 			'not_your_turn',
 		);
+		// A lit sniper with the snipe armed, but no shot on the table to take.
+		expect(check({ ...room, state: { ...room.state, snipeWindow: null } }, 'BEA', togglePiece('0-N')).reason).toEqual(
+			'not_your_turn',
+		);
 		// And moving is still the turn holder's alone.
 		expect(check(room, 'BEA', movePiece('0-N', [3, 1])).reason).toEqual('not_your_turn');
+	});
+
+	// A shot outlives the turn it answers: the table has until the next player moves. So from the
+	// moment NEXT TURN is pressed, "the seat that may not fire" and "the seat on turn" are two
+	// different people, and reading the rule off the turn gets both of them wrong at once.
+	test('after the turn has passed, the shot is still refused to the player who moved', () => {
+		// BEA is on turn; the shot answers ANA's move.
+		const room = armedRoom('ANA');
+		room.state = {
+			...room.state,
+			players: room.state.players.map(player => ({ ...player, turn: player.name === 'BEA' })),
+		};
+
+		expect(check(room, 'ANA', togglePiece('0-N'))).toEqual({ ok: false, reason: 'not_your_snipe' });
+		expect(check(room, 'ANA', snipe())).toEqual({ ok: false, reason: 'not_your_snipe' });
+	});
+
+	test('and offered to the player who has just been handed the turn', () => {
+		const room = armedRoom('ANA');
+		room.state = {
+			...room.state,
+			players: room.state.players.map(player => ({ ...player, turn: player.name === 'BEA' })),
+		};
+
+		expect(check(room, 'BEA', snipe()).ok).toBe(true);
+		expect(check(room, 'BEA', togglePiece('0-N')).ok).toBe(true);
 	});
 });
 

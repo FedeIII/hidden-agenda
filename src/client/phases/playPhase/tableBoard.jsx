@@ -8,6 +8,7 @@ import useSkin from 'Hooks/useSkin';
 import useThreeView from 'Client/three/useThreeView';
 import { TableBoardStyled, BoardRow, BoardMarks, Tick, Dimension, Callout } from './components';
 import Hexagon from './hexagon';
+import FallenSniper from './fallenSniper';
 
 // One cell either side of every row, plus a row above and below the board, so a piece on the
 // border can still be pointed outwards.
@@ -32,6 +33,14 @@ function previewLevel(position, previewPositions) {
 	return previewPositions.findIndex(positions => areCoordsInList(position, positions)) + 1;
 }
 
+// Which sniper, if any, this cell fires. `board.fallenSnipers` is empty unless a snipe is armed and
+// one of the lit snipers was killed by the very move it saw.
+function fallenSniperAt(row, cell, fallenSnipers) {
+	const fallen = fallenSnipers.find(sniper => sniper.position[0] === row && sniper.position[1] === cell);
+
+	return fallen && fallen.id;
+}
+
 function renderRow(row, numberOfCells, board) {
 	const hexagons = [];
 
@@ -45,6 +54,7 @@ function renderRow(row, numberOfCells, board) {
 				piece={pz.getPieceAtPosition([row, cell], board.pieces)}
 				highlighted={areCoordsInList([row, cell], board.highlightedPositions)}
 				preview={previewLevel([row, cell], board.previewPositions)}
+				fallenSniper={fallenSniperAt(row, cell, board.fallenSnipers)}
 				aim={board.aim}
 				onHover={board.onHover}
 				// Where the renderer put this cell's tile, in pixels across and down the board.
@@ -150,7 +160,7 @@ function BoardCoordinates({ layout, selected }) {
 }
 
 function TableBoard() {
-	const [{ pieces, pieceState, snipe }] = useContext(StateContext);
+	const [{ pieces, pieceState, snipe, snipeWindow }] = useContext(StateContext);
 	const boardRef = useRef(null);
 	const skin = useSkin();
 
@@ -173,6 +183,14 @@ function TableBoard() {
 	// spy mid-walk, and never a legal destination — see pz.getPreviewPositions.
 	const previewPositions = useMemo(() => pz.getPreviewPositions(pieces, pieceState), [pieces, pieceState]);
 	const selectedPiece = pz.getSelectedPiece(pieces);
+
+	// The lit snipers with no token left to click, and the cells that fire them instead. Only while
+	// the snipe is armed: before anybody reaches for the button there is nothing to explain, and the
+	// mark would be telling the whole table that a shot is there before anybody has spotted it.
+	const fallenSnipers = useMemo(
+		() => (snipe && snipeWindow ? pz.getFallenSnipers(pieces, snipeWindow.pieces) : []),
+		[snipe, snipeWindow, pieces],
+	);
 
 	// Pointing is only offered once the selected piece has nowhere left to move, which is what
 	// keeps a hover from hijacking a move. A piece still in its HQ has no position to aim from.
@@ -207,6 +225,7 @@ function TableBoard() {
 		pieces,
 		highlightedPositions,
 		previewPositions,
+		fallenSnipers,
 		layout,
 		aim,
 		onHover: layout ? onHover : undefined,
@@ -221,6 +240,16 @@ function TableBoard() {
 			{ROW_NUMBERS.map(row => renderRow(row, CELLS_BY_ROW[row], board))}
 
 			{renderRow(ROW_NUMBERS.length, EDGE_ROW_CELLS, board)}
+
+			{/* Projected, a hexagon is an invisible hit target and cannot carry a visible child, so
+			    the mark is laid on the board at the box the renderer gave that cell. Flat, the
+			    hexagon draws it and this renders nothing. Both paths turn on the same box being
+			    there, so exactly one of them draws and the id stays unique. */}
+			{fallenSnipers.map(sniper => {
+				const box = layout && layout[`${sniper.position[0]}-${sniper.position[1]}`];
+
+				return box && <FallenSniper key={sniper.id} id={sniper.id} box={box} />;
+			})}
 		</TableBoardStyled>
 	);
 }

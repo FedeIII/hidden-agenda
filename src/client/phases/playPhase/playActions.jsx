@@ -1,10 +1,10 @@
 import useBooleanState from 'Hooks/useBooleanState';
 import { useCanAccuse, useCanReveal } from 'Hooks/useSession';
-import useSnipe from 'Hooks/useSnipe';
+import useSnipe, { useSnipeNote } from 'Hooks/useSnipe';
 import { Button } from 'Client/components/button';
 import useT from 'Client/i18n';
 import LeaveGame from 'Client/components/leaveGame';
-import { Actions, Action, ActionButton } from './components';
+import { Actions, Action, ActionButton, SnipeNote } from './components';
 import AccuseScreen from './accuseScreen';
 import RevealScreen from './revealScreen';
 import AlignmentScreen from './alignmentScreen';
@@ -33,6 +33,7 @@ function useScreens() {
 function PlayActions() {
 	const t = useT();
 	const [canSnipe, onSnipe, isSnipeArmed] = useSnipe();
+	const snipeNote = useSnipeNote();
 	const canReveal = useCanReveal();
 	const canAccuse = useCanAccuse();
 	const screens = useScreens();
@@ -46,6 +47,15 @@ function PlayActions() {
 				<Button id="snipe" small $primary active={canSnipe} onClick={onSnipe}>
 					{t(isSnipeArmed ? 'play.standDown' : 'play.snipe')}
 				</Button>
+
+				{/* Hot-seat only, and nothing to do with whether the button works: it works for
+				    everybody there, because one screen and one mouse cannot tell who reached for it.
+				    What this says is whose shot it is — see useSnipeNote. */}
+				{snipeNote && (
+					<SnipeNote id="snipe-note">
+						{t(snipeNote.kind === 'only' ? 'play.snipeOnly' : 'play.snipeNot', { name: snipeNote.name })}
+					</SnipeNote>
+				)}
 			</Action>
 
 			<Action>

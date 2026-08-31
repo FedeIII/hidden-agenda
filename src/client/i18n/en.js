@@ -213,6 +213,15 @@ export default {
 		// The action bar.
 		snipe: 'SNIPE!',
 		standDown: 'STAND DOWN',
+		// Hot-seat only: one screen and one mouse, so the app cannot tell who reached for that
+		// button and the rule has to be said out loud. Which of the two depends on how many people
+		// the answer names — see useSnipeNote.
+		snipeOnly: "{name}'s shot",
+		snipeNot: 'anyone but {name}',
+		// A sniper killed by the very move it saw. It is lit for a shot and has no token left on
+		// the board, so the cell it stood in is what fires it.
+		fallenSniper: 'SNIPER DOWN',
+		fallenSniperNote: 'click its cell to fire',
 		accuse: 'ACCUSE',
 		reveal: 'REVEAL',
 		friendFoe: 'FRIEND & FOE',

@@ -1,4 +1,4 @@
-import styled, { css } from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 import { Button } from 'Client/components/button';
 import { narrow, short, narrowOrShort } from 'Client/components/breakpoints';
 import { BOARD_ASPECT } from 'Client/three/layout';
@@ -819,6 +819,118 @@ export const HqHolder = styled.b`
 
 export const ActionButton = styled(Button)`
 	cursor: ${({ active }) => (active ? 'pointer' : 'not-allowed')};
+`;
+
+// Whose shot it is, beside the button, in hot-seat only. A line of small caps rather than a chip:
+// the bar is already three groups of controls, and this is a caption on one of them and not a
+// fourth thing to press. `font-variant-caps` rather than `text-transform`, for the reason the claim
+// message uses it — Playwright's toHaveText reads textContent, which a transform does not touch.
+export const SnipeNote = styled.span`
+	font-family: var(--ha-face-data);
+	font-size: 9px;
+	font-variant-caps: all-small-caps;
+	letter-spacing: 0.08em;
+	color: var(--ha-ink-dim);
+	max-width: 14ch;
+	overflow-wrap: anywhere;
+	line-height: 1.15;
+`;
+
+/* ── The cell a fallen sniper is fired from ─────────────────────────────────────────────────
+ * A sniper killed by the very move it saw is lit for a shot with no token left on the board, so
+ * the cell it stood in answers for it. Nothing on the board says that on its own, hence a ring, a
+ * label and an arrow tying the two together — shown only while the snipe is armed.
+ *
+ * Two rules, both borrowed from the training coach marks for the same reasons. It never takes a
+ * pointer event: the cell underneath IS the control, and an absolutely positioned box over one
+ * would quietly eat the click it is advertising. And it is drawn in the skin's accent — the SNIPE
+ * button's own colour — rather than in any of the board's feedback colours: red on a cell means
+ * "you may go here", and teal and gold mean "and later".
+ * ------------------------------------------------------------------------------------------- */
+
+const sniperSeek = keyframes`
+	0%   { opacity: 1;    transform: scale(1); }
+	55%  { opacity: 0.45; transform: scale(1.08); }
+	100% { opacity: 1;    transform: scale(1); }
+`;
+
+// Laid over one cell. Flat, it is a child of that hexagon and fills it; in 3D the projected box
+// arrives through the `style` prop, which is why all four offsets are here rather than an `inset`
+// the inline width and height would then be over-constraining.
+export const FallenSniperMark = styled.div`
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 4;
+
+	&::before {
+		content: '';
+		position: absolute;
+		/* Round the token rather than under it. A token is drawn standing on its tile — about a
+		   fifth of a cell up the screen, which is why TOKEN_BOX is offset the same way — so a ring
+		   centred on the cell is mostly hidden by the piece it is ringing. */
+		left: 0;
+		right: 0;
+		top: -12%;
+		bottom: 4%;
+		border: 2px dashed var(--ha-accent);
+		border-radius: 50%;
+		/* The same halo the training coach marks wear, for the same reason: what this ring goes
+		   round is a piece, and the piece that killed a sniper is as often as not the red team's —
+		   which is the accent, on the accent. A dark outline reads on any token and any tile. */
+		filter: drop-shadow(0 0 1px rgba(20, 15, 5, 0.95)) drop-shadow(0 0 3px rgba(20, 15, 5, 0.7));
+		animation: ${sniperSeek} 1.6s ease-in-out infinite;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		&::before {
+			animation: none;
+		}
+	}
+`;
+
+// The label, and the arrow that ties it to the cell. Above the cell rather than on it: what it
+// points at has a piece standing on it — the one that did the killing — and a label laid over that
+// hides both the ring and the piece the shot is about.
+export const FallenSniperTag = styled.b`
+	position: absolute;
+	left: 50%;
+	bottom: 100%;
+	transform: translate(-50%, -9px);
+	display: block;
+	white-space: nowrap;
+	text-align: center;
+	padding: 3px 8px 2px;
+	background: var(--ha-accent);
+	color: var(--ha-ink-on-accent);
+	font-family: var(--ha-face-data);
+	font-size: 9px;
+	font-weight: 400;
+	letter-spacing: 0.08em;
+	line-height: 1.4;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+
+	i {
+		display: block;
+		font-style: normal;
+		opacity: 0.85;
+	}
+
+	&::after {
+		content: '';
+		position: absolute;
+		left: 50%;
+		top: 100%;
+		width: 0;
+		height: 0;
+		border-left: 5px solid transparent;
+		border-right: 5px solid transparent;
+		border-top: 9px solid var(--ha-accent);
+		transform: translateX(-50%);
+	}
 `;
 
 // Accusing names a team, so the button wears that team's colour as a filled chip rather than as
