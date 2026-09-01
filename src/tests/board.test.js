@@ -269,6 +269,21 @@ test.describe('THE TURN, HANDED OVER', () => {
 		await clickOn.cell(2, 2);
 	}
 
+	// The first arrival at this table used to be the only one nobody was told about: the cards were
+	// dealt, the board appeared, and the first player was expected to notice that a 9px key already had
+	// their name in it. `beforeEach` has already navigated, so this is asserting on what is still on
+	// screen from the mount rather than on anything this spec did.
+	test('announces the first turn to the first player, unprompted', async ({ page }) => {
+		const card = page.locator('#turn-announce');
+
+		await expect(card).toContainText('FEDE');
+		await expect(page.locator('#turn-player')).toHaveText('FEDE');
+
+		// And it goes the same way every other one does, leaving the strip exactly as it was.
+		await expect(card).toHaveCount(0);
+		await expect(page.locator('#turn-player')).toHaveText('FEDE');
+	});
+
 	test('the button asks to be pressed only once the turn has ended', async ({ page, clickOn, get }) => {
 		// Mid-turn it is dark, and a dark control has nothing to ask for.
 		expect(await get.nextTurn.isBeating).toBe(false);

@@ -208,14 +208,22 @@ export const InitialBox = styled.i`
  *     is no still version of "carried in from somewhere"; the end state is the whole of the news.
  * ------------------------------------------------------------------------------------------- */
 
-// Long enough to read at a glance, short enough to sit through forty times an evening: it settles
-// in ~165ms, is held for ~200ms, and takes ~400ms to travel.
-export const DELIVER_MS = 760;
+// It settles in ~170ms, is HELD FOR A FULL SECOND, and takes ~390ms to travel.
+//
+// The hold was 200ms to begin with, which is long enough to see something and not long enough to read
+// it: the card was gone by the time the eye had finished arriving at it. The two moving parts are
+// deliberately unchanged — what a player waits through is the still frame in the middle, and making
+// the flight itself slower would only make the same news take longer to be delivered.
+export const DELIVER_MS = 1560;
 
 // `--ha-fly-x`, `--ha-fly-y` and `--ha-fly-k` are the offsets and the scale, measured off the strip's
 // own cell and written on the element by `TurnStrip`. The rotation is the direction's own: a slip
 // lands a degree out of square on the desk and squares up as it seats, and the two directions that
 // are machined rather than typed say so with a rotation of zero.
+//
+// The percentages are the shape of the thing and DELIVER_MS is its length, so the two are read
+// together: 11% and 75% of 1560ms are the settle and the take-off. Changing the duration alone
+// stretches all three parts, which is why the stops moved with it when the hold went to a second.
 const deliver = keyframes`
 	0% {
 		opacity: 0;
@@ -223,15 +231,18 @@ const deliver = keyframes`
 			rotate(var(--ha-control-rotate));
 		animation-timing-function: cubic-bezier(0.16, 0.84, 0.24, 1);
 	}
-	8% {
+	/* Spent in the first 60ms, as it always was: a card that fades up slowly while it is also
+	   settling reads as something loading rather than something arriving. */
+	4% {
 		opacity: 1;
 	}
-	22% {
+	11% {
 		transform: translate(var(--ha-fly-x), var(--ha-fly-y)) scale(var(--ha-fly-k))
 			rotate(var(--ha-control-rotate));
 		animation-timing-function: linear;
 	}
-	48% {
+	/* The still second. */
+	75% {
 		transform: translate(var(--ha-fly-x), var(--ha-fly-y)) scale(var(--ha-fly-k))
 			rotate(var(--ha-control-rotate));
 		animation-timing-function: cubic-bezier(0.55, 0, 0.2, 1);
@@ -247,8 +258,8 @@ const deliver = keyframes`
 // the cell takes over is a second edge over the strip's own.
 const dissolve = keyframes`
 	0%   { opacity: 1; }
-	48%  { opacity: 1; }
-	88%  { opacity: 0; }
+	75%  { opacity: 1; }
+	93%  { opacity: 0; }
 	100% { opacity: 0; }
 `;
 

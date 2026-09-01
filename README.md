@@ -170,6 +170,25 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.23.1
+* **The turn is now held still in the middle of the table for a full second before it travels.** It
+  was 200ms, which is long enough to *see* a card and not long enough to read one — it was gone by the
+  time the eye had finished arriving at it. 1560ms all in: a 170ms settle, a second held, a 390ms
+  flight. The two moving parts are deliberately unchanged, because what a player waits through is the
+  still frame in the middle and a slower flight would only make the same news take longer to arrive
+* **And the first turn is announced too.** That was the one arrival at this table nobody was told
+  about: the cards were dealt, the board appeared, and the first player was expected to notice that a
+  9px key already had their name in it. A refresh mid-game announces for the same reason — a player
+  who has just come back is exactly the player who needs telling whose turn it is
+* That mount announcement is the one thing in this feature the suite had to be told about, and only
+  in two places: `three.test.js` holds the suite's only *pixel* assertions and they sample `#hex-3-2`,
+  measured to sit directly under a card held at the centre of the screen. Both wait for the table to
+  settle rather than suppressing the card — what they are about is what the renderer drew, and a spec
+  that turned the app's own chrome off to read it would be measuring a screen no player ever sees.
+  Nothing else needed a line: every other spec asks the DOM, and `elementFromPoint` at that same
+  point returns `#hex-3-2` straight through the card
+* Two more specs
+
 ### v3.23.0
 * **NEXT TURN now asks to be pressed.** A turn that has ended looks exactly like one that has not
   until somebody notices the button has lit, so once it is live it beats — one beat and a rest of

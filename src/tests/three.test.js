@@ -14,6 +14,18 @@ import { test, expect } from './fixtures';
 // asked this question. There are more than enough that are not.
 const MINIMUM_CHECKED = 40;
 
+// The two specs below read PIXELS, and they are the only ones in the suite that do — so they are the
+// only ones that care that a board announces itself when it arrives. The turn is carried in on a card
+// at the centre of the screen and held there for a second, and the centre of the screen is the middle
+// of the board: `#hex-3-2` is directly under it. Sampled without waiting, the assertion reads the
+// colour of a manila slip and reports it as the tile's.
+//
+// Waiting for the table to settle rather than suppressing the card, because what these specs are
+// about is what the RENDERER drew, and a spec that turned the app's own chrome off to read it would
+// be measuring a screen no player ever sees. Everything else in this suite is DOM, and the card takes
+// no pointer events, so nothing else has to know.
+const settled = page => expect(page.locator('#turn-announce')).toHaveCount(0);
+
 async function whatIsUnderTheMiddleOf(page, selector) {
 	return page.evaluate(sel => {
 		const wrong = [];
@@ -172,6 +184,7 @@ test.describe('3D BOARD', () => {
 
 	test('draws a carried piece over the tray it came out of', async ({ page, goToPlay }) => {
 		await goToPlay(2);
+		await settled(page);
 
 		const held = await page.locator('#pz-0-A1').boundingBox();
 		// Another socket in the same HQ. It is outside the board's own rectangle, and the board is
@@ -204,6 +217,7 @@ test.describe('3D BOARD', () => {
 
 	test('lights the board rather than dimming it', async ({ page, goToPlay }) => {
 		await goToPlay(2);
+		await settled(page);
 
 		// Row 3 cell 2 is one of the cells the chequer does not darken at all, so its top face is
 		// #a1abb7 — the exact grey the flat board has always used and where the 3D palette took it

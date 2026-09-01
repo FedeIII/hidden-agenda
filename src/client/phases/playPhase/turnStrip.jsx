@@ -76,11 +76,19 @@ function flightFrom(box) {
 // is how a player comes back to a table that has been waiting for them for a minute. The server
 // passing over a seat that has gone is announced by the same rule, for the same reason.
 //
-// Deliberately silent on the first render: arriving at the play phase is not a turn changing hands,
-// and a refresh mid-game is a player finding the table again rather than being handed it.
+// **The first turn is a turn changing hands too, and `held` starts at null so that it counts.** The
+// game deals the cards, the board appears, and the first player was simply expected to notice that a
+// 9px key already had their name in it — the one arrival at this table that nobody was told about was
+// the first. `getTurn` throws rather than returning a seat with no name, so null can never be a real
+// turn and this cannot miss.
+//
+// The consequence to accept: a refresh mid-game announces as well, because a remount is the first
+// render again and nothing in this state distinguishes the two. That is the right answer anyway — a
+// player who has just come back to the table is exactly the player who needs telling whose turn it
+// is, and it is the same news in the same words.
 function useTurnDelivery(turn, target, enabled) {
 	const [flight, setFlight] = useState(null);
-	const held = useRef(turn);
+	const held = useRef(null);
 	const flights = useRef(0);
 
 	// A layout effect, so the measurement, the hush and the card all land in the frame the new name
