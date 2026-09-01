@@ -77,8 +77,9 @@ test.describe('DRAGGING', () => {
 	});
 });
 
-// Everybody moves everybody's pieces here, so which of 32 tokens has just changed is the one thing
-// a player arriving at their turn cannot read off the board. A tag over one cell says it.
+// Everybody moves everybody's pieces here, so what has just changed is the one thing a player
+// arriving at their turn cannot read off the board. A tag over one cell says it, and says which of
+// the four things it was.
 test.describe('THE LAST MOVE', () => {
 	test.beforeEach(async ({ goToPlay }) => {
 		await goToPlay(2);
@@ -100,7 +101,7 @@ test.describe('THE LAST MOVE', () => {
 		await page.click('#next-turn');
 
 		await expect(page.locator('#last-move-0-A1')).toBeVisible();
-		await expect(page.locator('#last-move-0-A1')).toHaveText('LAST MOVE');
+		await expect(page.locator('#last-move-0-A1')).toHaveText('AGENT PLACED');
 	});
 
 	test('sits on the cell the move ended on', async ({ page, clickOn }) => {
@@ -136,6 +137,64 @@ test.describe('THE LAST MOVE', () => {
 		expect(await get.team(0).agent(1).isHighlighted).toBe(true);
 	});
 
+	test('says a piece already on the board was moved', async ({ page, clickOn }) => {
+		await clickOn.team(1).agent(1);
+		await clickOn.cell(3, 1);
+		await clickOn.cell(3, 2);
+		await page.click('#next-turn');
+
+		// Two cells ahead of an agent facing right, then dropped where it lands.
+		await page.click('#pz-1-A1');
+		await clickOn.cell(3, 3);
+		await clickOn.cell(3, 3);
+		await page.click('#next-turn');
+
+		await expect(page.locator('#last-move-1-A1')).toHaveText('AGENT MOVED');
+	});
+
+	// A kill names what was TAKEN, not what took it: the killer is standing on the marked cell for
+	// anybody to read, and the piece that is no longer anywhere is the news.
+	test('says what a kill took, over the cell it was taken on', async ({ page, clickOn, get }) => {
+		await clickOn.team(1).agent(1);
+		await clickOn.cell(3, 3);
+		await clickOn.cell(3, 4);
+		await page.click('#next-turn');
+
+		await clickOn.team(0).agent(1);
+		await clickOn.cell(3, 1);
+		await clickOn.cell(3, 2);
+		await page.click('#next-turn');
+
+		await page.click('#pz-0-A1');
+		await clickOn.cell(3, 3);
+		await clickOn.cell(3, 3);
+		await page.click('#next-turn');
+
+		expect(await get.cementery(0).agent).toEqual('x 1');
+
+		// The mark belongs to the mover, which is what its id says; the words name its victim.
+		await expect(page.locator('#last-move-0-A1')).toHaveText('AGENT KILLED');
+	});
+
+	// Deploying a CEO is HOW a team is claimed, so the board cannot tell the two apart on its own.
+	test('says a team was claimed when the ceo put down was the claim', async ({ page, clickOn }) => {
+		await page.click('#claim-0');
+		await clickOn.cell(3, 3);
+		await clickOn.cell(3, 3);
+		await page.click('#next-turn');
+
+		await expect(page.locator('#last-move-0-C')).toHaveText('TEAM CLAIMED');
+	});
+
+	test('says a plain placement when the ceo was deployed with nobody holding the team', async ({ page, clickOn }) => {
+		await clickOn.team(0).ceo();
+		await clickOn.cell(3, 3);
+		await clickOn.cell(3, 3);
+		await page.click('#next-turn');
+
+		await expect(page.locator('#last-move-0-C')).toHaveText('CEO PLACED');
+	});
+
 	test('moves to the next player’s cell when they hand the turn on', async ({ page, clickOn }) => {
 		await anAgentPutDownOnACell(page, clickOn);
 		await page.click('#next-turn');
@@ -147,5 +206,50 @@ test.describe('THE LAST MOVE', () => {
 
 		await expect(page.locator('#last-move-0-A1')).toHaveCount(0);
 		await expect(page.locator('#last-move-1-A1')).toBeVisible();
+	});
+});
+
+// The mark lasts until the player being handed the turn commits to something, not for their whole
+// turn. Looking at what is on offer is free; anything that cannot be taken back answers the mark.
+test.describe('WHAT PUTS THE LAST MOVE AWAY', () => {
+	test.beforeEach(async ({ page, clickOn, goToPlay }) => {
+		await goToPlay(2);
+
+		await clickOn.team(0).agent(1);
+		await clickOn.cell(1, 1);
+		await clickOn.cell(2, 2);
+		await page.click('#next-turn');
+
+		await expect(page.locator('#last-move-0-A1')).toBeVisible();
+	});
+
+	test('survives picking a piece up and looking at where it could go', async ({ page, clickOn }) => {
+		await clickOn.team(1).agent(1);
+
+		await expect(page.locator('#last-move-0-A1')).toBeVisible();
+	});
+
+	test('survives arming a snipe and standing down again', async ({ page, clickOn }) => {
+		// The sniper's own deployment becomes the mark, so the next player has one to look at with
+		// a sniper on the board — which is what makes SNIPE worth pressing at all.
+		await clickOn.team(1).sniper();
+		await clickOn.cell(5, 3);
+		await clickOn.cell(5, 2);
+		await page.click('#next-turn');
+
+		await expect(page.locator('#last-move-1-N')).toHaveText('SNIPER PLACED');
+
+		await page.click('#snipe');
+		await expect(page.locator('#last-move-1-N')).toBeVisible();
+
+		await page.click('#snipe');
+		await expect(page.locator('#last-move-1-N')).toBeVisible();
+	});
+
+	test('goes the moment a piece actually moves', async ({ page, clickOn }) => {
+		await clickOn.team(1).agent(1);
+		await clickOn.cell(5, 3);
+
+		await expect(page.locator('#last-move-0-A1')).toHaveCount(0);
 	});
 });

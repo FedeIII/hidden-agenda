@@ -83,7 +83,7 @@ function Hexagon({ row, cell, piece, highlighted, preview, edge, aim, box, onHov
 			    down with it, so TableBoard lays both on the board instead. */}
 			{fallenSniper && !box && <FallenSniper id={fallenSniper} />}
 
-			{lastMove && !box && <LastMove id={lastMove} />}
+			{lastMove && !box && <LastMove move={lastMove} />}
 		</HexagonStyled>
 	);
 }

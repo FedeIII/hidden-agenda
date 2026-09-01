@@ -192,7 +192,18 @@ export default {
 		snipeNot: 'cualquiera menos {name}',
 		fallenSniper: 'FRANCOTIRADOR ABATIDO',
 		fallenSniperNote: 'pulsa su casilla para disparar',
-		lastMove: 'ÚLTIMO MOVIMIENTO',
+		// DESPLEGADO, MOVIDO, ABATIDO y RECLAMADO son los verbos que ya usan el curso y la marca del
+		// francotirador. Los cuatro tipos son masculinos o de género común, así que un solo
+		// participio vale para todos.
+		lastMovePlaced: '{piece} DESPLEGADO',
+		lastMoveMoved: '{piece} MOVIDO',
+		lastMoveKilled: '{piece} ABATIDO',
+		lastMoveClaimed: 'EQUIPO RECLAMADO',
+
+		pieceAgent: 'AGENTE',
+		pieceCeo: 'CEO',
+		pieceSpy: 'ESPÍA',
+		pieceSniper: 'FRANCOTIRADOR',
 		accuse: 'ACUSAR',
 		reveal: 'REVELAR',
 		friendFoe: 'AMIGO Y ENEMIGO',

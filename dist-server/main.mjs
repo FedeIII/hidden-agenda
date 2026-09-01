@@ -336,6 +336,12 @@ var STATES = {
 	MOVEMENT3: "movement3",
 	COLLOCATION: "collocation"
 };
+var MOVES = {
+	PLACED: "placed",
+	MOVED: "moved",
+	KILLED: "killed",
+	CLAIMED: "claimed"
+};
 var POINTS_PER_PIECE_TYPE = {
 	[AGENT$3]: 5,
 	[SPY$3]: 10,
@@ -1100,7 +1106,7 @@ function hasBoardChanged(pieces, otherPieces) {
 	});
 }
 /**
-* The move a turn made: the piece that made it, and the cell it is standing on.
+* The move a turn made: the piece that made it, the cell it ended on, and what happened there.
 *
 * Asked of the same two boards and the same four fields as hasBoardChanged, so what counts as a
 * move here and what counts as a turn there cannot drift apart.
@@ -1114,18 +1120,38 @@ function hasBoardChanged(pieces, otherPieces) {
 * A turn that changed nothing has no move either. The server passes over a seat that has gone
 * rather than moving for it, and that is what a null means.
 *
-* @returns {{id: string, position: number[]} | null}
+* `event` is one of MOVES, and `victim` is the piece a kill took, present only for MOVES.KILLED.
+*
+* @returns {{id: string, position: number[], event: string, victim?: string} | null}
 */
-function getTurnMove(pieces, prevPieces) {
+function getTurnMove({ pieces, piecesPrevState, teamControl }) {
 	const mover = pieces.find((piece) => {
-		const before = getPieceById(piece.id, prevPieces);
+		const before = getPieceById(piece.id, piecesPrevState);
 		return !!before && !piece.killed && !before.killed && (!areSameCoords(piece.position, before.position) || !areSameCoords(piece.direction, before.direction));
 	});
 	if (!mover || !cells_default.inBoard(mover.position)) return null;
+	const victim = getPieceKilledAt(mover, pieces, piecesPrevState);
+	if (victim) return {
+		id: mover.id,
+		position: mover.position,
+		event: MOVES.KILLED,
+		victim: victim.id
+	};
+	if (getPieceById(mover.id, piecesPrevState).position) return {
+		id: mover.id,
+		position: mover.position,
+		event: MOVES.MOVED
+	};
+	const claimed = isCeo(mover.id) && !!teamControl && !!teamControl[Number(getTeam(mover.id))].controlling;
 	return {
 		id: mover.id,
-		position: mover.position
+		position: mover.position,
+		event: claimed ? MOVES.CLAIMED : MOVES.PLACED
 	};
+}
+function getPieceKilledAt(mover, pieces, prevPieces) {
+	const before = prevPieces.find((piece) => piece.id !== mover.id && !piece.killed && areSameCoords(piece.position, mover.position));
+	return before && getPieceById(before.id, pieces).killed ? before : null;
 }
 function isPieceBlocked(selectedPiece, pieces, position1CellAhead, position2CellsAhead) {
 	return pieces.filter((piece) => isPieceAtPosition(piece, position1CellAhead) || isFriendlyAtPosition(piece, position2CellsAhead, selectedPiece)).length !== 0;
@@ -2033,22 +2059,35 @@ function piecesPrevStateReducer(state, action) {
 /**
 * What the last player did, left on the board for the rest of the table to read.
 *
-* `null` when there is nothing to say. Otherwise `{ id, position }` — the piece that moved and the
-* cell its move ended on.
+* `null` when there is nothing to say. Otherwise `{ id, position, event, victim? }` — the piece that
+* moved, the cell its move ended on, which of MOVES happened there, and, for a kill, what it took.
 *
-* Everybody moves everybody's pieces here, so which piece just moved is the one thing a player
+* Everybody moves everybody's pieces here, so what the last player did is the one thing a player
 * arriving at their turn cannot work out from the board in front of them: 32 tokens changed by one,
-* and nothing on screen says which. It is written when a turn is handed on and replaced when the
-* next one is, because that is the whole of what it claims — the move the table has just been shown.
+* and nothing on screen says which or how.
 *
-* Deliberately not cleared by the new player's own move. The mark answers "what did the last player
-* do", and that question is worth asking right up to the moment you commit your own answer to it.
+* It is written when a turn is handed on and it lasts until the board changes irreversibly under it
+* — **not** for the whole of the next turn. Looking is free: picking a piece up, pointing it, arming
+* SNIPE and claiming a team are all things that can be taken back, and none of them answers the
+* mark. Neither does revealing an alignment or accusing somebody: those cost their player something
+* real, but the pieces stand exactly where the last move left them, and this mark is about the
+* board.
+*
+* So there is no list of actions to keep in step with the game. There is one question — has the
+* board stopped being the board this turn found — asked of the very move the click is about to make.
 */
+function hasCommitted(state, pieces) {
+	return pz.hasBoardChanged(pieces, state.piecesPrevState);
+}
 function lastMoveReducer(state, action) {
 	switch (action.type) {
 		case START_GAME: return null;
-		case NEXT_TURN: return pz.getTurnMove(state.pieces, state.piecesPrevState);
-		case TOGGLE_PIECE: return pz.isSnipeShot(state, action.payload.pieceId) ? null : state.lastMove;
+		case NEXT_TURN: return pz.getTurnMove(state);
+		case MOVE_PIECE: {
+			const { pieceId, coords } = action.payload;
+			return hasCommitted(state, pz.move(state.pieces, pieceId, coords, state.pieceState)) ? null : state.lastMove;
+		}
+		case TOGGLE_PIECE: return hasCommitted(state, pz.toggle(state, action.payload.pieceId)) ? null : state.lastMove;
 		default: return state.lastMove;
 	}
 }

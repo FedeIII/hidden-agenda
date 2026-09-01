@@ -1,7 +1,18 @@
 import { test, expect } from '@playwright/test';
 import { createInitialState, gameReducer } from 'Game/reducer';
-import { startGame, nextTurn, togglePiece, movePiece, directPiece } from 'Game/actions';
-import { pz, STATES } from 'Domain/pieces';
+import {
+	accuse,
+	claimControl,
+	directPiece,
+	movePiece,
+	nextTurn,
+	revealFoe,
+	revealFriend,
+	snipe,
+	startGame,
+	togglePiece,
+} from 'Game/actions';
+import { pz, MOVES, STATES } from 'Domain/pieces';
 import cells from 'Domain/cells';
 
 const { SELECTION, MOVEMENT2 } = STATES;
@@ -321,47 +332,81 @@ test.describe('hasBoardChanged', () => {
 });
 
 // The mark over a cell that says what the last player did. Everybody moves everybody's pieces, so
-// which of 32 tokens has just changed is the one thing the board cannot say by itself.
+// what has just changed is the one thing the board cannot say by itself.
 test.describe('the last move', () => {
 	test('is nothing at all before anybody has moved', () => {
 		expect(twoPlayerGame().lastMove).toBe(null);
 	});
 
-	// The mark belongs to the player being handed the turn, so it is written when the turn is —
-	// and it keeps saying what the last player did right up to the moment this player answers it.
-	test('still names the previous move while the next one is being made', () => {
-		const state = deploy(twoPlayerGame(), '0-A1', [3, 3], [3, 4]);
-
-		const moving = dispatch(state, togglePiece('0-A1'), movePiece('0-A1', [3, 5]));
-
-		expect(moving.lastMove).toEqual({ id: '0-A1', position: [3, 3] });
-	});
-
-	test('names the piece and the cell its move ended on', () => {
-		const state = deploy(twoPlayerGame(), '0-A1', [3, 3], [3, 4]);
-
-		const passed = dispatch(state, togglePiece('0-A1'), movePiece('0-A1', [3, 5]), togglePiece('0-A1'), nextTurn());
-
-		expect(passed.lastMove).toEqual({ id: '0-A1', position: [3, 5] });
-	});
-
-	// A piece coming out of an HQ has no cell to be moved from, and the mark is about where it
-	// landed rather than where it came from, so there is nothing special to say about it.
 	test('names a piece deployed out of its HQ', () => {
 		const placed = dispatch(twoPlayerGame(), togglePiece('0-A1'), movePiece('0-A1', [3, 3]));
 		const passed = dispatch(hover(placed, '0-A1', [3, 4]), togglePiece('0-A1'), nextTurn());
 
-		expect(passed.lastMove).toEqual({ id: '0-A1', position: [3, 3] });
+		expect(passed.lastMove).toEqual({ id: '0-A1', position: [3, 3], event: MOVES.PLACED });
 	});
 
-	// A sniper's whole move can be a turn on the spot, and that is still the move to mark.
+	test('names a piece that moved on the board', () => {
+		const state = deploy(twoPlayerGame(), '0-A1', [3, 3], [3, 4]);
+
+		const passed = dispatch(state, togglePiece('0-A1'), movePiece('0-A1', [3, 5]), togglePiece('0-A1'), nextTurn());
+
+		expect(passed.lastMove).toEqual({ id: '0-A1', position: [3, 5], event: MOVES.MOVED });
+	});
+
+	// A sniper's whole move can be a turn on the spot, and that is still a move it made.
 	test('names a piece that only turned where it stood', () => {
 		const state = deploy(twoPlayerGame(), '0-N', [3, 3], [3, 4]);
 
 		const turned = hover(dispatch(state, togglePiece('0-N')), '0-N', [2, 3]);
 		const passed = dispatch(turned, togglePiece('0-N'), nextTurn());
 
-		expect(passed.lastMove).toEqual({ id: '0-N', position: [3, 3] });
+		expect(passed.lastMove).toEqual({ id: '0-N', position: [3, 3], event: MOVES.MOVED });
+	});
+
+	// The mover is the piece alive on both boards and not where it was, so a kill is read as the
+	// consequence of a move rather than as a second one — and the mark names what was TAKEN, because
+	// the killer is standing on that cell for anybody to read.
+	test('names the piece a kill took, and the mover it belongs to', () => {
+		let state = deploy(twoPlayerGame(), '1-S', [3, 3], [3, 4]);
+		state = deploy(state, '0-A1', [3, 1], [3, 2]);
+
+		const passed = dispatch(state, togglePiece('0-A1'), movePiece('0-A1', [3, 3]), togglePiece('0-A1'), nextTurn());
+
+		expect(pz.getPieceById('1-S', passed.pieces).killed).toBe(true);
+		expect(passed.lastMove).toEqual({ id: '0-A1', position: [3, 3], event: MOVES.KILLED, victim: '1-S' });
+	});
+
+	// A CEO takes its team's undeployed pieces with it, out of their HQ and straight to a cemetery.
+	// The mark names the CEO, which is the piece the move actually reached — and the biggest thing
+	// that can happen on one cell.
+	test('names a killed ceo rather than one of the pieces its death took', () => {
+		let state = deploy(twoPlayerGame(), '1-C', [3, 3], [3, 4]);
+		state = deploy(state, '0-A1', [3, 1], [3, 2]);
+
+		const passed = dispatch(state, togglePiece('0-A1'), movePiece('0-A1', [3, 3]), togglePiece('0-A1'), nextTurn());
+
+		// Still in its HQ when the CEO died, so it went too.
+		expect(pz.getPieceById('1-A2', passed.pieces).killed).toBe(true);
+		expect(passed.lastMove.event).toEqual(MOVES.KILLED);
+		expect(passed.lastMove.victim).toEqual('1-C');
+	});
+
+	// Deploying a CEO is HOW a team is claimed, so the board cannot tell the two apart on its own.
+	// `teamControl.controlling` is set by that very placement and says which it was.
+	test('says a team was claimed when the ceo placed was the claim', () => {
+		const claimed = dispatch(twoPlayerGame(), claimControl('ANA', '0'), movePiece('0-C', [3, 3]));
+		const passed = dispatch(hover(claimed, '0-C', [3, 4]), togglePiece('0-C'), nextTurn());
+
+		expect(passed.teamControl[0].player).toEqual('ANA');
+		expect(passed.lastMove).toEqual({ id: '0-C', position: [3, 3], event: MOVES.CLAIMED });
+	});
+
+	test('says a plain placement when the ceo was deployed with nobody holding the team', () => {
+		const placed = dispatch(twoPlayerGame(), togglePiece('0-C'), movePiece('0-C', [3, 3]));
+		const passed = dispatch(hover(placed, '0-C', [3, 4]), togglePiece('0-C'), nextTurn());
+
+		expect(passed.teamControl[0].player).toBe(null);
+		expect(passed.lastMove).toEqual({ id: '0-C', position: [3, 3], event: MOVES.PLACED });
 	});
 
 	test('is replaced by the next turn, not added to', () => {
@@ -371,7 +416,7 @@ test.describe('the last move', () => {
 		const passed = dispatch(state, togglePiece('0-A1'), movePiece('0-A1', [3, 5]), togglePiece('0-A1'), nextTurn());
 		const again = dispatch(passed, togglePiece('1-A1'), movePiece('1-A1', [1, 3]), togglePiece('1-A1'), nextTurn());
 
-		expect(again.lastMove).toEqual({ id: '1-A1', position: [1, 3] });
+		expect(again.lastMove).toEqual({ id: '1-A1', position: [1, 3], event: MOVES.MOVED });
 	});
 
 	// A turn is passed without a move when the server passes over a seat that has gone. There is
@@ -382,16 +427,68 @@ test.describe('the last move', () => {
 
 		expect(dispatch(passed, nextTurn()).lastMove).toBe(null);
 	});
+});
 
-	// The mover is the piece that is alive on both boards and is not where it was, so a kill is
-	// read as the consequence of a move rather than as a second one.
-	test('names the killer rather than the piece it killed', () => {
-		let state = deploy(twoPlayerGame(), '1-A1', [3, 3], [3, 4]);
-		state = deploy(state, '0-A1', [3, 1], [3, 2]);
+// The mark lasts until the player being handed the turn commits to something, not for their whole
+// turn. Looking at what is on offer is free; anything that cannot be taken back answers the mark.
+test.describe('what puts the last move away', () => {
+	function aMarkedBoard() {
+		let state = deploy(twoPlayerGame(), '0-A1', [3, 3], [3, 4]);
+		state = deploy(state, '1-N', [5, 3], [5, 4]);
 
-		const passed = dispatch(state, togglePiece('0-A1'), movePiece('0-A1', [3, 3]), togglePiece('0-A1'), nextTurn());
+		return dispatch(state, togglePiece('0-A1'), movePiece('0-A1', [3, 5]), togglePiece('0-A1'), nextTurn());
+	}
 
-		expect(pz.getPieceById('1-A1', passed.pieces).killed).toBe(true);
-		expect(passed.lastMove).toEqual({ id: '0-A1', position: [3, 3] });
+	test('survives picking a piece up and putting it back', () => {
+		const marked = aMarkedBoard();
+
+		expect(dispatch(marked, togglePiece('1-N')).lastMove).not.toBe(null);
+		expect(dispatch(marked, togglePiece('1-N'), togglePiece('1-N')).lastMove).not.toBe(null);
+	});
+
+	test('survives pointing a piece somewhere, which a hover elsewhere undoes', () => {
+		const held = dispatch(aMarkedBoard(), togglePiece('1-N'));
+
+		expect(hover(held, '1-N', [4, 3]).lastMove).not.toBe(null);
+	});
+
+	test('survives arming a snipe, and standing down again', () => {
+		const marked = aMarkedBoard();
+
+		expect(dispatch(marked, snipe()).lastMove).not.toBe(null);
+		expect(dispatch(marked, snipe(), snipe()).lastMove).not.toBe(null);
+	});
+
+	// Claiming is cancellable — it selects the team's CEO and CANCEL_CONTROL puts it back.
+	test('survives claiming a team', () => {
+		expect(dispatch(aMarkedBoard(), claimControl('BEA', '2')).lastMove).not.toBe(null);
+	});
+
+	test('goes the moment a piece actually moves', () => {
+		const moved = dispatch(aMarkedBoard(), togglePiece('1-N'), movePiece('1-N', [5, 2]));
+
+		expect(moved.lastMove).toBe(null);
+	});
+
+	// The one turn with no move in it: a sniper turned where it stands. The drop is what commits it,
+	// so the drop is what the mark waits for.
+	test('goes on the drop that leaves a piece facing somewhere new', () => {
+		const turned = hover(dispatch(aMarkedBoard(), togglePiece('1-N')), '1-N', [4, 3]);
+
+		expect(turned.lastMove).not.toBe(null);
+		expect(dispatch(turned, togglePiece('1-N')).lastMove).toBe(null);
+	});
+
+	// Both cost their player something real and neither can be taken back, but the pieces stand
+	// exactly where the last move left them — and this mark is about the board.
+	test('survives revealing an alignment', () => {
+		expect(dispatch(aMarkedBoard(), revealFriend()).lastMove).not.toBe(null);
+		expect(dispatch(aMarkedBoard(), revealFoe()).lastMove).not.toBe(null);
+	});
+
+	test('survives an accusation, right or wrong', () => {
+		const guess = accuse({ accuser: 'BEA', accusee: 'ANA', alignment: 'friend', team: '0' });
+
+		expect(dispatch(aMarkedBoard(), guess).lastMove).not.toBe(null);
 	});
 });

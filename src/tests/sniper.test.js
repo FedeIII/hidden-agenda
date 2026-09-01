@@ -616,7 +616,8 @@ test.describe('SNIPER', () => {
 			await anAgentWalkingOntoTheSniper(page, clickOn);
 			await page.click('#next-turn');
 
-			await expect(page.locator('#last-move-1-A1')).toBeVisible();
+			// The move walked onto the sniper's own cell, so the mark already says what it took.
+			await expect(page.locator('#last-move-1-A1')).toHaveText('SNIPER KILLED');
 
 			await page.click('#snipe');
 

@@ -1,6 +1,6 @@
 import cells, { OUT_POSITION } from 'Domain/cells';
 import { areCoordsEqual, areCoordsInList, directions, getUniqueValues } from 'Domain/utils';
-import { TYPES, STATES, NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END, IDS } from 'Domain/pieces';
+import { TYPES, STATES, MOVES, NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END, IDS } from 'Domain/pieces';
 import py from 'Domain/py';
 
 const { AGENT, CEO, SPY, SNIPER } = TYPES;
@@ -1045,7 +1045,7 @@ function hasBoardChanged(pieces, otherPieces) {
 }
 
 /**
- * The move a turn made: the piece that made it, and the cell it is standing on.
+ * The move a turn made: the piece that made it, the cell it ended on, and what happened there.
  *
  * Asked of the same two boards and the same four fields as hasBoardChanged, so what counts as a
  * move here and what counts as a turn there cannot drift apart.
@@ -1059,11 +1059,13 @@ function hasBoardChanged(pieces, otherPieces) {
  * A turn that changed nothing has no move either. The server passes over a seat that has gone
  * rather than moving for it, and that is what a null means.
  *
- * @returns {{id: string, position: number[]} | null}
+ * `event` is one of MOVES, and `victim` is the piece a kill took, present only for MOVES.KILLED.
+ *
+ * @returns {{id: string, position: number[], event: string, victim?: string} | null}
  */
-function getTurnMove(pieces, prevPieces) {
+function getTurnMove({ pieces, piecesPrevState, teamControl }) {
 	const mover = pieces.find(piece => {
-		const before = getPieceById(piece.id, prevPieces);
+		const before = getPieceById(piece.id, piecesPrevState);
 
 		return (
 			!!before &&
@@ -1077,7 +1079,37 @@ function getTurnMove(pieces, prevPieces) {
 		return null;
 	}
 
-	return { id: mover.id, position: mover.position };
+	const victim = getPieceKilledAt(mover, pieces, piecesPrevState);
+
+	// A kill names what was taken rather than what took it. The killer is standing on the marked
+	// cell for anybody to read; the piece that is no longer anywhere is the news.
+	if (victim) {
+		return { id: mover.id, position: mover.position, event: MOVES.KILLED, victim: victim.id };
+	}
+
+	if (getPieceById(mover.id, piecesPrevState).position) {
+		return { id: mover.id, position: mover.position, event: MOVES.MOVED };
+	}
+
+	// Out of an HQ, and deploying a CEO is *how* a team is claimed — so which of the two this was
+	// cannot be read off the board. `controlling` is set by that very placement
+	// (teams.movePieceForControl) and says it: a CEO put down with nobody holding the team is a
+	// deployment, and one put down with a holder is the claim being completed.
+	const claimed = isCeo(mover.id) && !!teamControl && !!teamControl[Number(getTeam(mover.id))].controlling;
+
+	return { id: mover.id, position: mover.position, event: claimed ? MOVES.CLAIMED : MOVES.PLACED };
+}
+
+// The piece this move killed by landing on it. Read off the board the turn found: by now the victim
+// is in a cemetery with OUT_POSITION where its cell used to be, so the current board cannot say
+// which cell it died on. A CEO's team dies with it, elsewhere on the board — this names the CEO,
+// because that is the piece the move actually reached.
+function getPieceKilledAt(mover, pieces, prevPieces) {
+	const before = prevPieces.find(
+		piece => piece.id !== mover.id && !piece.killed && areSameCoords(piece.position, mover.position),
+	);
+
+	return before && getPieceById(before.id, pieces).killed ? before : null;
 }
 
 function isPieceBlocked(selectedPiece, pieces, position1CellAhead, position2CellsAhead) {

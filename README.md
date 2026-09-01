@@ -170,6 +170,28 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.22.0
+* **The last-move mark now says what happened, not just where.** `AGENT PLACED`, `SNIPER MOVED`,
+  `SPY KILLED` — and `TEAM CLAIMED`, because deploying a CEO is *how* a team is claimed and the
+  board cannot tell those two apart on its own. `teamControl.controlling` is set by that very
+  placement and is what says which it was
+* **A kill names what was taken, not what took it.** The killer is standing on the marked cell for
+  anybody to read; the piece that is no longer anywhere is the news. A CEO's team dies with it all
+  over the board, so the mark names the CEO — the piece the move actually reached
+* **The mark now lasts until the board changes irreversibly under it, not for the whole of the next
+  turn.** Looking is free: a selection, a hover, arming `SNIPE` and claiming a team can all be taken
+  back and all keep it — and so do revealing an alignment and accusing somebody, which cost their
+  player something real but leave every piece where the last move left it. It is told by **what a
+  click leaves behind rather than by which click it is** — the reducer re-runs the very move or
+  toggle the board is about to take and asks `hasBoardChanged`, the same reading that decides a turn
+  is a turn. So a move, a drop that points a piece somewhere new and a shot all end it, from one
+  predicate and no list of actions to keep in step with the game
+* `MOVES` joins the phases and the skin names in `domain`, because the server sends them. The pieces
+  get names in both catalogs, so the mark reads `ESPÍA ABATIDO` in Spanish — one participle serves
+  all four types, which are masculine or of common gender
+* Seventeen more specs on top of v3.21.0's, ten of them with no browser — thirty-three on the mark
+  in all
+
 ### v3.21.0
 * **The board now says what the last player did.** A `LAST MOVE` tag sits over the cell the previous
   turn's move ended on, from the moment NEXT TURN is pressed until the turn after that. Everybody

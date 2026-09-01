@@ -42,10 +42,10 @@ function fallenSniperAt(row, cell, fallenSnipers) {
 	return fallen && fallen.id;
 }
 
-// Whether this is the cell the last player's move ended on. `board.lastMove` is null before anybody
-// has moved, and while a fallen sniper is already answering for that same cell.
+// The last player's move, when this is the cell it ended on. `board.lastMove` is null before
+// anybody has moved, and while a fallen sniper is already answering for that same cell.
 function lastMoveAt(row, cell, lastMove) {
-	return lastMove && lastMove.position[0] === row && lastMove.position[1] === cell ? lastMove.id : undefined;
+	return lastMove && lastMove.position[0] === row && lastMove.position[1] === cell ? lastMove : undefined;
 }
 
 function renderRow(row, numberOfCells, board) {
@@ -273,7 +273,7 @@ function TableBoard() {
 				return box && <FallenSniper key={sniper.id} id={sniper.id} box={box} />;
 			})}
 
-			{lastMoveBox && <LastMove id={lastMoveMark.id} box={lastMoveBox} />}
+			{lastMoveBox && <LastMove move={lastMoveMark} box={lastMoveBox} />}
 		</TableBoardStyled>
 	);
 }

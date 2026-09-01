@@ -222,9 +222,24 @@ export default {
 		// the board, so the cell it stood in is what fires it.
 		fallenSniper: 'SNIPER DOWN',
 		fallenSniperNote: 'click its cell to fire',
-		// Over the cell the last player's move ended on. Everybody moves everybody's pieces, so
-		// which of 32 tokens has just changed is the one thing the board does not say by itself.
-		lastMove: 'LAST MOVE',
+		// Over the cell the last player's move ended on. Everybody moves everybody's pieces, so what
+		// has just changed is the one thing the board does not say by itself. Whole sentences rather
+		// than a verb slotted into one, because Spanish agrees its participle with the piece — and a
+		// kill names what was TAKEN, since the killer is standing on the marked cell to be read.
+		lastMovePlaced: '{piece} PLACED',
+		lastMoveMoved: '{piece} MOVED',
+		lastMoveKilled: '{piece} KILLED',
+		// Deploying a CEO is how a team is claimed, so this replaces "CEO PLACED" when it was one.
+		// The team is the news; the CEO is only the mechanism.
+		lastMoveClaimed: 'TEAM CLAIMED',
+
+		// The pieces, by type, for the mark above. Deliberately not the `TYPE_NAMES` table in
+		// tableBoard.jsx: that one is lettering on Blueprint's own drawing and stays English in
+		// both languages, the way `FIG. 1` and `SECTION A–A` do.
+		pieceAgent: 'AGENT',
+		pieceCeo: 'CEO',
+		pieceSpy: 'SPY',
+		pieceSniper: 'SNIPER',
 		accuse: 'ACCUSE',
 		reveal: 'REVEAL',
 		friendFoe: 'FRIEND & FOE',

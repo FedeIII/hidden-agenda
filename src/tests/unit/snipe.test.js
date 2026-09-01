@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { createInitialState, gameReducer } from 'Game/reducer';
 import { startGame, movePiece, togglePiece, snipe, nextTurn } from 'Game/actions';
-import { pz } from 'Domain/pieces';
+import { pz, MOVES } from 'Domain/pieces';
 import { getMover, isAnsweringTurnHolder } from 'Domain/snipeWindow';
 
 // Two things about the snipe that the board alone cannot say, and that a browser is a slow way to
@@ -206,10 +206,11 @@ test.describe('the shot inside the turn it answers', () => {
 // The board carries a mark over the cell the last player's move ended on. A shot undoes that very
 // move, so the two have to agree about whether it ever happened.
 test.describe('the mark naming the answered move', () => {
+	// The move walked onto the sniper's own cell, so what it says is that a sniper died there.
 	test('names the move the table is being offered a shot at', () => {
 		const state = play(aSniperKilledByWhatItSaw(), nextTurn());
 
-		expect(state.lastMove).toEqual({ id: '0-A1', position: [3, 3] });
+		expect(state.lastMove).toEqual({ id: '0-A1', position: [3, 3], event: MOVES.KILLED, victim: '1-N' });
 	});
 
 	test('goes with the shot, because the move it names has been undone', () => {

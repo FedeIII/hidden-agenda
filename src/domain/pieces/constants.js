@@ -29,6 +29,16 @@ export const STATES = {
 	COLLOCATION: 'collocation',
 };
 
+// What a turn did, as the mark over its cell says it. Four, because those are the four things a
+// turn can leave behind that a player arriving at the board would want named — see pz.getTurnMove.
+// In `domain` with the phases and the skins, and for the same reason: the server sends them.
+export const MOVES = {
+	PLACED: 'placed',
+	MOVED: 'moved',
+	KILLED: 'killed',
+	CLAIMED: 'claimed',
+};
+
 export const POINTS_PER_PIECE_TYPE = {
 	[AGENT]: 5,
 	[SPY]: 10,
