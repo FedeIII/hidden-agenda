@@ -5,12 +5,12 @@ import { Button, Buttons } from 'Client/components/button';
 import { Title, Subtitle } from 'Client/components/title';
 import { Alignments, AlignmentFriend, AlignmentFoe } from 'Client/components/alignments';
 import useSession from 'Hooks/useSession';
-import useT from 'Client/i18n';
+import useT, { useTParts } from 'Client/i18n';
 import { dealAlignments } from 'Domain/deal';
 import SkinPicker from 'Client/components/skinPicker';
 import LanguagePicker from 'Client/components/languagePicker';
 import LeaveGame from 'Client/components/leaveGame';
-import { AlignmentPhaseContainer } from './components';
+import { AlignmentPhaseContainer, PlayerName } from './components';
 
 // Dealt once for the whole table instead of a card at a time off a shared deck. Hot-seat only: online
 // the server deals, and sends each player nothing but their own pair.
@@ -110,11 +110,15 @@ function useAlignmentCards(start) {
 	};
 }
 
-function renderTitle(t, playerTurn) {
+function renderTitle(t, tParts, playerTurn) {
 	if (playerTurn) {
 		return (
 			<>
-				<Title>{t('alignmentPhase.onlyForEyes', { name: playerTurn })}</Title>
+				<Title>
+					{/* One flex item and not three. Title is an inline-flex row with a gap, so the
+					    pieces of a split sentence would each be spaced off the next: "FEDE 'S EYES". */}
+					<span>{tParts('alignmentPhase.onlyForEyes', { name: <PlayerName>{playerTurn}</PlayerName> })}</span>
+				</Title>
 				<Subtitle>{t('alignmentPhase.expose')}</Subtitle>
 			</>
 		);
@@ -186,6 +190,7 @@ function OnlineAlignment({ onReady }) {
 
 function HotSeatAlignment({ onReady }) {
 	const t = useT();
+	const tParts = useTParts();
 	const { cardsRevealed, revealFriend, revealFoe, playerTurn, currentFriend, currentFoe, nextTurn } =
 		useAlignmentCards(onReady);
 
@@ -193,7 +198,7 @@ function HotSeatAlignment({ onReady }) {
 
 	return (
 		<AlignmentPhaseContainer>
-			{renderTitle(t, playerTurn)}
+			{renderTitle(t, tParts, playerTurn)}
 
 			{playerTurn && (
 				<Alignments>

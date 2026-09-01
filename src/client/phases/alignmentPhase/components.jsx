@@ -21,3 +21,12 @@ export const AlignmentPhaseContainer = styled.div`
 		padding: 18px 12px;
 	}
 `;
+
+// The one word in the handover title that has to cross a table: the phone goes to whoever it names,
+// and everybody else has to look away. A step up in size and the skin's accent colour, so the name
+// is read before the sentence around it. Sized in `em` rather than px, so it keeps its step over a
+// title that drops to 13px at the narrow breakpoint.
+export const PlayerName = styled.span`
+	color: var(--ha-accent);
+	font-size: 1.25em;
+`;

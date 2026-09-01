@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { cloneElement, isValidElement, useCallback, useEffect, useSyncExternalStore } from 'react';
 import EN from './en';
 import ES from './es';
 
@@ -133,6 +133,33 @@ export function translate(lang, key, vars) {
 	return vars ? fill(text, vars) : text;
 }
 
+/**
+ * The same string, in the same language, with room for an element inside it.
+ *
+ * `t()` can only give text back, so a sentence that wants one of its placeholders typed differently
+ * from the words around it — a player's name in the accent colour — has nowhere to put the markup.
+ * This returns the sentence in pieces instead: the words between the placeholders, and whatever each
+ * placeholder was given, string or element. The catalog still holds the whole sentence, and `{name}`
+ * still goes wherever the translator put it.
+ *
+ * The split is on the template, before anything is filled in. Splitting the finished sentence would
+ * mean hunting for the name inside it, and a player called S cuts "This is only for S's eyes" into
+ * pieces in three wrong places.
+ */
+export function translateParts(lang, key, vars = {}) {
+	return translate(lang, key)
+		.split(/(\{\w+\})/)
+		.filter(piece => piece !== '')
+		.map((piece, index) => {
+			const placeholder = /^\{(\w+)\}$/.exec(piece);
+			const value = placeholder && placeholder[1] in vars ? vars[placeholder[1]] : piece;
+
+			// React asks for a key on every element in an array, and a caller writing
+			// `{ name: <PlayerName>…</PlayerName> }` should not have to know it is going into one.
+			return isValidElement(value) ? cloneElement(value, { key: index }) : value;
+		});
+}
+
 // The module-level reader, for the handful of places that need a string outside a render: a
 // `document.title`, an aria label built in a helper, a plain function shared with a component.
 export function t(key, vars) {
@@ -155,6 +182,15 @@ export function useT() {
 	const lang = useLang();
 
 	return useCallback((key, vars) => translate(lang, key, vars), [lang]);
+}
+
+// The same hook for the few sentences that have an element in the middle of them. Separate from
+// `useT` rather than a flag on it, because the two return different kinds of thing and a screen
+// should not have to read the arguments to know which one it is getting.
+export function useTParts() {
+	const lang = useLang();
+
+	return useCallback((key, vars) => translateParts(lang, key, vars), [lang]);
 }
 
 export function useSetLang() {

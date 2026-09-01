@@ -825,9 +825,14 @@ export const ActionButton = styled(Button)`
 // the bar is already three groups of controls, and this is a caption on one of them and not a
 // fourth thing to press. `font-variant-caps` rather than `text-transform`, for the reason the claim
 // message uses it — Playwright's toHaveText reads textContent, which a transform does not touch.
+//
+// It is set large and bold for a caption, because it is the only thing on a hot-seat screen that
+// says a control the whole table can press belongs to one person this turn. Read late, the shot is
+// already taken and cannot be given back.
 export const SnipeNote = styled.span`
 	font-family: var(--ha-face-data);
-	font-size: 9px;
+	font-size: 18px;
+	font-weight: bold;
 	font-variant-caps: all-small-caps;
 	letter-spacing: 0.08em;
 	color: var(--ha-ink-dim);
