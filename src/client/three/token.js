@@ -9,6 +9,7 @@ import {
 	getTokenGeometry,
 	SIZES,
 } from './assets';
+import killMove, { CHANNELS } from './killMoves';
 import { directionToAngle } from './layout';
 import { BUFF, SELECTED, SHADOW, SNIPE } from './palette';
 import { prefersReducedMotion } from './stage';
@@ -48,6 +49,27 @@ const SETTLED = 0.004;
 
 // Slower than a heartbeat. At 1.5Hz this reads as an alarm; at 0.8 it reads as an invitation.
 const SNIPE_PULSE_HZ = 0.8;
+
+// A kill is armed by the state change and played when the piece ARRIVES, so an agent's press is
+// the sound of it landing rather than something it did on the way over. This is how close counts
+// as arrived — four percent of a cell, which a one-cell move reaches in about a third of a second.
+const KILL_ARRIVED = SIZES.tokenRadius * 0.09;
+
+// And this is how long it will wait for that. A killer travels one cell and a sniper does not move
+// at all, so the wait is normally a third of a second or none — but a piece picked up on the frame
+// its kill was armed would never arrive at all, and something that reports itself as animating
+// forever stops the frame loop ever settling.
+const KILL_HOLD = 0.9;
+
+// What one unit of each channel is worth in the scene. The table in killMoves.js is deliberately
+// free of any of this: it says how far in the channel's own terms, and here is where a token
+// height, a degree and a token radius become board units.
+const KILL_SCALE = {
+	[CHANNELS.SINK]: SIZES.tokenHeight,
+	[CHANNELS.TWIST]: Math.PI / 180,
+	[CHANNELS.KICK]: SIZES.tokenRadius,
+	[CHANNELS.SWELL]: 1,
+};
 
 let shadowGeometry;
 let haloGeometry;
@@ -139,6 +161,11 @@ export default function createToken(pieceId) {
 
 	let pulsing = false;
 	let clock = 0;
+	// The kill in hand, if any: the move this piece's type makes, how far into it we are, and
+	// whether it is still waiting for the piece to finish travelling before it starts.
+	let killing = null;
+	let killClock = 0;
+	let killWaiting = false;
 	// The last thing it was told, so the hand can pick the piece up and put it down again without
 	// having to know anything else about it.
 	let told = { x: 0, z: 0 };
@@ -209,6 +236,33 @@ export default function createToken(pieceId) {
 			current.angle += Math.PI * 2 * Math.round((wanted.angle - current.angle) / (Math.PI * 2));
 		},
 
+		/**
+		 * This piece has just taken another one off the board.
+		 *
+		 * Armed rather than played: the move waits for the travel to finish, so the whole thing is
+		 * one gesture — the piece arrives on the cell and marks it — instead of two overlapping
+		 * ones. A sniper does not travel, so its recoil starts on the next frame.
+		 *
+		 * @param type the KILLER's type. The move depends on that and on nothing else.
+		 */
+		kill(type) {
+			// The same withdrawal the travel, the lift and the sniper's pulse make: a player who
+			// has asked their system for less movement gets none of this either.
+			if (prefersReducedMotion()) {
+				return;
+			}
+
+			const move = killMove(type);
+
+			if (!move) {
+				return;
+			}
+
+			killing = move;
+			killClock = 0;
+			killWaiting = true;
+		},
+
 		/** @returns true while there is still something left to draw. */
 		update(delta) {
 			clock += delta;
@@ -243,12 +297,48 @@ export default function createToken(pieceId) {
 			}
 
 			// The whole flight, in one line: the further it still has to go, the higher it is.
-			const hop = Math.min(Math.hypot(current.x - wanted.x, current.z - wanted.z) * ARC, CARRY_LIFT);
+			const left = Math.hypot(current.x - wanted.x, current.z - wanted.z);
+			const hop = Math.min(left * ARC, CARRY_LIFT);
 			const height = current.lift + hop;
 
+			// A kill in hand: hold it until the piece has all but arrived, then run it once. The
+			// wait is bounded, because a token that says it is animating and never finishes is a
+			// frame loop that never settles.
+			if (killing) {
+				killClock += delta;
+
+				if (killWaiting && (left <= KILL_ARRIVED || killClock >= KILL_HOLD)) {
+					killWaiting = false;
+					killClock = 0;
+				}
+
+				if (!killWaiting && killClock >= killing.seconds) {
+					killing = null;
+				}
+			}
+
+			// Every move is one channel and every channel rests at zero, so what is not this
+			// piece's own is simply not added. Nothing here touches group.position: that is what
+			// the flight reads to start a token from where it was last drawn, and what the tray it
+			// came out of is told. The rig is the part that lifts and turns.
+			const playing = killing && !killWaiting ? killing : null;
+			const move = playing
+				? playing.curve(killClock / playing.seconds) * playing.amount * KILL_SCALE[playing.channel]
+				: 0;
+			const channel = playing ? playing.channel : null;
+			const twist = channel === CHANNELS.TWIST ? move : 0;
+			const kick = channel === CHANNELS.KICK ? move : 0;
+
 			group.position.set(current.x, 0, current.z);
-			rig.position.y = height;
-			rig.rotation.y = current.angle;
+			// Backwards along its own bearing. The nose is local north (-z) and the yaw carries it
+			// round, so the way it is facing is (-sin, -cos) and the way it recoils is the other.
+			rig.position.set(
+				kick * Math.sin(current.angle),
+				height + (channel === CHANNELS.SINK ? move : 0),
+				kick * Math.cos(current.angle),
+			);
+			rig.rotation.y = current.angle + twist;
+			rig.scale.setScalar(1 + (channel === CHANNELS.SWELL ? move : 0));
 			chamfer.emissiveIntensity = current.glow * 0.85;
 
 			// The shadow spreads and lightens as the chip comes up, which is the cheapest possible
@@ -261,7 +351,7 @@ export default function createToken(pieceId) {
 			halo.visible = current.halo > 0.005;
 			halo.material.opacity = current.halo;
 
-			return beat || restless;
+			return beat || restless || !!killing;
 		},
 
 		dispose() {

@@ -275,9 +275,52 @@ export default function createBoardScene(element, skin) {
 	const tokens = new Map();
 	// Which cell each token is standing on, so it can ride up with a tile that rises under it.
 	const standingOn = new Map();
+	// Who is already dead, so that a kill is a TRANSITION and not a state. Without it every state
+	// change would re-announce every kill of the game so far.
+	const dead = new Set();
+	let opened = false;
 	let signature = null;
 	let carrying = null;
 	let travelling = false;
+
+	/**
+	 * Who has just killed something, from the only record of it the game keeps: the `killedById` a
+	 * corpse carries. Nothing dispatches a kill and nothing needs to — the state says who did it.
+	 *
+	 * Three things it has to get right, each of which is a real path through the rules:
+	 *
+	 * - **One shot, one move.** A dead CEO takes its team's whole undeployed half with it, and
+	 *   every one of those corpses names the same killer. That is one kill to watch, not six.
+	 * - **A piece can come back to life.** A snipe rolls the board back to before the move it
+	 *   answered, so whatever that move killed is alive again — and can be killed again later.
+	 *   Hence a set rebuilt from the state each time rather than one that only ever grows.
+	 * - **A scene opens on a game already in progress**, after a rejoin, a lost WebGL context or
+	 *   `?test=`. Every kill of that game is new to this Set and none of them is news, so the
+	 *   first pass seeds and announces nothing.
+	 */
+	function killersAmong(pieces) {
+		const killers = [];
+
+		for (const piece of pieces) {
+			if (opened && piece.killed && piece.killedById && !dead.has(piece.id)) {
+				if (!killers.includes(piece.killedById)) {
+					killers.push(piece.killedById);
+				}
+			}
+		}
+
+		dead.clear();
+
+		for (const piece of pieces) {
+			if (piece.killed) {
+				dead.add(piece.id);
+			}
+		}
+
+		opened = true;
+
+		return killers;
+	}
 
 	// A point in the page, on the plane a token's base sits on. Everything the hand does goes
 	// through this: the pointer is in the document and the piece is in the scene, and the camera is
@@ -474,7 +517,13 @@ export default function createBoardScene(element, skin) {
 				aim ? `${aim.from}>${aim.directions.join(';')}` : '',
 			].join('|');
 
-			if (next === signature) {
+			// Read before the early return, and it is what defeats it: a kill is not in the
+			// signature — the signature is what is on the board, and a kill is something that has
+			// just left it. Reading it here also makes it idempotent, so a state change that
+			// happens to repeat cannot replay a move.
+			const killers = killersAmong(pieces);
+
+			if (next === signature && !killers.length) {
 				return false;
 			}
 
@@ -588,6 +637,17 @@ export default function createBoardScene(element, skin) {
 					token.dispose();
 					tokens.delete(pieceId);
 					standingOn.delete(pieceId);
+				}
+			}
+
+			// After the cleanup, because a killer is not always a piece that was already standing
+			// here: a sniper killed by the very move it saw is brought back to life by its own
+			// shot, and its token is built by the loop above in the same pass that arms it.
+			for (const killerId of killers) {
+				const token = tokens.get(killerId);
+
+				if (token) {
+					token.kill(pz.getType(killerId));
 				}
 			}
 

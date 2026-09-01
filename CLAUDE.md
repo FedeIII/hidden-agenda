@@ -521,6 +521,7 @@ Five rules hold the arrangement together. Breaking any of them breaks the game q
 | `three/{boardScene,hqScene}.js` | The two scenes. Each exposes `layout()` (the overlay boxes) and `setState()`, which returns `false` when nothing visible changed. The board also owns the *hand* — `grab`/`carryTo`/`drop`. |
 | `three/flight.js` | The two facts a piece crossing scenes needs: where it was last seen on screen, and which piece is currently in the air. Plus the board's hand, published for the drag controller above it. |
 | `three/useThreeView.js` | Binds a scene to a ref and hands back the layout. Returns `null` when there is no renderer, which is what puts the flat board back. |
+| `three/killMoves.js` | What each piece type does at the moment it kills — the table, and nothing else. No three.js import, for the same reason `layout.js` has none: the unit project reads it. |
 
 ### Picking a piece up
 
@@ -545,8 +546,31 @@ Things not to undo:
 - The board's height comes from a `::before` spacer on `TableBoardStyled` in 3D mode, because its rows no longer have any. It only bites in the stacked phone layout; everywhere else `Board` has a height and the board is a stretched flex item. Do not turn it into a real height: the landscape phone layout has **zero** slack before the action bar falls off the bottom.
 - Rendering is fill-bound, not draw-call-bound. Two things measured: turning multisampling off when the renderer is software (a quarter off the suite's wall clock), and scissoring each view down to the rectangle its scene actually paints into, `projector.extent()` (another third off a click). Repainting views individually rather than all together was tried, saved nothing, and left trays blank.
 - **The context is created with the attributes it is meant to have, once.** A second `getContext` on a canvas returns the first context and silently discards the attributes — so the software-renderer probe lives on a throwaway canvas in `support.js`. Probing the real one is how this ran 4× multisampling on a CPU rasteriser for a while whilst the code said it did not.
-- Nothing moves at rest: the loop drops to ten polls a second when no view is animating and nothing has asked to be drawn, and stops entirely when the last view goes. `prefers-reduced-motion` removes the travel, the lift and the sniper's pulse, because continuous motion is something this layer introduced and the flat renderer never had.
+- Nothing moves at rest: the loop drops to ten polls a second when no view is animating and nothing has asked to be drawn, and stops entirely when the last view goes. `prefers-reduced-motion` removes the travel, the lift, the sniper's pulse and the kill moves below, because continuous motion is something this layer introduced and the flat renderer never had.
 - The HQ store takes everything its card has left, and that is roughly twice what it had: **who holds a team and the control that claims it are one line at the foot of the card now, rather than a full-width button across the top of the rack**, and what reserved that button's room was 53px of margin on the store (26px on a phone). A socket projects from the store's box, so the box is how big a target a thumb has — which is why the tray gets the space rather than a smaller one being centred in it. On a phone held sideways it went from about 34px tall to roughly 60, and a socket from 13×8 pixels to something a thumb can mean. The line's own height is fixed and identical in all three directions for the same reason.
+
+### Four kills, four moves
+
+A kill used to be the quietest thing on the table: the victim's token stopped existing and the killer stood on the cell as if it had walked onto an empty one. Each type now marks it in a way of its own — `three/killMoves.js` is the table, `token.js#kill` plays it, and `boardScene.js#killersAmong` decides when.
+
+| | Channel | What it does | Time |
+| --- | --- | --- | --- |
+| Agent | height | presses down into the tile and rebounds about half as far | 0.34s |
+| Spy | yaw | slips nine degrees off its bearing and comes back to it | 0.44s |
+| Sniper | ground plane | recoils hard back along its own line, then settles forward | 0.40s |
+| CEO | scale | swells four and a half percent and slowly returns | 0.62s |
+
+Five things hold it together:
+
+- **The move is a function of the killer's TYPE and of nothing else** — not the victim, not the distance, not whose turn it is. That is what makes it worth learning: four moves seen once, and afterwards a player knows which piece fired without looking away from where they were already looking.
+- **One channel each, and that is why four moves this small stay tellable apart.** Height, yaw, ground plane and size are four different things to see. Four variations on one channel would be four amounts of the same move, which at these amplitudes is no distinction at all.
+- **Every curve starts and ends at exactly zero**, because what it returns is *added* to the token's rest pose. A curve that ends anywhere else leaves that piece pressed into the board, turned off its bearing or the wrong size for the rest of the game, and every later kill compounds it. `unit/killMoves.test.js` asserts that, the subtlety ceiling per channel, and that no two types share a channel.
+- **Only the rig moves, never `group.position`.** The group is what `screenOf` projects to tell `flight.js` where a piece was last drawn, so a recoil written there would quietly become the point a later drag flies from. It is the same rule as the overlay boxes, one level down.
+- **The move is armed by the state change and played on arrival.** A killer usually has a cell to travel first, and a press that lands while the piece is still in the air is two gestures rather than one — so `token.kill` waits until the travel is all but done. The wait is bounded (`KILL_HOLD`): a token that reports itself as animating and never finishes is a frame loop that never settles.
+
+`killersAmong` reads the kills off `killedById`, which is the only record the game keeps, and three paths through the rules decide its shape. A dead CEO takes its team's undeployed pieces with it and every one of those corpses names the same killer — one move, not six. A snipe rolls the board back, so a piece can come back to life and be killed again later, which is why the set of the dead is rebuilt from the state each pass rather than only ever grown. And a scene can open on a game already in progress — a rejoin, a lost WebGL context, `?test=` — where every kill is new to that Set and none of them is news, so the first pass seeds and announces nothing.
+
+**This is 3D only, and deliberately.** Under `?flat` or with no WebGL a kill looks exactly as it always did. Motion is the vocabulary this layer introduced; the flat renderer animates for 200ms at a time and its piece carries the facing in a `transform` that `helpers/get.js` reads back as a matrix, so a move written there would be read as a bearing.
 
 ### Path aliases
 

@@ -170,6 +170,36 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.18.0
+* **Each piece marks its own kills now.** A kill was the quietest thing on the table: the victim's
+  token stopped existing and the killer stood on the cell as if it had walked onto an empty one.
+  Four moves, one per type, and the move is a function of the KILLER's type and of nothing else —
+  not the victim, not the distance, not whose turn it is. An agent presses down into the tile and
+  rebounds about half as far; a spy slips nine degrees off its bearing and comes back to it; a
+  sniper recoils hard along its own line and settles forward; a CEO swells four and a half percent
+  and slowly returns
+* **One channel each** — height, yaw, ground plane, size — which is the whole of why four moves this
+  small stay tellable apart. Four variations on one channel would be four amounts of the same move,
+  and at these amplitudes that is no distinction at all. Nothing here moves more than about seven
+  pixels at the table's usual size
+* Armed by the state change and played on **arrival**, so an agent's press lands with the piece
+  rather than happening on the way over. A sniper does not travel, so its recoil is immediate. The
+  wait is bounded: a token that reports itself as animating and never finishes would stop the frame
+  loop ever settling
+* Read off `killedById`, the only record the game keeps, which decides the shape of all of it. A
+  dead CEO's whole undeployed team names the same killer, so that is one move and not six; a snipe's
+  rollback can bring a piece back to be killed again later, so the set of the dead is rebuilt from
+  the state rather than only ever grown; and a board opening on a game in progress — a rejoin, a
+  lost WebGL context, `?test=` — seeds silently instead of replaying every kill so far
+* Only the rig moves, never the token's group: the group is what the flight reads to start a piece
+  from where it was last drawn, so a recoil written there would quietly become the point a later
+  drag flies from. The invisible box a click lands on does not move at all, as before
+* 3D only, like the travel and the lift before it. `prefers-reduced-motion` removes it, and under
+  `?flat` a kill looks exactly as it always did
+* Four new specs with no browser, on the two properties that would break the board quietly: a curve
+  that does not come back to rest leaves that piece pressed, turned or resized for the rest of the
+  game, and a move that stops being subtle stops being the feature
+
 ### v3.17.0
 * **A sniper killed by the very move it saw can be fired at last.** The mover walks its line and ends
   the walk on its cell, so the shot was owed to a piece already in the cemetery: `SNIPE!` lit a token
