@@ -1,5 +1,5 @@
 import useT from 'Client/i18n';
-import { FallenSniperMark, FallenSniperTag } from './components';
+import { FallenSniperMark, HexTag } from './components';
 
 /**
  * The cell a sniper that is no longer on the board is fired from.
@@ -19,10 +19,10 @@ function FallenSniper({ id, box }) {
 
 	return (
 		<FallenSniperMark id={`snipe-fallen-${id}`} style={box} aria-hidden="true">
-			<FallenSniperTag>
+			<HexTag>
 				{t('play.fallenSniper')}
 				<i>{t('play.fallenSniperNote')}</i>
-			</FallenSniperTag>
+			</HexTag>
 		</FallenSniperMark>
 	);
 }

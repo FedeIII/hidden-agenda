@@ -170,6 +170,25 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.21.0
+* **The board now says what the last player did.** A `LAST MOVE` tag sits over the cell the previous
+  turn's move ended on, from the moment NEXT TURN is pressed until the turn after that. Everybody
+  moves everybody's pieces here, so a player being handed the turn was looking at thirty-two tokens,
+  one of which had changed, with nothing on screen naming it — and asking the table out loud is
+  exactly the information this game is played without
+* It is the fallen sniper's label in the same hand: the skin's accent, the arrow into the cell,
+  `pointer-events: none` so the cell underneath stays an ordinary one to click. No ring, because
+  this one is a caption and not a control
+* **The two marks want the same cell, and not by accident** — a sniper is fallen because the move
+  that killed it ended where it stood — so the last-move mark stands aside for it while a shot is
+  armed, and comes back if the table stands down
+* A `lastMove` slice holds `{ id, position }`. `pz.getTurnMove` reads the ending turn against
+  `piecesPrevState` on the same four fields as `hasBoardChanged`, and picks the piece **alive on
+  both boards and not where it was** — which is what tells a mover from the pieces its kills took
+  off the table, and from a sniper a shot has brought back. A shot clears it with the move it undoes,
+  and a turn passed for a seat that has gone wipes it rather than leaving one two turns old
+* Sixteen new specs, eleven of them with no browser
+
 ### v3.20.0
 * **The agent and the spy now CARRY the piece: the gesture is the arrival.** v3.19.0 ran the
   gesture after the piece had got there, so an agent crossed the cell at walking pace and then

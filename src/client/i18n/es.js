@@ -192,6 +192,7 @@ export default {
 		snipeNot: 'cualquiera menos {name}',
 		fallenSniper: 'FRANCOTIRADOR ABATIDO',
 		fallenSniperNote: 'pulsa su casilla para disparar',
+		lastMove: 'ÚLTIMO MOVIMIENTO',
 		accuse: 'ACUSAR',
 		reveal: 'REVELAR',
 		friendFoe: 'AMIGO Y ENEMIGO',

@@ -222,6 +222,9 @@ export default {
 		// the board, so the cell it stood in is what fires it.
 		fallenSniper: 'SNIPER DOWN',
 		fallenSniperNote: 'click its cell to fire',
+		// Over the cell the last player's move ended on. Everybody moves everybody's pieces, so
+		// which of 32 tokens has just changed is the one thing the board does not say by itself.
+		lastMove: 'LAST MOVE',
 		accuse: 'ACCUSE',
 		reveal: 'REVEAL',
 		friendFoe: 'FRIEND & FOE',

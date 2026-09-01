@@ -7,6 +7,7 @@ import useCellAction from 'Hooks/useCellAction';
 import { useDragController } from 'Client/drag';
 import Piece from '../piece/index';
 import FallenSniper from '../fallenSniper';
+import LastMove from '../lastMove';
 
 import HexagonStyled from './styled';
 
@@ -22,7 +23,7 @@ import HexagonStyled from './styled';
 // its own hit target and clicking there would reach the row behind it.
 const TOKEN_BOX = { left: '6%', top: '-6%', width: '88%', height: '96%' };
 
-function Hexagon({ row, cell, piece, highlighted, preview, edge, aim, box, onHover, fallenSniper }) {
+function Hexagon({ row, cell, piece, highlighted, preview, edge, aim, box, onHover, fallenSniper, lastMove }) {
 	const [_state, dispatch] = useContext(StateContext);
 	const cellAction = useCellAction();
 	const { isClickSuppressed } = useDragController();
@@ -78,9 +79,11 @@ function Hexagon({ row, cell, piece, highlighted, preview, edge, aim, box, onHov
 		>
 			{piece && <Piece {...piece} box={box && TOKEN_BOX} />}
 
-			{/* Only on the flat board. Projected, this hexagon is opacity: 0 and would take the mark
-			    down with it, so TableBoard lays it on the board instead. */}
+			{/* Only on the flat board. Projected, this hexagon is opacity: 0 and would take a mark
+			    down with it, so TableBoard lays both on the board instead. */}
 			{fallenSniper && !box && <FallenSniper id={fallenSniper} />}
+
+			{lastMove && !box && <LastMove id={lastMove} />}
 		</HexagonStyled>
 	);
 }

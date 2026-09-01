@@ -1099,6 +1099,34 @@ function hasBoardChanged(pieces, otherPieces) {
 		return !other || !piece.killed !== !other.killed || !areSameCoords(piece.position, other.position) || !areSameCoords(piece.direction, other.direction);
 	});
 }
+/**
+* The move a turn made: the piece that made it, and the cell it is standing on.
+*
+* Asked of the same two boards and the same four fields as hasBoardChanged, so what counts as a
+* move here and what counts as a turn there cannot drift apart.
+*
+* A turn moves one piece. Everything else the two boards disagree about is a consequence of that
+* move rather than a second one: the pieces it killed, and — once a shot has answered it — the mover
+* going to the cemetery and whatever it killed on the way coming back. So the mover is the piece
+* that is alive on both boards and is not where it was, which leaves an answered move with no mover
+* at all. That is the right answer: the move was undone, and there is nothing left to point at.
+*
+* A turn that changed nothing has no move either. The server passes over a seat that has gone
+* rather than moving for it, and that is what a null means.
+*
+* @returns {{id: string, position: number[]} | null}
+*/
+function getTurnMove(pieces, prevPieces) {
+	const mover = pieces.find((piece) => {
+		const before = getPieceById(piece.id, prevPieces);
+		return !!before && !piece.killed && !before.killed && (!areSameCoords(piece.position, before.position) || !areSameCoords(piece.direction, before.direction));
+	});
+	if (!mover || !cells_default.inBoard(mover.position)) return null;
+	return {
+		id: mover.id,
+		position: mover.position
+	};
+}
 function isPieceBlocked(selectedPiece, pieces, position1CellAhead, position2CellsAhead) {
 	return pieces.filter((piece) => isPieceAtPosition(piece, position1CellAhead) || isFriendlyAtPosition(piece, position2CellsAhead, selectedPiece)).length !== 0;
 }
@@ -1242,6 +1270,7 @@ var pz = {
 	isSniper,
 	isSniperOnBoard,
 	hasBoardChanged,
+	getTurnMove,
 	getKilledCeoCount,
 	hasGameFinished,
 	isTogglePieceOnCellClick,
@@ -2000,6 +2029,30 @@ function piecesPrevStateReducer(state, action) {
 	}
 }
 //#endregion
+//#region src/game/reducers/lastMoveReducer.js
+/**
+* What the last player did, left on the board for the rest of the table to read.
+*
+* `null` when there is nothing to say. Otherwise `{ id, position }` — the piece that moved and the
+* cell its move ended on.
+*
+* Everybody moves everybody's pieces here, so which piece just moved is the one thing a player
+* arriving at their turn cannot work out from the board in front of them: 32 tokens changed by one,
+* and nothing on screen says which. It is written when a turn is handed on and replaced when the
+* next one is, because that is the whole of what it claims — the move the table has just been shown.
+*
+* Deliberately not cleared by the new player's own move. The mark answers "what did the last player
+* do", and that question is worth asking right up to the moment you commit your own answer to it.
+*/
+function lastMoveReducer(state, action) {
+	switch (action.type) {
+		case START_GAME: return null;
+		case NEXT_TURN: return pz.getTurnMove(state.pieces, state.piecesPrevState);
+		case TOGGLE_PIECE: return pz.isSnipeShot(state, action.payload.pieceId) ? null : state.lastMove;
+		default: return state.lastMove;
+	}
+}
+//#endregion
 //#region src/game/reducers/teamControlReducer.js
 function teamControlReducer(state, action) {
 	switch (action.type) {
@@ -2023,6 +2076,7 @@ var reducers = {
 	snipe: snipeReducer,
 	snipeWindow: snipeWindowReducer,
 	piecesPrevState: piecesPrevStateReducer,
+	lastMove: lastMoveReducer,
 	teamControl: teamControlReducer
 };
 function reduceSlices(state, action) {
@@ -2041,6 +2095,7 @@ function createInitialState() {
 		snipe: false,
 		snipeWindow: null,
 		piecesPrevState: pz.init(),
+		lastMove: null,
 		teamControl: teams_default.initControl()
 	};
 }

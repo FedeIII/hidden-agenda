@@ -609,6 +609,27 @@ test.describe('SNIPER', () => {
 			expect(await get.cementery(0).agent).toEqual('x 1');
 		});
 
+		// The two marks want the same cell, and not by accident: a sniper is fallen because the move
+		// that killed it ended where it stood, which is the very cell the last move is marked on.
+		// One tag to a cell, and the one that is also a control keeps it.
+		test('takes the last-move mark off that cell while the shot is armed', async ({ page, clickOn }) => {
+			await anAgentWalkingOntoTheSniper(page, clickOn);
+			await page.click('#next-turn');
+
+			await expect(page.locator('#last-move-1-A1')).toBeVisible();
+
+			await page.click('#snipe');
+
+			await expect(page.locator('#snipe-fallen-0-N')).toBeVisible();
+			await expect(page.locator('#last-move-1-A1')).toHaveCount(0);
+
+			// Standing down gives the cell back to the mark that was on it.
+			await page.click('#snipe');
+
+			await expect(page.locator('#snipe-fallen-0-N')).toHaveCount(0);
+			await expect(page.locator('#last-move-1-A1')).toBeVisible();
+		});
+
 		test('and answering costs the next player nothing: the turn is still theirs to spend', async ({
 			page,
 			clickOn,

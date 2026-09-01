@@ -10,6 +10,7 @@ import followMouse from './reducers/followMouseReducer';
 import snipe from './reducers/snipeReducer';
 import snipeWindow from './reducers/snipeWindowReducer';
 import piecesPrevState from './reducers/piecesPrevStateReducer';
+import lastMove from './reducers/lastMoveReducer';
 import teamControl from './reducers/teamControlReducer';
 
 // This module is the game core: no React, no browser globals, no side effects at import time.
@@ -25,6 +26,7 @@ const reducers = {
 	snipe,
 	snipeWindow,
 	piecesPrevState,
+	lastMove,
 	teamControl,
 };
 
@@ -52,6 +54,8 @@ export function createInitialState() {
 		// No shot on the table. See Domain/snipeWindow for what it holds when there is one.
 		snipeWindow: null,
 		piecesPrevState: pz.init(),
+		// Nobody has moved yet. See reducers/lastMoveReducer for what it holds once somebody has.
+		lastMove: null,
 		teamControl: teams.initControl(),
 	};
 }

@@ -72,6 +72,9 @@ export function seedState({ players = ['YOU'], alignments = {}, board = {} } = {
 		// against this, so it has to carry all 32 ids — and it has to be *this* board, or the first
 		// exercise move would look to the game like something the previous turn had already done.
 		piecesPrevState: [...pieces],
+		// Nobody has moved yet, so there is no last move to mark. The lessons that press NEXT TURN
+		// earn one the way a game does, off the move they have just played.
+		lastMove: null,
 		// Derived rather than left at the initial `true`, exactly as every writer in `teams.js` does
 		// it: a team whose CEO is standing on the board cannot be claimed by anybody, and an HQ card
 		// offering a CLAIM the rules refuse is a lesson in the wrong thing.

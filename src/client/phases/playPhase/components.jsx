@@ -841,16 +841,20 @@ export const SnipeNote = styled.span`
 	line-height: 1.15;
 `;
 
-/* ── The cell a fallen sniper is fired from ─────────────────────────────────────────────────
- * A sniper killed by the very move it saw is lit for a shot with no token left on the board, so
- * the cell it stood in answers for it. Nothing on the board says that on its own, hence a ring, a
- * label and an arrow tying the two together — shown only while the snipe is armed.
+/* ── Marks laid over one cell ───────────────────────────────────────────────────────────────
+ * Two cells are worth saying something about, and they say it the same way: a tag over the cell
+ * with an arrow into it. One is the cell a fallen sniper is fired from — a sniper killed by the
+ * very move it saw is lit for a shot with no token left on the board, so the cell it stood in
+ * answers for it, and it wears a ring as well because that cell is a control. The other is where
+ * the last player's move ended, which is a caption and nothing more.
  *
- * Two rules, both borrowed from the training coach marks for the same reasons. It never takes a
- * pointer event: the cell underneath IS the control, and an absolutely positioned box over one
- * would quietly eat the click it is advertising. And it is drawn in the skin's accent — the SNIPE
- * button's own colour — rather than in any of the board's feedback colours: red on a cell means
- * "you may go here", and teal and gold mean "and later".
+ * Three rules, the first two borrowed from the training coach marks for the same reasons. A mark
+ * never takes a pointer event: the cell underneath IS the control, and an absolutely positioned box
+ * over one would quietly eat the click it is advertising. It is drawn in the skin's accent rather
+ * than in any of the board's feedback colours — red on a cell means "you may go here", and teal and
+ * gold mean "and later". And every offset is a proportion of the cell, so one mark works both ways
+ * the board is drawn: flat, as a child of its hexagon, and projected, laid on the board at the box
+ * the renderer gave that cell.
  * ------------------------------------------------------------------------------------------- */
 
 const sniperSeek = keyframes`
@@ -862,7 +866,7 @@ const sniperSeek = keyframes`
 // Laid over one cell. Flat, it is a child of that hexagon and fills it; in 3D the projected box
 // arrives through the `style` prop, which is why all four offsets are here rather than an `inset`
 // the inline width and height would then be over-constraining.
-export const FallenSniperMark = styled.div`
+export const HexMark = styled.div`
 	position: absolute;
 	left: 0;
 	top: 0;
@@ -870,7 +874,11 @@ export const FallenSniperMark = styled.div`
 	height: 100%;
 	pointer-events: none;
 	z-index: 4;
+`;
 
+// The fallen sniper's own addition: a ring round the cell, because that cell is a thing to click
+// and the label alone does not say where.
+export const FallenSniperMark = styled(HexMark)`
 	&::before {
 		content: '';
 		position: absolute;
@@ -897,10 +905,10 @@ export const FallenSniperMark = styled.div`
 	}
 `;
 
-// The label, and the arrow that ties it to the cell. Above the cell rather than on it: what it
-// points at has a piece standing on it — the one that did the killing — and a label laid over that
-// hides both the ring and the piece the shot is about.
-export const FallenSniperTag = styled.b`
+// The label, and the arrow that ties it to the cell. Above the cell rather than on it: what either
+// mark points at has a piece standing on it — the one that did the killing, or the one that has just
+// moved — and a label laid over that hides the piece it is about.
+export const HexTag = styled.b`
 	position: absolute;
 	left: 50%;
 	bottom: 100%;

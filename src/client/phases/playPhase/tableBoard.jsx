@@ -1,6 +1,6 @@
 import { useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { pz } from 'Domain/pieces';
-import { areCoordsInList } from 'Domain/utils';
+import { areCoordsEqual, areCoordsInList } from 'Domain/utils';
 import { CELLS_BY_ROW, ROW_NUMBERS } from 'Domain/cells';
 import { StateContext } from 'State';
 import createBoardScene from 'Client/three/boardScene';
@@ -9,6 +9,7 @@ import useThreeView from 'Client/three/useThreeView';
 import { TableBoardStyled, BoardRow, BoardMarks, Tick, Dimension, Callout } from './components';
 import Hexagon from './hexagon';
 import FallenSniper from './fallenSniper';
+import LastMove from './lastMove';
 
 // One cell either side of every row, plus a row above and below the board, so a piece on the
 // border can still be pointed outwards.
@@ -41,6 +42,12 @@ function fallenSniperAt(row, cell, fallenSnipers) {
 	return fallen && fallen.id;
 }
 
+// Whether this is the cell the last player's move ended on. `board.lastMove` is null before anybody
+// has moved, and while a fallen sniper is already answering for that same cell.
+function lastMoveAt(row, cell, lastMove) {
+	return lastMove && lastMove.position[0] === row && lastMove.position[1] === cell ? lastMove.id : undefined;
+}
+
 function renderRow(row, numberOfCells, board) {
 	const hexagons = [];
 
@@ -55,6 +62,7 @@ function renderRow(row, numberOfCells, board) {
 				highlighted={areCoordsInList([row, cell], board.highlightedPositions)}
 				preview={previewLevel([row, cell], board.previewPositions)}
 				fallenSniper={fallenSniperAt(row, cell, board.fallenSnipers)}
+				lastMove={lastMoveAt(row, cell, board.lastMove)}
 				aim={board.aim}
 				onHover={board.onHover}
 				// Where the renderer put this cell's tile, in pixels across and down the board.
@@ -160,7 +168,7 @@ function BoardCoordinates({ layout, selected }) {
 }
 
 function TableBoard() {
-	const [{ pieces, pieceState, snipe, snipeWindow }] = useContext(StateContext);
+	const [{ pieces, pieceState, snipe, snipeWindow, lastMove }] = useContext(StateContext);
 	const boardRef = useRef(null);
 	const skin = useSkin();
 
@@ -190,6 +198,16 @@ function TableBoard() {
 	const fallenSnipers = useMemo(
 		() => (snipe && snipeWindow ? pz.getFallenSnipers(pieces, snipeWindow.pieces) : []),
 		[snipe, snipeWindow, pieces],
+	);
+
+	// Where the last player's move ended, unless a fallen sniper is already answering for that cell.
+	// That collision is not a rare one but the usual one: a sniper is fallen because the move that
+	// killed it ended on its cell, which is the very cell this would mark. One tag to a cell, and
+	// the one that is also a control keeps it.
+	const lastMoveMark = useMemo(
+		() =>
+			lastMove && !fallenSnipers.some(sniper => areCoordsEqual(sniper.position, lastMove.position)) ? lastMove : null,
+		[lastMove, fallenSnipers],
 	);
 
 	// Pointing is only offered once the selected piece has nowhere left to move, which is what
@@ -226,10 +244,14 @@ function TableBoard() {
 		highlightedPositions,
 		previewPositions,
 		fallenSnipers,
+		lastMove: lastMoveMark,
 		layout,
 		aim,
 		onHover: layout ? onHover : undefined,
 	};
+
+	// Same two paths as a fallen sniper's mark, and the same box: exactly one of them draws.
+	const lastMoveBox = lastMoveMark && layout && layout[`${lastMoveMark.position[0]}-${lastMoveMark.position[1]}`];
 
 	return (
 		<TableBoardStyled id="board" ref={boardRef} dimensional={!!layout} onMouseLeave={onLeave}>
@@ -250,6 +272,8 @@ function TableBoard() {
 
 				return box && <FallenSniper key={sniper.id} id={sniper.id} box={box} />;
 			})}
+
+			{lastMoveBox && <LastMove id={lastMoveMark.id} box={lastMoveBox} />}
 		</TableBoardStyled>
 	);
 }

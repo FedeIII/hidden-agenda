@@ -202,3 +202,28 @@ test.describe('the shot inside the turn it answers', () => {
 		expect(getMover(state)).toEqual('ANA');
 	});
 });
+
+// The board carries a mark over the cell the last player's move ended on. A shot undoes that very
+// move, so the two have to agree about whether it ever happened.
+test.describe('the mark naming the answered move', () => {
+	test('names the move the table is being offered a shot at', () => {
+		const state = play(aSniperKilledByWhatItSaw(), nextTurn());
+
+		expect(state.lastMove).toEqual({ id: '0-A1', position: [3, 3] });
+	});
+
+	test('goes with the shot, because the move it names has been undone', () => {
+		const state = play(aSniperKilledByWhatItSaw(), nextTurn(), snipe(), togglePiece('1-N'));
+
+		expect(pieceOf(state, '0-A1').killed).toBe(true);
+		expect(state.lastMove).toBe(null);
+	});
+
+	// The shot taken inside the mover's own turn spends it, so the next NEXT_TURN comes straight
+	// after — and has to find no move to mark rather than the one that was just rolled back.
+	test('is not written by the turn a shot has already spent', () => {
+		const state = play(aSniperKilledByWhatItSaw(), snipe(), togglePiece('1-N'), nextTurn());
+
+		expect(state.lastMove).toBe(null);
+	});
+});
