@@ -170,6 +170,37 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.19.0
+* **The kill gestures are gestures now, and the dead are carried off rather than deleted.** v3.18.0
+  gave each type a few pixels in a channel of its own, which was correct and invisible. An agent
+  now **charges** on past the cell's centre with a long thin point driven out of its nose; a spy
+  **settles, holds still for a sixth of a second, and then goes across in one stroke**, laying a
+  blade over the cell; a sniper is **thrown backward** off a muzzle flash that is gone in a tenth
+  of a second
+* **A killed piece is carried to the HQ of whoever killed it**, which is the deploy run backwards
+  and reuses every part of it: the tray publishes its own centre, the board turns that back into a
+  point on its own plane, and the corpse lofts across the table on the same arc a piece coming the
+  other way uses. It keeps its size for the first half of the journey and is gone by the end. It
+  lands where the game already puts it — `getKilledPiecesByTeam` tallies a kill under the killer's
+  team, so the corpse arrives where its own tally is about to increment
+* **The corpse leaves when the blow lands, not when the state changes.** Each gesture says at what
+  fraction of itself it strikes; the board hangs the release on that. A corpse that left on the
+  state change would already be gone by the time the agent arrived to run it through, which is the
+  whole of what makes a charge read as a charge
+* The marks are drawn additively — light falling on the board rather than a shape painted over it,
+  which is what makes one work on the palest tile and the darkest alike. Near-white on purpose: red
+  means *you may go here now*, teal and gold are a spy's later steps, blue is where a piece may be
+  pointed. Those are all claims about what a player MAY do; a kill has already happened
+* **A CEO cannot kill**, so its gesture has never been seen in a game and this release does not
+  pretend otherwise. `getCeoPositions` builds destinations with `getFreeCells`, which never
+  includes the occupied cell it stops at — the roadmap has listed the capture mechanic for the
+  agent, the spy and the sniper only, all along. The row is kept so the table is total over the
+  four types and so there is nothing to add the day that changes
+* Three more specs with no browser: that no two types share a channel or a mark, that a mark never
+  outlasts the gesture carrying it, and that the blow lands strictly inside that gesture — the
+  board hangs a corpse's release on that last one, so a strike at 0 or 1 would either fire before
+  anything moved or never let the piece go
+
 ### v3.18.0
 * **Each piece marks its own kills now.** A kill was the quietest thing on the table: the victim's
   token stopped existing and the killer stood on the cell as if it had walked onto an empty one.

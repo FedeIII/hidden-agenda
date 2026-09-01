@@ -20,6 +20,29 @@ export function lastScreenPosition(pieceId) {
 }
 
 /**
+ * WHERE EACH TEAM'S HQ IS
+ *
+ * The same problem as above, in the other direction. A piece that has just been killed is carried
+ * off to the HQ of whoever killed it, and the board draws that journey too — so it has to know
+ * where a tray it cannot see is on the page. Each tray writes its own centre; the board reads it,
+ * turns it back into a point on its own plane, and flies the corpse there.
+ *
+ * A team with no tray on screen simply has no entry, and the board lets the corpse go where it
+ * stands instead. Nothing here can be missing in a way that breaks anything.
+ */
+
+const headquarters = new Map();
+
+/** In viewport pixels: the centre of this team's rack. */
+export function noteHqPosition(team, x, y) {
+	headquarters.set(`${team}`, { x, y });
+}
+
+export function hqPosition(team) {
+	return headquarters.get(`${team}`);
+}
+
+/**
  * DRAGGING
  */
 

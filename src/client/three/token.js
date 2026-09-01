@@ -1,4 +1,4 @@
-import { Color, Group, Mesh, MeshBasicMaterial, PlaneGeometry, MathUtils } from 'three';
+import { AdditiveBlending, Color, Group, Mesh, MeshBasicMaterial, PlaneGeometry, MathUtils } from 'three';
 import { pz } from 'Domain/pieces';
 import {
 	createTokenMaterials,
@@ -9,9 +9,9 @@ import {
 	getTokenGeometry,
 	SIZES,
 } from './assets';
-import killMove, { CHANNELS } from './killMoves';
+import killMove, { CHANNELS, EFFECTS, sparkCurve } from './killMoves';
 import { directionToAngle } from './layout';
-import { BUFF, SELECTED, SHADOW, SNIPE } from './palette';
+import { BUFF, KILL, SELECTED, SHADOW, SNIPE } from './palette';
 import { prefersReducedMotion } from './stage';
 
 // One piece, in 3D: a chip with a collar, a nose, a contact shadow, and the halo that says a CEO
@@ -63,16 +63,31 @@ const KILL_HOLD = 0.9;
 
 // What one unit of each channel is worth in the scene. The table in killMoves.js is deliberately
 // free of any of this: it says how far in the channel's own terms, and here is where a token
-// height, a degree and a token radius become board units.
+// radius becomes board units.
 const KILL_SCALE = {
-	[CHANNELS.SINK]: SIZES.tokenHeight,
-	[CHANNELS.TWIST]: Math.PI / 180,
+	[CHANNELS.LUNGE]: SIZES.tokenRadius,
+	[CHANNELS.SWEEP]: SIZES.tokenRadius,
 	[CHANNELS.KICK]: SIZES.tokenRadius,
 	[CHANNELS.SWELL]: 1,
 };
 
+// The mark rides just clear of the chip's top face and is drawn last with no depth test, so a
+// sliver laid across a cell passes over the piece it is cutting instead of being buried in it.
+// For a fifth of a second, on top of everything, is what an effect is for.
+const SPARK_HEIGHT = SIZES.tokenHeight * 1.04;
+
+// How long a corpse takes to be carried off the board to the HQ of whoever killed it. Long enough
+// to follow across the table, short enough that the next player is not waiting on it.
+export const EXIT_SECONDS = 0.55;
+
+// A corpse keeps its size for the first half of the journey and then goes, rather than shrinking
+// evenly from the moment it dies: a piece that starts shrinking at once reads as a mistake in the
+// renderer, where one that is carried and then filed away reads as what it is.
+const EXIT_SHRINK = 2.2;
+
 let shadowGeometry;
 let haloGeometry;
+let sparkGeometry;
 
 function getShadowGeometry() {
 	if (!shadowGeometry) {
@@ -92,6 +107,17 @@ function getHaloGeometry() {
 	return haloGeometry;
 }
 
+// A UNIT plane, laid flat, so one shape can be a long thin point, a wide thin blade or a small
+// round flash — the effect scales it. One quad per token, hidden until something happens.
+function getSparkGeometry() {
+	if (!sparkGeometry) {
+		sparkGeometry = new PlaneGeometry(1, 1);
+		sparkGeometry.rotateX(-Math.PI / 2);
+	}
+
+	return sparkGeometry;
+}
+
 function approach(from, to, rate, delta) {
 	if (prefersReducedMotion()) {
 		return to;
@@ -102,6 +128,14 @@ function approach(from, to, rate, delta) {
 
 const selectedGlow = new Color(SELECTED);
 const snipeGlow = new Color(SNIPE);
+
+// Parsed once. A Color built from a string every frame is a string parsed every frame, for four
+// values that never change.
+const sparkColours = {
+	[EFFECTS.PIERCE]: new Color(KILL.pierce),
+	[EFFECTS.SLASH]: new Color(KILL.slash),
+	[EFFECTS.FLASH]: new Color(KILL.flash),
+};
 
 export default function createToken(pieceId) {
 	const { face, chamfer, wall } = createTokenMaterials(pieceId);
@@ -156,6 +190,26 @@ export default function createToken(pieceId) {
 	halo.visible = false;
 	group.add(halo);
 
+	// The mark a kill leaves. Additive rather than blended, so it is light falling on the board
+	// instead of a shape painted over it — which is the difference between a flash and a sticker,
+	// and is why it works on the palest tile and the darkest without being told which it is on.
+	// A child of the rig, so a point driven out of the nose travels with the nose.
+	const spark = new Mesh(
+		getSparkGeometry(),
+		new MeshBasicMaterial({
+			map: getFadeTexture(),
+			color: new Color(KILL.pierce),
+			transparent: true,
+			blending: AdditiveBlending,
+			depthWrite: false,
+			depthTest: false,
+			opacity: 0,
+		}),
+	);
+	spark.renderOrder = 6;
+	spark.visible = false;
+	rig.add(spark);
+
 	const current = { lift: 0, glow: 0, halo: 0, angle: 0, x: 0, z: 0, placed: false };
 	const wanted = { lift: 0, glow: 0, halo: 0, angle: 0, x: 0, z: 0 };
 
@@ -166,9 +220,38 @@ export default function createToken(pieceId) {
 	let killing = null;
 	let killClock = 0;
 	let killWaiting = false;
+	// Called once, at the instant the blow lands. The board uses it to let the corpse go.
+	let onStrike = null;
+	// This piece is dead and being carried off. Counted separately from everything above, because
+	// a corpse is still a token that has to be drawn while it leaves.
+	let exit = null;
 	// The last thing it was told, so the hand can pick the piece up and put it down again without
 	// having to know anything else about it.
 	let told = { x: 0, z: 0 };
+
+	/**
+	 * The mark, sized and placed for the kind of blow it is.
+	 *
+	 * One unit quad does all of it: a long thin point driven out of the nose, a wide thin blade
+	 * laid across the cell, a small hot blob off the muzzle. The CEO's bloom draws nothing here —
+	 * it is light on the piece's own rim and nothing else — which is why it is in the same table
+	 * rather than a special case somewhere else.
+	 */
+	function drawSpark(effect, burning) {
+		if (!effect || burning <= 0 || !sparkColours[effect.kind]) {
+			spark.visible = false;
+
+			return;
+		}
+
+		spark.visible = true;
+		spark.material.color.copy(sparkColours[effect.kind]);
+		spark.material.opacity = burning;
+		// Y is untouched: the quad is already lying flat, and scaling a flat plane on its normal
+		// does nothing but cost a matrix.
+		spark.scale.set(effect.width * SIZES.tokenRadius, 1, effect.length * SIZES.tokenRadius);
+		spark.position.set(0, SPARK_HEIGHT, -effect.ahead * SIZES.tokenRadius);
+	}
 
 	return {
 		pieceId,
@@ -240,27 +323,63 @@ export default function createToken(pieceId) {
 		 * This piece has just taken another one off the board.
 		 *
 		 * Armed rather than played: the move waits for the travel to finish, so the whole thing is
-		 * one gesture — the piece arrives on the cell and marks it — instead of two overlapping
-		 * ones. A sniper does not travel, so its recoil starts on the next frame.
+		 * one gesture — the piece arrives on the cell and runs the occupant through — instead of
+		 * two overlapping ones. A sniper does not travel, so its recoil starts on the next frame.
 		 *
 		 * @param type the KILLER's type. The move depends on that and on nothing else.
+		 * @param struck called once, when the blow lands, so the board can let the corpse go.
+		 * @returns whether a move was armed. False means the caller has to release the dead piece
+		 *   itself, because nothing here is going to call `struck`.
 		 */
-		kill(type) {
+		kill(type, struck) {
 			// The same withdrawal the travel, the lift and the sniper's pulse make: a player who
-			// has asked their system for less movement gets none of this either.
+			// has asked their system for less movement gets none of this either — no gesture, no
+			// mark, and the board takes the dead piece off at once rather than carrying it away.
 			if (prefersReducedMotion()) {
-				return;
+				return false;
 			}
 
 			const move = killMove(type);
 
 			if (!move) {
-				return;
+				return false;
 			}
 
 			killing = move;
 			killClock = 0;
 			killWaiting = true;
+			onStrike = struck || null;
+
+			return true;
+		},
+
+		/**
+		 * This piece is dead. Carry it off.
+		 *
+		 * The board decides where to — the HQ of whoever killed it — by pointing it there with the
+		 * ordinary `set`, so a corpse crosses the table on exactly the travel and arc a deployed
+		 * piece uses coming the other way. All this adds is the going: it keeps its size for the
+		 * first half of the journey and is gone by the end of it.
+		 */
+		leave(seconds = EXIT_SECONDS) {
+			exit = { clock: 0, seconds };
+		},
+
+		/** True once a corpse has finished leaving and the board may throw it away. */
+		gone() {
+			return !!exit && exit.clock >= exit.seconds;
+		},
+
+		/**
+		 * It was dead and it is not any more.
+		 *
+		 * A snipe rolls the board back to before the move it answered, so a piece already on its
+		 * way to somebody's HQ can be alive again on the next state. Reclaiming the token it was
+		 * using — rather than throwing it away and building another — is what lets it simply fly
+		 * back from wherever the journey had got to.
+		 */
+		revive() {
+			exit = null;
 		},
 
 		/** @returns true while there is still something left to draw. */
@@ -301,45 +420,79 @@ export default function createToken(pieceId) {
 			const hop = Math.min(left * ARC, CARRY_LIFT);
 			const height = current.lift + hop;
 
-			// A kill in hand: hold it until the piece has all but arrived, then run it once. The
-			// wait is bounded, because a token that says it is animating and never finishes is a
-			// frame loop that never settles.
+			// A kill in hand. Three stages, in order: wait for the piece to arrive, hold still for
+			// as long as this type holds still, then run the gesture once. The wait is bounded,
+			// because a token that says it is animating and never finishes is a frame loop that
+			// never settles.
 			if (killing) {
 				killClock += delta;
 
 				if (killWaiting && (left <= KILL_ARRIVED || killClock >= KILL_HOLD)) {
 					killWaiting = false;
-					killClock = 0;
+					killClock = -killing.hold;
 				}
 
 				if (!killWaiting && killClock >= killing.seconds) {
 					killing = null;
+					onStrike = null;
 				}
+			}
+
+			if (exit && exit.clock < exit.seconds) {
+				exit.clock += delta;
+			}
+
+			// Nothing is drawn during the hold, and the clock is negative for exactly that long.
+			const playing = killing && !killWaiting && killClock >= 0 ? killing : null;
+			const at = playing ? killClock / playing.seconds : 0;
+
+			// The blow lands partway through, not at the start: an agent's point is through the
+			// cell at the top of its lunge, and the sniper's shot is off before the recoil. This is
+			// what tells the board it may take the dead piece away.
+			if (playing && onStrike && at >= playing.strike) {
+				const struck = onStrike;
+
+				onStrike = null;
+				struck();
 			}
 
 			// Every move is one channel and every channel rests at zero, so what is not this
 			// piece's own is simply not added. Nothing here touches group.position: that is what
 			// the flight reads to start a token from where it was last drawn, and what the tray it
 			// came out of is told. The rig is the part that lifts and turns.
-			const playing = killing && !killWaiting ? killing : null;
-			const move = playing
-				? playing.curve(killClock / playing.seconds) * playing.amount * KILL_SCALE[playing.channel]
-				: 0;
+			const move = playing ? playing.curve(at) * playing.amount * KILL_SCALE[playing.channel] : 0;
 			const channel = playing ? playing.channel : null;
-			const twist = channel === CHANNELS.TWIST ? move : 0;
-			const kick = channel === CHANNELS.KICK ? move : 0;
+
+			// The nose is local north (-z) and the yaw carries it round, so the way a piece is
+			// facing is (-sin, -cos) — forward for the agent's charge, and its opposite for the
+			// sniper's recoil. A spy's cut is the same pair turned a quarter circle.
+			const along = channel === CHANNELS.LUNGE ? -move : channel === CHANNELS.KICK ? move : 0;
+			const across = channel === CHANNELS.SWEEP ? move : 0;
 
 			group.position.set(current.x, 0, current.z);
-			// Backwards along its own bearing. The nose is local north (-z) and the yaw carries it
-			// round, so the way it is facing is (-sin, -cos) and the way it recoils is the other.
 			rig.position.set(
-				kick * Math.sin(current.angle),
-				height + (channel === CHANNELS.SINK ? move : 0),
-				kick * Math.cos(current.angle),
+				along * Math.sin(current.angle) + across * Math.cos(current.angle),
+				height,
+				along * Math.cos(current.angle) - across * Math.sin(current.angle),
 			);
-			rig.rotation.y = current.angle + twist;
-			rig.scale.setScalar(1 + (channel === CHANNELS.SWELL ? move : 0));
-			chamfer.emissiveIntensity = current.glow * 0.85;
+			rig.rotation.y = current.angle;
+
+			// The mark, and the light it throws on the piece that made it. Both run on their own
+			// clock from the strike, because a flash that lasted as long as the recoil would be a
+			// lamp rather than a shot.
+			const effect = playing && playing.effect;
+			const since = effect ? at * playing.seconds - playing.strike * playing.seconds : 0;
+			const burning = effect && since >= 0 && since < effect.seconds ? sparkCurve(since / effect.seconds) : 0;
+
+			drawSpark(effect, burning);
+
+			// A corpse keeps its size, then goes. Multiplied into the CEO's swell rather than
+			// fighting it, so nothing has to know which of the two is happening.
+			const swell = channel === CHANNELS.SWELL ? move : 0;
+			const going = exit ? Math.max(0, 1 - (exit.clock / exit.seconds) ** EXIT_SHRINK) : 1;
+
+			rig.scale.setScalar((1 + swell) * going);
+			chamfer.emissiveIntensity = current.glow * 0.85 + burning * (effect ? effect.glow : 0);
 
 			// The shadow spreads and lightens as the chip comes up, which is the cheapest possible
 			// cue that it is off the board rather than merely bright — and the whole cue that a
@@ -351,7 +504,7 @@ export default function createToken(pieceId) {
 			halo.visible = current.halo > 0.005;
 			halo.material.opacity = current.halo;
 
-			return beat || restless || !!killing;
+			return beat || restless || !!killing || (!!exit && exit.clock < exit.seconds);
 		},
 
 		dispose() {
@@ -359,6 +512,7 @@ export default function createToken(pieceId) {
 			wall.dispose();
 			shadow.material.dispose();
 			halo.material.dispose();
+			spark.material.dispose();
 		},
 	};
 }

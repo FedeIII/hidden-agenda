@@ -4,7 +4,7 @@ import { getTileGeometry, getTileMaterials, SIZES } from './assets';
 import hexPrismGeometry, { ORIENTATION } from './geometry';
 import addLights from './lighting';
 import { allRenderedCells, cellToWorld, COLUMN_PITCH, directionToAngle, isPlayableCell, R, ROW_PITCH } from './layout';
-import { lastScreenPosition, noteScreenPosition, setHand } from './flight';
+import { hqPosition, lastScreenPosition, noteScreenPosition, setHand } from './flight';
 import { AIM, BOARD, boardColors, HIGHLIGHT, HOVER, KEYLINE, previewStep } from './palette';
 import getStage, { prefersReducedMotion } from './stage';
 import createProjector, { boxStyle } from './view';
@@ -26,6 +26,11 @@ const TRAVELLING = 0.4;
 // reading of "you may go here", and being vertical it cannot move a single overlay box.
 const TILE_RISE = R * 0.05;
 const RISE_RATE = 18;
+
+// How long a dead piece will wait to be let go before it goes anyway. Every path that arms a
+// gesture bounds its own wait, so this is never reached in play — it exists so that a killer whose
+// token disappears mid-gesture cannot leave a corpse animating for the rest of the game.
+const UNCLAIMED = 1.6;
 
 // Sized so the lip is about the same all the way round. The board's outline is already a
 // flat-topped hexagon, so the tray is the same hexagon, larger. Its half-height is only 0.866 of
@@ -278,19 +283,25 @@ export default function createBoardScene(element, skin) {
 	// Who is already dead, so that a kill is a TRANSITION and not a state. Without it every state
 	// change would re-announce every kill of the game so far.
 	const dead = new Set();
+	// Pieces that have been killed and are still on screen: held where they fell until the blow
+	// that killed them lands, then carried off to the killer's HQ. Kept apart from `tokens`
+	// because everything there is a piece the game still has on the board.
+	const leaving = new Map();
 	let opened = false;
 	let signature = null;
 	let carrying = null;
 	let travelling = false;
 
 	/**
-	 * Who has just killed something, from the only record of it the game keeps: the `killedById` a
-	 * corpse carries. Nothing dispatches a kill and nothing needs to — the state says who did it.
+	 * What has just been killed and by whom, from the only record of it the game keeps: the
+	 * `killedById` a corpse carries. Nothing dispatches a kill and nothing needs to — the state
+	 * says who did it.
 	 *
 	 * Three things it has to get right, each of which is a real path through the rules:
 	 *
 	 * - **One shot, one move.** A dead CEO takes its team's whole undeployed half with it, and
-	 *   every one of those corpses names the same killer. That is one kill to watch, not six.
+	 *   every one of those corpses names the same killer. That is one gesture to watch and six
+	 *   pieces to carry off, not six gestures — hence victims grouped under the killer.
 	 * - **A piece can come back to life.** A snipe rolls the board back to before the move it
 	 *   answered, so whatever that move killed is alive again — and can be killed again later.
 	 *   Hence a set rebuilt from the state each time rather than one that only ever grows.
@@ -298,13 +309,17 @@ export default function createBoardScene(element, skin) {
 	 *   `?test=`. Every kill of that game is new to this Set and none of them is news, so the
 	 *   first pass seeds and announces nothing.
 	 */
-	function killersAmong(pieces) {
-		const killers = [];
+	function killsAmong(pieces) {
+		const kills = [];
 
 		for (const piece of pieces) {
 			if (opened && piece.killed && piece.killedById && !dead.has(piece.id)) {
-				if (!killers.includes(piece.killedById)) {
-					killers.push(piece.killedById);
+				const already = kills.find(kill => kill.killerId === piece.killedById);
+
+				if (already) {
+					already.victimIds.push(piece.id);
+				} else {
+					kills.push({ killerId: piece.killedById, victimIds: [piece.id] });
 				}
 			}
 		}
@@ -319,7 +334,37 @@ export default function createBoardScene(element, skin) {
 
 		opened = true;
 
-		return killers;
+		return kills;
+	}
+
+	/**
+	 * Send a corpse home to the HQ of whoever killed it.
+	 *
+	 * The journey is the deploy in reverse and uses the same machinery: the tray publishes where
+	 * it is on the page, this turns that back into a point on the board's own plane, and the piece
+	 * is simply told to go there — so it lofts across the table on the arc every travelling piece
+	 * uses. `overlay()` is what lets it be drawn over the gap and over the tray it is heading for.
+	 *
+	 * A team whose tray is not on screen has no published position. The corpse then goes where it
+	 * stands rather than nowhere, which is the same thing the board did before any of this existed.
+	 */
+	function releaseCorpse(pieceId, team) {
+		const entry = leaving.get(pieceId);
+
+		if (!entry || entry.released) {
+			return;
+		}
+
+		entry.released = true;
+
+		const home = hqPosition(team);
+		const at = home && toBoard(home.x, home.y, TILE_TOP);
+
+		if (at) {
+			entry.token.set({ ...entry.token.state(), x: at.x, z: at.z, selected: false, snipe: false, buffed: false });
+		}
+
+		entry.token.leave();
 	}
 
 	// A point in the page, on the plane a token's base sits on. Everything the hand does goes
@@ -520,10 +565,11 @@ export default function createBoardScene(element, skin) {
 			// Read before the early return, and it is what defeats it: a kill is not in the
 			// signature — the signature is what is on the board, and a kill is something that has
 			// just left it. Reading it here also makes it idempotent, so a state change that
-			// happens to repeat cannot replay a move.
-			const killers = killersAmong(pieces);
+			// happens to repeat cannot replay a gesture.
+			const kills = killsAmong(pieces);
+			const fresh = new Set(kills.flatMap(kill => kill.victimIds));
 
-			if (next === signature && !killers.length) {
+			if (next === signature && !kills.length) {
 				return false;
 			}
 
@@ -600,6 +646,25 @@ export default function createBoardScene(element, skin) {
 					continue;
 				}
 
+				// It was dead a moment ago and it is not any more — a snipe rolled the board back
+				// past the move that killed it. Take its token back off the journey it was on
+				// rather than building a second one for the same piece, and it flies home from
+				// wherever the corpse had got to.
+				//
+				// This is a net rather than a path anybody walks: a corpse is off the board in
+				// just over half a second and a table takes rather longer than that to reach for
+				// `SNIPE`, so in practice the corpse is long gone and `tokenFor` below builds a
+				// fresh token at the cell. Both endings leave exactly one token for one piece,
+				// which is the only thing that actually matters here — traced both ways in a
+				// browser rather than assumed.
+				const returning = leaving.get(piece.id);
+
+				if (returning) {
+					returning.token.revive();
+					tokens.set(piece.id, returning.token);
+					leaving.delete(piece.id);
+				}
+
 				const { x, z } = cellToWorld(piece.position[0], piece.position[1]);
 				const token = tokenFor(piece.id);
 
@@ -623,31 +688,46 @@ export default function createBoardScene(element, skin) {
 				});
 			}
 
-			// A piece that left the board was killed, or was rolled back by a sniper. Either way
-			// it stops existing here rather than sliding off. The exception is the piece in the
-			// player's hand: the game does not think it is on the board — it is not, yet — but it
-			// is the one thing on screen the player is actually holding.
+			// A piece that left the board was killed, or was rolled back by a sniper. A piece that
+			// was just KILLED is held where it fell instead, until the blow that killed it lands
+			// and it can be carried off; everything else stops existing here rather than sliding
+			// off. The exception is the piece in the player's hand: the game does not think it is
+			// on the board — it is not, yet — but it is the one thing on screen the player is
+			// actually holding.
 			for (const [pieceId, token] of tokens) {
 				if (carrying && carrying.pieceId === pieceId) {
 					continue;
 				}
 
 				if (!onBoard.has(pieceId)) {
-					standing.remove(token.object);
-					token.dispose();
 					tokens.delete(pieceId);
 					standingOn.delete(pieceId);
+
+					if (fresh.has(pieceId)) {
+						leaving.set(pieceId, { token, released: false, waited: 0 });
+					} else {
+						standing.remove(token.object);
+						token.dispose();
+					}
 				}
 			}
 
 			// After the cleanup, because a killer is not always a piece that was already standing
 			// here: a sniper killed by the very move it saw is brought back to life by its own
 			// shot, and its token is built by the loop above in the same pass that arms it.
-			for (const killerId of killers) {
+			//
+			// The corpses go when the gesture says so, not now. An agent that has a cell to cross
+			// before it arrives would otherwise be running its point through an empty tile, which
+			// is the whole of what makes a charge read as a charge. If there is no gesture to wait
+			// for — no token, an unknown type, or a player who has asked for less movement — they
+			// go immediately, which is what the board did before any of this existed.
+			for (const { killerId, victimIds } of kills) {
 				const token = tokens.get(killerId);
+				const team = pz.getTeam(killerId);
+				const release = () => victimIds.forEach(victimId => releaseCorpse(victimId, team));
 
-				if (token) {
-					token.kill(pz.getType(killerId));
+				if (!token || !token.kill(pz.getType(killerId), release)) {
+					release();
 				}
 			}
 
@@ -695,6 +775,36 @@ export default function createBoardScene(element, skin) {
 				noteScreenPosition(pieceId, at.x, at.y);
 			}
 
+			// The dead, on their way to somebody's HQ. Always animating while any of them exists:
+			// one is either waiting for the blow that killed it to land or crossing the table, and
+			// neither is something the tweens on the token can be asked about.
+			for (const [pieceId, entry] of leaving) {
+				entry.token.update(delta);
+				animating = true;
+				// It has to be drawn outside the board's own rectangle for most of the journey, so
+				// this is what opens the scissor and the viewport for it — the same widening a
+				// piece coming the other way out of a tray already needs.
+				inFlight = true;
+
+				// A corpse cannot be left holding on for a strike that is never coming. The wait is
+				// normally a third of a second, and every path that arms a gesture bounds itself —
+				// but a killer whose token is disposed mid-gesture would take its victim's frame
+				// loop down with it, so the corpse gives up on its own and goes.
+				if (!entry.released) {
+					entry.waited += delta;
+
+					if (entry.waited >= UNCLAIMED) {
+						releaseCorpse(pieceId, undefined);
+					}
+				}
+
+				if (entry.token.gone()) {
+					standing.remove(entry.token.object);
+					entry.token.dispose();
+					leaving.delete(pieceId);
+				}
+			}
+
 			travelling = inFlight;
 
 			return animating;
@@ -707,6 +817,11 @@ export default function createBoardScene(element, skin) {
 				token.dispose();
 			}
 			tokens.clear();
+
+			for (const entry of leaving.values()) {
+				entry.token.dispose();
+			}
+			leaving.clear();
 		},
 	};
 

@@ -10,7 +10,7 @@ import {
 } from 'three';
 import { SIZES } from './assets';
 import addLights from './lighting';
-import { noteScreenPosition } from './flight';
+import { noteHqPosition, noteScreenPosition } from './flight';
 import { COLUMN_PITCH, R, ROW_PITCH, slotKeyForPiece, storeSlots, TRAY_ELEVATION } from './layout';
 import { HQ_TRAY } from './palette';
 import createProjector, { boxStyle } from './view';
@@ -266,6 +266,18 @@ export default function createHqScene(team, element) {
 				if (token.update(delta)) {
 					animating = true;
 				}
+			}
+
+			// Where this rack is on the page, for the board to fly the team's kills home to. Per
+			// frame rather than on a state change, because it moves when nothing about the game
+			// has changed — a scroll, a rotate, the action bar growing a line. The stage has
+			// already read this element's rect this frame, so the browser answers from cache.
+			const rect = element.getBoundingClientRect();
+
+			if (rect.width >= 1 && rect.height >= 1) {
+				const middle = projector.project(0, 0, 0);
+
+				noteHqPosition(team, rect.left + middle.x, rect.top + middle.y);
 			}
 
 			return animating;

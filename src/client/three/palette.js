@@ -165,6 +165,21 @@ export const BUFF = '#ffd77a';
 // The contact shadow tints the shared white fade; the halo tints the same one warm.
 export const SHADOW = '#000000';
 
+// The mark a kill leaves, for the fifth of a second it lasts. Near-white on purpose, and it is
+// the one place on this board where that is a signal rather than a surface: red means "you may go
+// here, NOW", teal and gold are a spy's later steps, blue is where a piece may be pointed, and
+// the hover is a cursor. All five are claims about what a player MAY do next. A kill is a thing
+// that has just happened, so it is the only mark here that is light rather than a colour — drawn
+// additively, so on the palest tile and the darkest alike it reads as a flare and not as paint.
+//
+// The sniper's is warm because a muzzle flash is; the blade and the point are cold because steel
+// is. Nothing here is close enough to SELECTED's cream to be confused with a piece being held.
+export const KILL = {
+	pierce: '#f4faff',
+	slash: '#dcebff',
+	flash: '#fff0b8',
+};
+
 // Where a piece may be POINTED, which must never share a colour with where it may GO.
 export const AIM = '#8fc0ff';
 
