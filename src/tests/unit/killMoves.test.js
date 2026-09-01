@@ -1,15 +1,20 @@
 import { test, expect } from '@playwright/test';
 import { TYPES } from 'Domain/pieces';
-import killMove, { CHANNELS, EFFECTS, sparkCurve } from 'Client/three/killMoves';
+import killMove, { burstScale, CHANNELS, EFFECTS, sparkCurve, trailCurve } from 'Client/three/killMoves';
 
 // The four kill gestures, checked without a renderer. What a token does when it takes a piece is
 // not something a spec can read off the DOM — the 3D layer draws it and the invisible box a click
 // lands on does not move, deliberately — so what is asserted here is the shape of the table rather
-// than the picture, and the properties that would break the board quietly if they went: a gesture
-// that does not come back to rest, one that outstays its welcome, and a blow that lands outside
-// the gesture that is supposed to contain it.
+// than the picture, and the properties that would break the board quietly if they went.
+//
+// Two of the gestures now CARRY the piece: they start on the cell it was standing on and end on
+// the cell it took. That makes "ends at exactly 1" the load-bearing property for those, where for
+// the other two it is still "ends at exactly 0" — a carried curve is a journey and the rest are
+// amplitudes, and confusing the two would either leave a piece on the wrong cell or shove it off
+// the one it is on.
 
 const ALL_TYPES = Object.values(TYPES);
+const CARRIED = [CHANNELS.CHARGE, CHANNELS.ADVANCE];
 const SAMPLES = 200;
 
 // Read at u = 0 and u = 1 exactly, plus every step between.
@@ -23,14 +28,10 @@ function sample(curve) {
 	return values;
 }
 
-// How far each channel may go, in its own units. These are gestures rather than nudges now — the
-// first version of this table was too quiet to read — but none of them may reach the next cell:
-// a column pitch is 1.7321R and a token radius is 0.74R, so half a token radius of travel is
-// about a fifth of the way to the neighbouring tile. That is the line.
+// How far each non-carried channel may go, in its own units. A carried channel has no ceiling: its
+// distance is the distance the piece actually travelled, which is not a number anybody chooses.
 const CEILING = {
-	[CHANNELS.LUNGE]: 0.6,
-	[CHANNELS.SWEEP]: 0.6,
-	[CHANNELS.KICK]: 0.6,
+	[CHANNELS.KICK]: 0.8,
 	// Six percent, and not a taste: past that a swollen nose reaches through the piece in front.
 	// See the note on PROW_REACH in assets.js and the comment on the CEO in killMoves.js.
 	[CHANNELS.SWELL]: 0.06,
@@ -51,47 +52,97 @@ test('every piece type kills in a way of its own', () => {
 	expect(new Set(channels).size).toBe(ALL_TYPES.length);
 });
 
-test('every kill leaves a mark of its own', () => {
-	const kinds = ALL_TYPES.map(type => {
-		const { effect } = killMove(type);
+test('a carried gesture starts where the piece stood and ends on the cell it took', () => {
+	for (const type of ALL_TYPES) {
+		const { channel, carry } = killMove(type);
 
-		expect(effect, `${type} leaves no mark`).toBeTruthy();
-		expect(Object.values(EFFECTS), `${type} leaves an unknown mark`).toContain(effect.kind);
-		expect(effect.glow, `${type} throws no light`).toBeGreaterThan(0);
+		if (!CARRIED.includes(channel)) {
+			expect(carry, `${type} is not carried but has a carry curve`).toBeUndefined();
+			continue;
+		}
 
-		// A mark that outlived its gesture would still be burning while the piece stood still.
-		expect(effect.seconds, `${type}'s mark outlasts its gesture`).toBeLessThanOrEqual(killMove(type).seconds);
+		// 0 is the cell being left, 1 is the cell being taken. Both exactly: the game has already
+		// moved the piece, so a curve that ended at 0.98 would leave it permanently short of the
+		// cell it is standing on, and every kill after that would start from the wrong place.
+		expect(carry(0), `${type} does not start where it stood`).toBeCloseTo(0, 9);
+		expect(carry(1), `${type} does not land on the cell it took`).toBeCloseTo(1, 9);
 
-		return effect.kind;
-	});
-
-	expect(new Set(kinds).size).toBe(ALL_TYPES.length);
+		// And it must go PAST on the way, or nothing pierces anything.
+		expect(Math.max(...sample(carry)), `${type} never drives through`).toBeGreaterThan(1);
+	}
 });
 
-test('a kill gesture starts and ends at rest', () => {
+test('a non-carried gesture starts and ends at rest', () => {
 	for (const type of ALL_TYPES) {
-		const { curve } = killMove(type);
+		const { channel, curve } = killMove(type);
+
+		if (CARRIED.includes(channel)) {
+			continue;
+		}
 
 		// What the curve returns is ADDED to the token's rest pose. A curve that ends anywhere but
 		// zero leaves that piece shoved off its cell, or the wrong size, for the rest of the game
 		// — and every later kill compounds it.
 		expect(curve(0), `${type} does not start at rest`).toBeCloseTo(0, 9);
 		expect(curve(1), `${type} does not end at rest`).toBeCloseTo(0, 9);
+
+		const peak = Math.max(...sample(curve).map(Math.abs));
+
+		// Peak-normalised, within a tenth of a percent either side, so `amount` is an amplitude
+		// rather than a coefficient of whatever the expression happens to peak at. Not exactly one
+		// because both the normalisation and this reading are sampled, on grids of different sizes.
+		expect(peak, `${type} does not reach its amplitude`).toBeGreaterThan(0.999);
+		expect(peak, `${type} overshoots its amplitude`).toBeLessThan(1.001);
+
+		expect(killMove(type).amount, `${type} moves too far`).toBeLessThanOrEqual(CEILING[channel]);
+		expect(killMove(type).amount, `${type} does not move at all`).toBeGreaterThan(0);
 	}
 });
 
-test('a kill gesture is peak-normalised, so its amount is its amplitude', () => {
+test('a swing unwinds, so the piece ends up facing where the game says', () => {
 	for (const type of ALL_TYPES) {
-		const { curve } = killMove(type);
-		const peak = Math.max(...sample(curve).map(Math.abs));
+		const { swing } = killMove(type);
 
-		// Within a tenth of a percent either side, and not exactly one: both the normalisation and
-		// this reading are sampled, on grids of different sizes, so neither lands on the true peak
-		// of a continuous curve. What matters is that `amount` is the amplitude rather than a
-		// coefficient of it — a curve peaking at 0.55 would make every amount below a lie.
-		expect(peak, `${type} does not reach its amplitude`).toBeGreaterThan(0.999);
-		expect(peak, `${type} overshoots its amplitude`).toBeLessThan(1.001);
+		if (!swing) {
+			continue;
+		}
+
+		// The yaw is ADDED to the bearing. Anything but zero at the end and the piece is left
+		// pointing somewhere the rules disagree with — and facing is a mechanic here, not a look.
+		expect(swing.curve(0), `${type}'s swing does not start straight`).toBeCloseTo(0, 9);
+		expect(swing.curve(1), `${type}'s swing does not unwind`).toBeCloseTo(0, 9);
+
+		// It has to go both ways round, or it is a lean rather than a swing.
+		const values = sample(swing.curve);
+
+		expect(Math.max(...values), `${type} never swings one way`).toBeGreaterThan(0.5);
+		expect(Math.min(...values), `${type} never swings the other`).toBeLessThan(-0.1);
+		expect(swing.degrees).toBeGreaterThan(0);
+		expect(swing.degrees, `${type} swings too far`).toBeLessThanOrEqual(25);
 	}
+});
+
+test('every kill leaves a mark of its own', () => {
+	const kinds = ALL_TYPES.map(type => {
+		const move = killMove(type);
+		const { effect } = move;
+
+		expect(effect, `${type} leaves no mark`).toBeTruthy();
+		expect(Object.values(EFFECTS), `${type} leaves an unknown mark`).toContain(effect.kind);
+		expect(effect.glow, `${type} throws no light`).toBeGreaterThan(0);
+
+		// A mark that outlived its gesture would still be burning while the piece stood still.
+		expect(effect.seconds, `${type}'s mark outlasts its gesture`).toBeLessThanOrEqual(move.seconds);
+
+		// A streak is the run, so only a piece that is carried anywhere may have one.
+		if (effect.trail) {
+			expect(CARRIED, `${type} trails without going anywhere`).toContain(move.channel);
+		}
+
+		return effect.kind;
+	});
+
+	expect(new Set(kinds).size).toBe(ALL_TYPES.length);
 });
 
 test('the blow lands inside the gesture that carries it', () => {
@@ -106,29 +157,36 @@ test('the blow lands inside the gesture that carries it', () => {
 		// A hold is stillness before the gesture, and only the spy has one. It is part of what the
 		// player waits through, so it counts against the same budget.
 		expect(hold).toBeGreaterThanOrEqual(0);
-		expect(hold + seconds, `${type} takes too long`).toBeLessThanOrEqual(0.8);
+		expect(hold + seconds, `${type} takes too long`).toBeLessThanOrEqual(0.6);
 	}
 });
 
-test('a kill gesture stays quick, and stays this side of the next cell', () => {
+test('a carried gesture strikes about when it arrives', () => {
 	for (const type of ALL_TYPES) {
-		const { channel, amount, seconds } = killMove(type);
+		const { channel, carry, strike } = killMove(type);
 
-		expect(amount, `${type} moves too far`).toBeLessThanOrEqual(CEILING[channel]);
-		expect(amount, `${type} does not move at all`).toBeGreaterThan(0);
+		if (!CARRIED.includes(channel)) {
+			continue;
+		}
 
-		// Long enough to be seen, short enough to be over before the next player reaches for
-		// anything. The CEO is the slowest at 0.6s and the agent's charge the quickest at 0.3s.
-		expect(seconds).toBeGreaterThanOrEqual(0.3);
-		expect(seconds).toBeLessThanOrEqual(0.8);
+		// The point goes through as the piece gets there, so by the strike it has to have covered
+		// most of the ground. Struck at a third of the way in, the victim would vanish while the
+		// killer was still visibly a cell away from it.
+		expect(carry(strike), `${type} strikes before it has arrived`).toBeGreaterThan(0.8);
 	}
 });
 
-test('the mark comes up at once and spends its life fading', () => {
-	// Shared by all four, so it is asserted once. It has to start and end dark for the same reason
-	// the gestures start and end at rest — the quad is simply left visible otherwise.
-	expect(sparkCurve(0)).toBeCloseTo(0, 9);
-	expect(sparkCurve(1)).toBeCloseTo(0, 9);
+test('the marks come up at once and spend their lives fading', () => {
+	// Shared by all of them, so asserted once. The blade and the burst have to start and end dark
+	// for the same reason the gestures start and end at rest — the quad is simply left on screen
+	// otherwise. Same for the streak, which additionally must be out before the blow lands.
+	for (const [name, curve] of [
+		['spark', sparkCurve],
+		['trail', trailCurve],
+	]) {
+		expect(curve(0), `${name} does not start dark`).toBeCloseTo(0, 9);
+		expect(curve(1), `${name} does not end dark`).toBeCloseTo(0, 9);
+	}
 
 	const values = sample(sparkCurve);
 	const brightest = values.indexOf(Math.max(...values));
@@ -136,4 +194,10 @@ test('the mark comes up at once and spends its life fading', () => {
 	// In the first quarter: a spark that peaked halfway through would read as a shape being shown
 	// rather than as light arriving.
 	expect(brightest / SAMPLES).toBeLessThan(0.25);
+
+	// A burst is already the size of the thing that made it by the time it is seen, and only opens
+	// from there. Starting at nothing would make it a dot that grows, which is a firework.
+	expect(burstScale(0)).toBeGreaterThan(0.3);
+	expect(burstScale(1)).toBeCloseTo(1, 6);
+	expect(burstScale(0.5)).toBeGreaterThan(burstScale(0));
 });

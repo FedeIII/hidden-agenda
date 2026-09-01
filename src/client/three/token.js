@@ -9,7 +9,7 @@ import {
 	getTokenGeometry,
 	SIZES,
 } from './assets';
-import killMove, { CHANNELS, EFFECTS, sparkCurve } from './killMoves';
+import killMove, { burstScale, CHANNELS, EFFECTS, sparkCurve, trailCurve } from './killMoves';
 import { directionToAngle } from './layout';
 import { BUFF, KILL, SELECTED, SHADOW, SNIPE } from './palette';
 import { prefersReducedMotion } from './stage';
@@ -50,26 +50,31 @@ const SETTLED = 0.004;
 // Slower than a heartbeat. At 1.5Hz this reads as an alarm; at 0.8 it reads as an invitation.
 const SNIPE_PULSE_HZ = 0.8;
 
-// A kill is armed by the state change and played when the piece ARRIVES, so an agent's press is
-// the sound of it landing rather than something it did on the way over. This is how close counts
-// as arrived — four percent of a cell, which a one-cell move reaches in about a third of a second.
+// Both of these are for a gesture that is NOT carried — one that happens where the piece already
+// stands, and therefore has to wait for it to stop moving first, or the gesture would be fighting
+// a walk. A carried gesture is the walk, so it waits for nothing and neither of these applies.
+//
+// How close counts as arrived: four percent of a cell, which a one-cell move reaches in about a
+// third of a second.
 const KILL_ARRIVED = SIZES.tokenRadius * 0.09;
 
-// And this is how long it will wait for that. A killer travels one cell and a sniper does not move
-// at all, so the wait is normally a third of a second or none — but a piece picked up on the frame
-// its kill was armed would never arrive at all, and something that reports itself as animating
-// forever stops the frame loop ever settling.
+// And how long it will wait for that. In practice the only gesture that waits is the sniper's, and
+// a sniper never moves — so this is reached only by a piece that is somehow still travelling. It
+// exists because something that reports itself as animating and never finishes stops the frame loop
+// ever settling.
 const KILL_HOLD = 0.9;
 
-// What one unit of each channel is worth in the scene. The table in killMoves.js is deliberately
-// free of any of this: it says how far in the channel's own terms, and here is where a token
-// radius becomes board units.
+// What one unit of each non-carried channel is worth in the scene. The table in killMoves.js is
+// deliberately free of any of this: it says how far in the channel's own terms, and here is where a
+// token radius becomes board units. A carried channel has no entry — its distance is the distance
+// the piece actually travelled, which is not a number anybody gets to choose.
 const KILL_SCALE = {
-	[CHANNELS.LUNGE]: SIZES.tokenRadius,
-	[CHANNELS.SWEEP]: SIZES.tokenRadius,
 	[CHANNELS.KICK]: SIZES.tokenRadius,
 	[CHANNELS.SWELL]: 1,
 };
+
+// A carried gesture is the arrival, so it does not wait for one.
+const CARRIED = new Set([CHANNELS.CHARGE, CHANNELS.ADVANCE]);
 
 // The mark rides just clear of the chip's top face and is drawn last with no depth test, so a
 // sliver laid across a cell passes over the piece it is cutting instead of being buried in it.
@@ -190,25 +195,45 @@ export default function createToken(pieceId) {
 	halo.visible = false;
 	group.add(halo);
 
-	// The mark a kill leaves. Additive rather than blended, so it is light falling on the board
-	// instead of a shape painted over it — which is the difference between a flash and a sticker,
-	// and is why it works on the palest tile and the darkest without being told which it is on.
-	// A child of the rig, so a point driven out of the nose travels with the nose.
-	const spark = new Mesh(
-		getSparkGeometry(),
-		new MeshBasicMaterial({
-			map: getFadeTexture(),
-			color: new Color(KILL.pierce),
-			transparent: true,
-			blending: AdditiveBlending,
-			depthWrite: false,
-			depthTest: false,
-			opacity: 0,
-		}),
-	);
-	spark.renderOrder = 6;
-	spark.visible = false;
-	rig.add(spark);
+	// The marks a kill leaves. Additive rather than blended, so they are light falling on the board
+	// instead of shapes painted over it — which is the difference between a flash and a sticker, and
+	// is why one works on the palest tile and the darkest without being told which it is on.
+	//
+	// Three of them, all children of the rig so that a point driven out of the nose travels with the
+	// nose and a blade swung sideways swings with the piece:
+	//
+	// - `blade` runs along the bearing for a point and across it for a cut.
+	// - `burst` opens where the blow lands.
+	// - `trail` streams out behind a piece that is being carried, and belongs to the run rather
+	//   than to the blow — so it has a window of its own, over before the other two begin.
+	//
+	// One quad each rather than one quad reused, because at the moment a charge lands all three are
+	// on screen at once.
+	function mark(order) {
+		const mesh = new Mesh(
+			getSparkGeometry(),
+			new MeshBasicMaterial({
+				map: getFadeTexture(),
+				color: new Color(KILL.pierce),
+				transparent: true,
+				blending: AdditiveBlending,
+				depthWrite: false,
+				depthTest: false,
+				opacity: 0,
+			}),
+		);
+
+		mesh.renderOrder = order;
+		mesh.visible = false;
+		rig.add(mesh);
+
+		return mesh;
+	}
+
+	// Drawn back to front: the streak is behind the piece, the blade over it, the burst over both.
+	const trail = mark(5);
+	const blade = mark(6);
+	const burst = mark(7);
 
 	const current = { lift: 0, glow: 0, halo: 0, angle: 0, x: 0, z: 0, placed: false };
 	const wanted = { lift: 0, glow: 0, halo: 0, angle: 0, x: 0, z: 0 };
@@ -222,6 +247,10 @@ export default function createToken(pieceId) {
 	let killWaiting = false;
 	// Called once, at the instant the blow lands. The board uses it to let the corpse go.
 	let onStrike = null;
+	// For a carried gesture: where the piece was standing when the move was announced, as an offset
+	// from where it is going. The gesture walks this back to nothing, so it starts on the old cell
+	// and finishes on the new one.
+	let carriedFrom = null;
 	// This piece is dead and being carried off. Counted separately from everything above, because
 	// a corpse is still a token that has to be drawn while it leaves.
 	let exit = null;
@@ -230,27 +259,70 @@ export default function createToken(pieceId) {
 	let told = { x: 0, z: 0 };
 
 	/**
-	 * The mark, sized and placed for the kind of blow it is.
+	 * One quad, laid out in token radii along the bearing.
 	 *
-	 * One unit quad does all of it: a long thin point driven out of the nose, a wide thin blade
-	 * laid across the cell, a small hot blob off the muzzle. The CEO's bloom draws nothing here —
-	 * it is light on the piece's own rim and nothing else — which is why it is in the same table
-	 * rather than a special case somewhere else.
+	 * Y is untouched — the plane is already lying flat, and scaling a flat plane on its own normal
+	 * costs a matrix and does nothing. Negative Z is forward, so `ahead` puts a mark out in front
+	 * and a negative one puts it behind.
 	 */
-	function drawSpark(effect, burning) {
-		if (!effect || burning <= 0 || !sparkColours[effect.kind]) {
-			spark.visible = false;
+	function lay(mesh, colour, opacity, width, length, ahead) {
+		mesh.visible = opacity > 0.002;
+
+		if (!mesh.visible) {
+			return;
+		}
+
+		mesh.material.color.copy(colour);
+		mesh.material.opacity = opacity;
+		mesh.scale.set(width * SIZES.tokenRadius, 1, length * SIZES.tokenRadius);
+		mesh.position.set(0, SPARK_HEIGHT, -ahead * SIZES.tokenRadius);
+	}
+
+	/**
+	 * The marks, sized and placed for the kind of blow it is.
+	 *
+	 * Three flat quads and nothing cleverer: a `blade` that is a point along the bearing or a cut
+	 * across it, a `burst` that opens where the blow lands, and a `trail` streaming out behind a
+	 * piece that is being carried. Every one of them is optional, and the CEO's bloom has none —
+	 * it is light on the piece's own rim and nothing else, which is why it sits in the same table
+	 * rather than as a special case somewhere else.
+	 */
+	function drawMarks(effect, burning, running, opened) {
+		const colour = effect && sparkColours[effect.kind];
+
+		if (!colour) {
+			trail.visible = false;
+			blade.visible = false;
+			burst.visible = false;
 
 			return;
 		}
 
-		spark.visible = true;
-		spark.material.color.copy(sparkColours[effect.kind]);
-		spark.material.opacity = burning;
-		// Y is untouched: the quad is already lying flat, and scaling a flat plane on its normal
-		// does nothing but cost a matrix.
-		spark.scale.set(effect.width * SIZES.tokenRadius, 1, effect.length * SIZES.tokenRadius);
-		spark.position.set(0, SPARK_HEIGHT, -effect.ahead * SIZES.tokenRadius);
+		const { blade: edge, burst: flare, trail: streak } = effect;
+
+		if (streak) {
+			// Behind the piece, so `ahead` is negative: it runs from the token back the way it came.
+			lay(trail, colour, running, streak.width, streak.length, -streak.length / 2);
+		} else {
+			trail.visible = false;
+		}
+
+		if (edge) {
+			lay(blade, colour, burning, edge.width, edge.length, edge.ahead);
+		} else {
+			blade.visible = false;
+		}
+
+		if (flare) {
+			// The only one that changes size while it is on. Driven by its own progress rather than
+			// by its brightness: brightness comes up and goes down again, so a burst sized from it
+			// would open, close, and read as a heartbeat.
+			const opening = flare.size * burstScale(opened);
+
+			lay(burst, colour, burning, opening, opening, flare.ahead);
+		} else {
+			burst.visible = false;
+		}
 	}
 
 	return {
@@ -346,9 +418,30 @@ export default function createToken(pieceId) {
 			}
 
 			killing = move;
-			killClock = 0;
-			killWaiting = true;
 			onStrike = struck || null;
+			// A carried gesture IS the arrival, so there is nothing to wait for. Everything else
+			// waits for the piece to stop moving, so that a recoil is not fighting a walk.
+			killWaiting = !CARRIED.has(move.channel);
+			// A negative clock is the hold: stillness before the gesture, counted off before it
+			// starts. A gesture that waits for the piece first gets its hold when the wait ends.
+			killClock = killWaiting ? 0 : -move.hold;
+			carriedFrom = null;
+
+			if (CARRIED.has(move.channel)) {
+				// Taken here rather than per frame, because `kill` is called in the same pass as the
+				// `set` that gave this token its new cell — so `current` is still the cell it is
+				// leaving and `wanted` is already the cell it is taking. That is the only moment
+				// both are on hand.
+				//
+				// The travel is then taken off the table: `current` is put where the piece is going
+				// so nothing eases towards it behind the gesture's back, and the gesture draws the
+				// whole journey as an offset that it walks back to nothing. The arc goes with it,
+				// which is right — a charge is flat, and a piece that lofted would be jumping.
+				carriedFrom = { x: current.x - wanted.x, z: current.z - wanted.z };
+				current.x = wanted.x;
+				current.z = wanted.z;
+				current.placed = true;
+			}
 
 			return true;
 		},
@@ -435,6 +528,7 @@ export default function createToken(pieceId) {
 				if (!killWaiting && killClock >= killing.seconds) {
 					killing = null;
 					onStrike = null;
+					carriedFrom = null;
 				}
 			}
 
@@ -456,39 +550,58 @@ export default function createToken(pieceId) {
 				struck();
 			}
 
-			// Every move is one channel and every channel rests at zero, so what is not this
-			// piece's own is simply not added. Nothing here touches group.position: that is what
-			// the flight reads to start a token from where it was last drawn, and what the tray it
-			// came out of is told. The rig is the part that lifts and turns.
-			const move = playing ? playing.curve(at) * playing.amount * KILL_SCALE[playing.channel] : 0;
+			// Nothing here touches group.position: that is what the flight reads to start a token
+			// from where it was last drawn, and what the tray it came out of is told. The rig is
+			// the part that lifts, turns and is thrown about.
 			const channel = playing ? playing.channel : null;
 
-			// The nose is local north (-z) and the yaw carries it round, so the way a piece is
-			// facing is (-sin, -cos) — forward for the agent's charge, and its opposite for the
-			// sniper's recoil. A spy's cut is the same pair turned a quarter circle.
-			const along = channel === CHANNELS.LUNGE ? -move : channel === CHANNELS.KICK ? move : 0;
-			const across = channel === CHANNELS.SWEEP ? move : 0;
+			// A CARRIED gesture draws the whole journey. `carriedFrom` is where the piece stood as
+			// an offset from where it is going, and the curve walks that offset back to nothing —
+			// so 0 puts it on the cell it is leaving and 1 lands it exactly on the cell it took.
+			// Past 1 is the part that comes out of the other side.
+			//
+			// Read off the clock clamped at zero rather than off `playing`, so that the spy's hold
+			// is spent standing on the cell it has not left yet. Off `playing` the hold would be
+			// spent on the cell it is about to take, which is the one place it must not be.
+			const carrying = killing && carriedFrom && !killWaiting;
+			const carried = carrying ? 1 - killing.carry(Math.max(0, killClock) / killing.seconds) : 0;
+
+			// And a non-carried one is an amplitude along its own axis. The nose is local north
+			// (-z) and the yaw carries it round, so the way a piece is facing is (-sin, -cos) and
+			// the way a rifle throws it is the other.
+			const thrown =
+				playing && playing.amount && KILL_SCALE[channel] ? playing.curve(at) * playing.amount * KILL_SCALE[channel] : 0;
+			const back = channel === CHANNELS.KICK ? thrown : 0;
 
 			group.position.set(current.x, 0, current.z);
 			rig.position.set(
-				along * Math.sin(current.angle) + across * Math.cos(current.angle),
+				(carriedFrom ? carriedFrom.x * carried : 0) + back * Math.sin(current.angle),
 				height,
-				along * Math.cos(current.angle) - across * Math.sin(current.angle),
+				(carriedFrom ? carriedFrom.z * carried : 0) + back * Math.cos(current.angle),
 			);
-			rig.rotation.y = current.angle;
 
-			// The mark, and the light it throws on the piece that made it. Both run on their own
-			// clock from the strike, because a flash that lasted as long as the recoil would be a
-			// lamp rather than a shot.
+			// The spy cuts its way in and the rifle jumps in its own hands. Added to the bearing
+			// rather than replacing it, and every swing unwinds to nothing, so the piece still ends
+			// up facing the way the game says it is facing.
+			const swing = playing && playing.swing ? playing.swing.curve(at) * playing.swing.degrees : 0;
+
+			rig.rotation.y = current.angle + MathUtils.degToRad(swing);
+
+			// The marks, on two clocks. The blade and the burst run from the strike, because a
+			// flash that lasted as long as the recoil would be a lamp rather than a shot. The
+			// streak runs over the approach instead and is gone by the time the point lands — it is
+			// the run, not the blow.
 			const effect = playing && playing.effect;
-			const since = effect ? at * playing.seconds - playing.strike * playing.seconds : 0;
-			const burning = effect && since >= 0 && since < effect.seconds ? sparkCurve(since / effect.seconds) : 0;
+			const since = effect ? (at - playing.strike) * playing.seconds : 0;
+			const alight = effect && since >= 0 && since < effect.seconds ? since / effect.seconds : -1;
+			const burning = alight >= 0 ? sparkCurve(alight) : 0;
+			const running = effect && at < playing.strike ? trailCurve(at / playing.strike) : 0;
 
-			drawSpark(effect, burning);
+			drawMarks(effect, burning, running, Math.max(0, alight));
 
 			// A corpse keeps its size, then goes. Multiplied into the CEO's swell rather than
 			// fighting it, so nothing has to know which of the two is happening.
-			const swell = channel === CHANNELS.SWELL ? move : 0;
+			const swell = channel === CHANNELS.SWELL ? thrown : 0;
 			const going = exit ? Math.max(0, 1 - (exit.clock / exit.seconds) ** EXIT_SHRINK) : 1;
 
 			rig.scale.setScalar((1 + swell) * going);
@@ -512,7 +625,9 @@ export default function createToken(pieceId) {
 			wall.dispose();
 			shadow.material.dispose();
 			halo.material.dispose();
-			spark.material.dispose();
+			trail.material.dispose();
+			blade.material.dispose();
+			burst.material.dispose();
 		},
 	};
 }

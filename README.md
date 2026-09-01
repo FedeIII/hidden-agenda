@@ -170,6 +170,33 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.20.0
+* **The agent and the spy now CARRY the piece: the gesture is the arrival.** v3.19.0 ran the
+  gesture after the piece had got there, so an agent crossed the cell at walking pace and then
+  twitched. An agent's charge now starts on the cell it was standing on, drives about eighteen
+  percent of the way **past** the one it is taking, and settles onto it — a two-cell agent move is
+  a two-cell charge. A spy holds still for a sixth of a second and then cuts its way in, three
+  strokes of the blade, right and left and right, unwinding as it arrives
+* **The sniper is thrown.** Over half its own radius backward, up from a third, off a curve that
+  peaks a fortieth of the way in and spends everything after that returning — and the barrel jumps
+  once on the way. That is what separates a rifle from a shove
+* **Three marks per kill instead of one**: a `blade` along the bearing for a point or across it for
+  a cut, a `burst` opening where the blow lands, and a `trail` streaming out behind a piece that is
+  being carried. The streak runs on its own clock — it belongs to the run, not the blow, so it is up
+  and gone across the approach and dark by the time the point lands. The sniper's flash and burst
+  are both bigger, and its rim flares more than three times as hard as anything else here
+* **A carried curve is a journey and a non-carried one is an amplitude, and they are now kept
+  apart.** A journey starts at exactly 0 — the cell being left — and ends at exactly 1 — the cell
+  being taken; it goes past 1 on the way, and that overshoot is the part of the piece that comes out
+  of the other side. Amplitudes still start and end at 0 and are peak-normalised. A journey
+  deliberately is not: it has to land on 1, not on its own maximum. Four new specs assert the two
+  separately, that every swing unwinds so a piece ends up facing where the rules say, and that a
+  carried gesture has covered at least 80% of the ground by the time it strikes
+* Taking the travel off the table is what makes a carry work: `token.kill` records where the piece
+  stood, puts its position on the destination, and draws the whole journey as an offset it walks
+  back to nothing — so nothing eases toward the cell behind the gesture's back. The arc goes with
+  it, which is right, because a charge is flat and a piece that lofted would be jumping
+
 ### v3.19.0
 * **The kill gestures are gestures now, and the dead are carried off rather than deleted.** v3.18.0
   gave each type a few pixels in a channel of its own, which was correct and invisible. An agent
