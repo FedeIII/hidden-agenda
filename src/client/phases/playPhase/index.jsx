@@ -8,7 +8,9 @@ import TurnStrip from './turnStrip';
 function PlayPhase() {
 	return (
 		<PlayPhaseContainer>
-			<TurnStrip />
+			{/* `announce` is the real table's: a turn changing hands here is carried in from the middle
+			    of the board. The training course renders the same strip without it — see turnStrip. */}
+			<TurnStrip announce />
 
 			<Board>
 				<HQs>

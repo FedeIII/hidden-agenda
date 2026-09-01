@@ -89,6 +89,11 @@ export const Action = styled.div`
 // One cell of the turn strip. A divider on the left rather than a box around each, so the strip
 // reads as one object subdivided — which is what a title block, a routing slip and a machined rail
 // all are — and so the first cell has no stray rule to its left.
+//
+// `$hushed` empties the cell of what it says without emptying its place in the strip: the turn is
+// being carried in from the middle of the table (see `TurnAnnounce` below) and would otherwise be
+// readable in two places at once. It dims the cell's CONTENTS rather than the cell, because the
+// cell's own ground is a segment of the rail in two directions and a hole in it is not a hush.
 export const Cell = styled.div`
 	display: flex;
 	align-items: baseline;
@@ -107,6 +112,14 @@ export const Cell = styled.div`
 		padding: 2px 7px;
 		gap: 5px;
 	}
+
+	${({ $hushed }) =>
+		$hushed &&
+		css`
+			> * {
+				opacity: 0;
+			}
+		`}
 `;
 
 export const CellKey = styled.span`
@@ -165,6 +178,134 @@ export const InitialBox = styled.i`
 	border: 1px solid var(--ha-rule);
 	color: ${({ $on }) => ($on ? 'var(--ha-ink-on-accent)' : 'var(--ha-ink-faint)')};
 	background: ${({ $on }) => ($on ? 'var(--ha-ink)' : 'transparent')};
+`;
+
+/* ── The turn, delivered ───────────────────────────────────────────────────────────────────
+ * Whose turn it is used to change silently in a 9px key at the top of the screen, which is the one
+ * fact at this table nobody may miss. So it is handed over instead: it arrives in the middle of the
+ * table, is held there long enough to read, and is carried up into the cell it belongs in.
+ *
+ * It IS that cell — `styled(Cell)`, not a card that resembles one. Everything that makes the strip's
+ * first cell look the way it does is inherited, so at the end of the flight the two are the same
+ * object at the same size in the same place and the swap has nothing to show. A second set of rules
+ * kept in step by hand would have drifted the first time the strip's padding changed.
+ *
+ * What it travels ON is the card stock every direction already owns — a manila slip, a cyanotype
+ * sheet, a milled plate — laid on an opaque piece of that direction's own table. Two layers rather
+ * than one because a panel is a token designed to sit ON the ground and two of the three are
+ * see-through: over the board, one of them is a line of type read through a hexagon. And the whole
+ * of it DISSOLVES on the way up, so what seats itself in the rail is the type and not a box laid
+ * over the strip.
+ *
+ * Three rules:
+ *   - `pointer-events: none`, like every other mark this game lays over the table. It crosses the
+ *     whole board on its way up and the cells under it stay live — the drag controller resolves a
+ *     drop with `elementFromPoint`, and playwright verifies its own hit target the same way.
+ *   - Every offset comes through the `style` prop, never a styled-components template. Four values
+ *     that differ per viewport would mint a class per viewport and reclaim none — the same leak the
+ *     projected-pixel rule and the token table exist to prevent.
+ *   - Under `prefers-reduced-motion` it is not rendered at all, and the cell is never hushed. There
+ *     is no still version of "carried in from somewhere"; the end state is the whole of the news.
+ * ------------------------------------------------------------------------------------------- */
+
+// Long enough to read at a glance, short enough to sit through forty times an evening: it settles
+// in ~165ms, is held for ~200ms, and takes ~400ms to travel.
+export const DELIVER_MS = 760;
+
+// `--ha-fly-x`, `--ha-fly-y` and `--ha-fly-k` are the offsets and the scale, measured off the strip's
+// own cell and written on the element by `TurnStrip`. The rotation is the direction's own: a slip
+// lands a degree out of square on the desk and squares up as it seats, and the two directions that
+// are machined rather than typed say so with a rotation of zero.
+const deliver = keyframes`
+	0% {
+		opacity: 0;
+		transform: translate(var(--ha-fly-x), var(--ha-fly-y)) scale(calc(var(--ha-fly-k) * 1.06))
+			rotate(var(--ha-control-rotate));
+		animation-timing-function: cubic-bezier(0.16, 0.84, 0.24, 1);
+	}
+	8% {
+		opacity: 1;
+	}
+	22% {
+		transform: translate(var(--ha-fly-x), var(--ha-fly-y)) scale(var(--ha-fly-k))
+			rotate(var(--ha-control-rotate));
+		animation-timing-function: linear;
+	}
+	48% {
+		transform: translate(var(--ha-fly-x), var(--ha-fly-y)) scale(var(--ha-fly-k))
+			rotate(var(--ha-control-rotate));
+		animation-timing-function: cubic-bezier(0.55, 0, 0.2, 1);
+	}
+	100% {
+		opacity: 1;
+		transform: translate(0px, 0px) scale(1) rotate(0deg);
+	}
+`;
+
+// The panel is under the type for as long as the type is out over the board, and gone by the time it
+// reaches the rail. It leaves a little early on purpose: a ground that is still fading at the moment
+// the cell takes over is a second edge over the strip's own.
+const dissolve = keyframes`
+	0%   { opacity: 1; }
+	48%  { opacity: 1; }
+	88%  { opacity: 0; }
+	100% { opacity: 0; }
+`;
+
+export const TurnAnnounceStyled = styled(Cell)`
+	position: fixed;
+	z-index: 700;
+	pointer-events: none;
+	transform-origin: 50% 50%;
+	will-change: transform;
+	animation: ${deliver} ${DELIVER_MS}ms both;
+
+	/* A cell's divider is the rule between it and the cell on its left, and out here there is no cell
+	   on its left. Left in, two directions would fly a stray 1px rule across the board and — because
+	   the width is the target's border box — lose a pixel of the line's own room on the way. */
+	border-left: none;
+
+	/* Both layers sit behind the type and in front of the cell's own ground: within this stacking
+	   context a negative z-index paints over the element's background and under its content, which is
+	   exactly the order wanted — the card covers a rail segment while it is out over the board and
+	   uncovers it as it goes. ::after paints over ::before at equal z-index, so the stock is on the
+	   table and not under it. */
+	&::before,
+	&::after {
+		content: '';
+		position: absolute;
+		inset: -10px -18px;
+		z-index: -1;
+		border-radius: var(--ha-panel-radius);
+		animation: ${dissolve} ${DELIVER_MS}ms both;
+	}
+
+	/* The table, opaque, so nothing of the board reads through the line. A literal drop shadow rather
+	   than --ha-panel-shadow, and not composed with it either: a direction that wants no shadow sets
+	   that token to the keyword none, and the keyword none inside a comma-separated shadow list is a
+	   parse error that would take the whole declaration down in silence. No direction has an opinion
+	   about this anyway — none of them has a card that flies.
+
+	   And no backtick anywhere in this block, for the reason the token file gives at length: one
+	   closes the template literal, and the build says "expected a semicolon" thirty lines away. */
+	&::before {
+		background-color: var(--ha-ground);
+		box-shadow: 0 7px 20px rgba(0, 0, 0, 0.4);
+	}
+
+	/* The stock, in the direction's own hand: a manila slip, a cyanotype sheet, a milled plate. The
+	   background shorthand and nothing beside it, because the token is a flat colour in one direction
+	   and a gradient in another — a background-image line after this one would fill the same slot and
+	   quietly empty the plate. --ha-panel-texture is deliberately absent for that reason: it is a 5px
+	   band at the foot of a panel, and claiming the slot costs the plate. */
+	&::after {
+		background: var(--ha-panel);
+		border: 1px solid var(--ha-panel-edge);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		display: none;
+	}
 `;
 
 /* ── The full-screen shell ─────────────────────────────────────────────────────────────────

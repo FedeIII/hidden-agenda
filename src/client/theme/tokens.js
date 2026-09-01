@@ -100,6 +100,12 @@ const DOSSIER = {
 	'--ha-control-bg-off': 'transparent',
 	'--ha-control-ink-off': '#7c6a44',
 	'--ha-control-edge-off': '2px dashed #7c6a44',
+	// The beat a control gives when it is waiting to be pressed — see components/button.js. A stamp
+	// never lands once, so what comes up under Dossier's outline is a second impression of it,
+	// bleeding into the stock.
+	'--ha-control-beat-wash': 'rgba(163, 40, 43, 0.24)',
+	'--ha-control-beat': `inset 0 0 0 2px rgba(163, 40, 43, 0.75),
+		inset 0 0 12px rgba(163, 40, 43, 0.3)`,
 
 	'--ha-face': `'American Typewriter', 'Courier New', Courier, monospace`,
 	'--ha-face-data': `'American Typewriter', 'Courier New', Courier, monospace`,
@@ -288,6 +294,11 @@ const BLUEPRINT = {
 	'--ha-control-bg-off': 'transparent',
 	'--ha-control-ink-off': '#5d7f97',
 	'--ha-control-edge-off': '1px solid #3e5f76',
+	// A drawing calls a thing out by going over it in ferro red. The chalk keyline lights to the
+	// annotation colour and the sheet behind it takes a wash of the same.
+	'--ha-control-beat-wash': 'rgba(255, 107, 74, 0.12)',
+	'--ha-control-beat': `inset 0 0 0 1px #ff6b4a,
+		inset 0 0 12px rgba(255, 107, 74, 0.3)`,
 
 	'--ha-face': `'Avenir Next Condensed', 'Roboto Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif`,
 	'--ha-face-data': `ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace`,
@@ -452,6 +463,11 @@ const VAULT = {
 	'--ha-control-bg-off': 'linear-gradient(#4a5057, #3a4046)',
 	'--ha-control-ink-off': '#7d848b',
 	'--ha-control-edge-off': '1px solid #262b30',
+	// Brass has nothing to add and everything to catch, so the switch is simply lit: the bevel's own
+	// highlight flares and warm light spills across the plate.
+	'--ha-control-beat-wash': 'rgba(255, 240, 205, 0.22)',
+	'--ha-control-beat': `inset 0 1px 0 rgba(255, 255, 255, 0.6),
+		inset 0 0 14px rgba(255, 235, 180, 0.45)`,
 
 	'--ha-face': `'Helvetica Neue', Helvetica, Arial, sans-serif`,
 	'--ha-face-data': `ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace`,

@@ -1,4 +1,4 @@
-import styled, { css } from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 
 // One component, three looks, no extra classes.
 //
@@ -28,7 +28,69 @@ const asPrimary = css`
 	border-radius: var(--ha-control-radius-primary);
 `;
 
-const onActive = ({ active, $primary }) => {
+/* ── The beat ──────────────────────────────────────────────────────────────────────────────
+ * What a control does while it waits for a hand. NEXT TURN asks for it, because that is the one
+ * control the game needs a player to find rather than to look for: a turn that has ended looks
+ * exactly like a turn that has not until somebody notices the button lit.
+ *
+ * One beat, then a long rest. A control that pulses without a pause reads as an alarm; one that
+ * says something every couple of seconds reads as one that is ready and can wait.
+ *
+ * Three directions, one mechanism, two tokens — the same arrangement as everything else here: what
+ * the beat LOOKS like is `--ha-control-beat-wash` and `--ha-control-beat`, so a stamp's second
+ * impression, a drawing's ferro-red callout and a brass switch catching the light are all this rule.
+ *
+ * IT MAY NOT MOVE THE BUTTON, and that is a constraint rather than a taste. Most of the browser
+ * suite clicks `#next-turn`, and playwright will not click a target whose bounding box changed
+ * between two animation frames — a rocking stamp is the obvious Dossier reading of "ready" and
+ * would have hung several hundred specs on the actionability check. So the beat is opacity on a
+ * pseudo-element and nothing else: the button's own box never moves, and the pseudo is inset to it,
+ * clipped by its `clip-path` and rounded by its radius, so each direction's edge still holds.
+ * ------------------------------------------------------------------------------------------- */
+
+const beat = keyframes`
+	0%   { opacity: 0; }
+	9%   { opacity: 1; }
+	42%  { opacity: 0; }
+	100% { opacity: 0; }
+`;
+
+// One beat and a rest of about a second and a quarter, which is slow enough to read as patience.
+const BEAT_MS = 2200;
+
+const beats = css`
+	position: relative;
+
+	&::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		border-radius: inherit;
+		background: var(--ha-control-beat-wash);
+		box-shadow: var(--ha-control-beat);
+		animation: ${beat} ${BEAT_MS}ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
+	}
+
+	/* The beat is done the moment the pointer arrives — it was only ever asking for one. */
+	&:hover::after,
+	&:active::after,
+	&:focus-visible::after {
+		animation: none;
+		opacity: 0;
+	}
+
+	/* Asked for less movement, the control still has to say it is ready, so it says it once and
+	   holds it rather than saying nothing at all. */
+	@media (prefers-reduced-motion: reduce) {
+		&::after {
+			animation: none;
+			opacity: 0.6;
+		}
+	}
+`;
+
+const onActive = ({ active, $primary, $beat }) => {
 	if (active) {
 		return css`
 			color: var(--ha-control-ink);
@@ -66,6 +128,7 @@ const onActive = ({ active, $primary }) => {
 			}
 
 			${$primary && asPrimary}
+			${$beat && beats}
 		`;
 	}
 

@@ -147,6 +147,7 @@ What each direction adds beyond colour and type, all of it token-driven:
 | Claim control | a `CLAIM` rubber stamp beside it | a drafted `CLAIM` with its corner cut | a brass `CLAIM` switch |
 | Board | blotter-green recess, hairline framed | recess, chalk frame, coordinate ticks, a dimension line, a do-not-reproduce watermark behind the canvas | deep milled recess |
 | `SNIPE` | round rubber stamp | ferro-red drafted control | red fire switch |
+| `NEXT TURN`, waiting | a second impression of its own outline, bled into the stock | the chalk keyline lights ferro red | the brass catches the light |
 | Cemetery | typed tally on flimsy | hatched write-off | milled recess with brass |
 | Board marks | — | coordinate ticks, a dimension line reading `7 CELLS · 37 PLAYABLE`, leader-line callout on the selected piece | — |
 | Strip mark | the ceos-down stamp | `SECTION A–A` flag | engraved plate |
@@ -478,6 +479,26 @@ Three rules read the slice, and they are stated once each so they cannot drift:
 **Pointing and putting down are one click, on the cell being pointed at.** `Hexagon`'s `onMouseEnter` aims the piece at whichever cell the pointer crosses, and once `followMouse` is set, a click on a cell is the *drop* (`isTogglePieceOnCellClick`). So the gesture is: cross the cell you want it to face, click there. Every spec in the suite does exactly that — `clickOn.cell(3, 4)` to turn a sniper — and it is the thing to copy.
 
 Going back to click the **piece** also drops it, and quietly re-points it first: the pointer crosses the piece's own hexagon on the way, `cells.getDirection(from, from)` is `[0, 0]`, and `[0, 0]` is a legal facing for most pieces. So the facing just chosen is undone by the very click meant to keep it. Two training exercises were written that way and looked correct on screen — the token visibly turns during the hover — while committing the old bearing.
+
+### Handing the turn over
+
+Two pieces of chrome that are look rather than rule, and are documented because both have a constraint in them that is invisible in the code.
+
+**`NEXT TURN` beats while it waits, and the beat may not move it.** A turn that has ended looks exactly like one that has not until somebody notices the button has lit, so `Button` takes a `$beat` prop and the strip sets it on the same predicate as `active`. One beat and about a second of rest — slow enough to read as patience rather than as an alarm — and it stops on `:hover`, `:active` and `:focus-visible`, because it was only ever asking for one. Each direction says *ready* from two tokens, `--ha-control-beat-wash` and `--ha-control-beat`: a second impression of Dossier's own stamp outline bleeding into the stock, Blueprint's chalk keyline lighting to the ferro red a drawing calls things out in, Vault's brass catching the light.
+
+- **It is `opacity` on a `::after` and nothing else, and that is not a stylistic choice.** Most of this suite clicks `#next-turn`, and playwright will not click a target whose bounding box changed between two animation frames. A stamp rocking a degree is the obvious Dossier reading of "ready" and would have hung several hundred specs on the actionability check. The pseudo is `inset: 0`, so it is clipped by the button's own `clip-path` and rounded by its radius and each direction's edge still holds.
+- The pseudo paints **over** the label, so the wash's alpha is low on purpose. Putting it behind with `z-index: -1` would also put it behind the button's own background, which is a brass gradient in one direction.
+- Under `prefers-reduced-motion` it holds at 0.6 rather than going quiet: a control nobody can see waiting is worse than one that never moved.
+
+**The turn arrives in the middle of the table and is carried into the strip.** `TurnAnnounceStyled` is `styled(Cell)` — the strip's own first cell, not a card resembling one — laid on the target's box with `left/top/width/height` and then transformed away from it. That is a FLIP, and it is what makes the landing exact at every viewport and every name length: undoing a transform cannot miss, while animating *towards* a box can. `OnTheDesk` is the markup both of them render, so the two cannot drift; only the one in the strip is `named`, because `#turn-player` is read by a dozen specs and an id is not a thing to have two of.
+
+- **The offsets and the scale come through the `style` prop as custom properties** (`--ha-fly-x`, `--ha-fly-y`, `--ha-fly-k`) which the keyframes read. Same rule as `BoardMarks`: four values that differ per viewport, interpolated into a styled-components template, would mint a class per viewport and reclaim none.
+- **It runs on the turn CHANGING, not on the press.** Online, the seat that pressed the button is the one seat that already knew — everybody else was told by a 9px key quietly saying a different name. The server passing over a seat that has gone is announced by the same rule. It is deliberately silent on the first render: arriving at the play phase is not a turn changing hands, and a refresh mid-game is a player finding the table again.
+- **The strip's cell is hushed, not emptied** (`$hushed` dims its children, not the cell), so `#turn-player` keeps its text throughout — which is what lets every spec in the suite read it straight after a `NEXT TURN` — and the cell's own ground stays a segment of the rail rather than a hole in it. Opacity is also the one way to hide it that playwright still counts as visible.
+- **`announce` is off by default.** The training course renders this very strip inside its game mat, where a finished step already has a finding card coming down on it.
+- **The card travels on two layers**: an opaque `--ha-ground` backstop and the direction's own `--ha-panel` stock on top. One layer is not enough because a panel is a token designed to sit *on* the ground and two of the three are see-through — over the board that is a line of type read through a hexagon. Its drop shadow is a literal rather than `--ha-panel-shadow`, and is not composed with it either: a direction that wants no shadow sets that token to `none`, and a `none` inside a comma-separated shadow list is a parse error that takes the whole declaration down in silence.
+- Under `prefers-reduced-motion` the card is not rendered and the cell is never hushed. There is no still version of "carried in from somewhere", and the end state is the whole of the news. `prefersReducedMotion` lives in `client/motion.js` for this — `three/stage.js` re-exports it, so there is still one definition, but a DOM component no longer has to import the WebGL stage to ask.
+
 
 ### Mechanics vocabulary
 

@@ -253,3 +253,83 @@ test.describe('WHAT PUTS THE LAST MOVE AWAY', () => {
 		await expect(page.locator('#last-move-0-A1')).toHaveCount(0);
 	});
 });
+
+// The one control the game needs a player to FIND rather than to look for, and the hand-over it
+// triggers. Both are look rather than rule, and both are here because both have a way of failing
+// that the eye is the last thing to catch: a beat that never starts, and a card measured off one box
+// that lands on another.
+test.describe('THE TURN, HANDED OVER', () => {
+	test.beforeEach(async ({ goToPlay }) => {
+		await goToPlay(2);
+	});
+
+	async function aTurnPlayedOut(page, clickOn) {
+		await clickOn.team(0).agent(1);
+		await clickOn.cell(1, 1);
+		await clickOn.cell(2, 2);
+	}
+
+	test('the button asks to be pressed only once the turn has ended', async ({ page, clickOn, get }) => {
+		// Mid-turn it is dark, and a dark control has nothing to ask for.
+		expect(await get.nextTurn.isBeating).toBe(false);
+
+		await aTurnPlayedOut(page, clickOn);
+
+		expect(await get.nextTurn.isActive).toBe(true);
+		expect(await get.nextTurn.isBeating).toBe(true);
+
+		// And it stops the moment it has been answered: the turn it now holds has not ended.
+		await page.click('#next-turn');
+
+		expect(await get.nextTurn.isBeating).toBe(false);
+	});
+
+	// One round trip for everything the card has to be, because the card is a transient: it lives for
+	// the length of its own flight and this suite runs on machines where a second assertion is a
+	// second chance to arrive after it has gone.
+	test('carries the new turn in from the middle of the table', async ({ page, clickOn }) => {
+		await aTurnPlayedOut(page, clickOn);
+		await page.click('#next-turn');
+
+		const flight = await page.locator('#turn-announce').evaluate(card => {
+			const cell = document.getElementById('turn-cell').getBoundingClientRect();
+
+			return {
+				says: card.innerText,
+				// The box the card was LAID ON, before its own transform carried it away. The flight is
+				// a FLIP — the element is placed on the target and then transformed off it — so this is
+				// the property that makes the landing exact rather than close: undoing a transform
+				// cannot miss, and animating towards a box can.
+				laidOn: [parseFloat(card.style.left), parseFloat(card.style.top), parseFloat(card.style.width)],
+				target: [cell.left, cell.top, cell.width],
+				// And where it actually is while it is being read, which is out over the board.
+				at: card.getBoundingClientRect().top,
+				strip: cell.bottom,
+				// The board underneath stays live the whole way up. Every mark this game lays over the
+				// table has to, and this one crosses all of it.
+				through: getComputedStyle(card).pointerEvents,
+			};
+		});
+
+		expect(flight.says).toContain('SARA');
+		expect(flight.laidOn.map(Math.round)).toEqual(flight.target.map(Math.round));
+		expect(flight.at).toBeGreaterThan(flight.strip);
+		expect(flight.through).toEqual('none');
+	});
+
+	test('leaves the strip saying exactly what it said before', async ({ page, clickOn }) => {
+		await aTurnPlayedOut(page, clickOn);
+		await page.click('#next-turn');
+
+		// The cell is hushed rather than emptied, so the name is readable the whole way through — which
+		// is what lets every other spec in this suite read #turn-player straight after a NEXT TURN.
+		await expect(page.locator('#turn-player')).toHaveText('SARA');
+
+		await expect(page.locator('#turn-announce')).toHaveCount(0);
+		await expect(page.locator('#turn-player')).toHaveText('SARA');
+
+		const shown = await page.locator('#turn-player').evaluate(el => getComputedStyle(el).opacity);
+
+		expect(shown).toEqual('1');
+	});
+});

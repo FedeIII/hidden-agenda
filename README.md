@@ -170,6 +170,34 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.23.0
+* **NEXT TURN now asks to be pressed.** A turn that has ended looks exactly like one that has not
+  until somebody notices the button has lit, so once it is live it beats — one beat and a rest of
+  about a second, which is slow enough to read as patience rather than as an alarm. Each direction
+  says *ready* in its own hand, from two tokens: Dossier's stamp takes a second impression of its own
+  outline and bleeds it into the stock, Blueprint's chalk keyline lights to the ferro red a drawing
+  calls things out in, Vault's brass simply catches the light. The beat stops the moment the pointer
+  arrives — it was only ever asking for one
+* It is opacity on a pseudo-element and **nothing else**, on purpose: most of the browser suite
+  clicks `#next-turn`, and playwright refuses to click a target whose bounding box moved between two
+  frames. A rocking stamp was the obvious Dossier reading and would have hung several hundred specs
+* **And the turn is now handed over rather than swapped.** Press it and the new turn arrives in the
+  middle of the table — `ON THE DESK OF SARA`, on a piece of the direction's own card stock — is held
+  there long enough to read, and is carried up into the cell it belongs in, the stock dissolving on
+  the way so what seats itself in the strip is the line of type. 760ms all in
+* It **is** that cell rather than a card resembling one, and the flight is a FLIP: the element is laid
+  on the target's own box and then transformed away from it, so the landing is exact at every viewport
+  and every name length. Undoing a transform cannot miss; animating towards a box can
+* It runs on the turn **changing**, which is the wider reading of the same event on purpose: online,
+  the seat that pressed the button is the one seat that already knew. Everybody else was told by a
+  9px key at the top of the screen quietly saying a different name
+* `prefers-reduced-motion` gets the end state and nothing before it — there is no still version of
+  *carried in from somewhere* — and the beat says *ready* once and holds it rather than saying
+  nothing at all. The training course renders the same strip with the arrival off: a finished step
+  already has a finding card coming down on that board
+* Four new specs, and `prefersReducedMotion` moves out of the WebGL stage into `client/motion.js`,
+  because it stopped being the renderer's question
+
 ### v3.22.0
 * **The last-move mark now says what happened, not just where.** `AGENT PLACED`, `SNIPER MOVED`,
   `SPY KILLED` — and `TEAM CLAIMED`, because deploying a CEO is *how* a team is claimed and the

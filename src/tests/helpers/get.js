@@ -122,6 +122,17 @@ export default function createGet(page) {
 				get isActive() {
 					return page.locator('#next-turn').evaluate(el => getComputedStyle(el).cursor === 'pointer');
 				},
+				// Whether it is asking to be pressed. The beat is opacity on a ::after, and the
+				// animation NAME is styled-components', so what is asserted is that there is one —
+				// the alternative would be pinning a hash. An inactive button has no ::after at all,
+				// which computes to `none` on both counts.
+				get isBeating() {
+					return page.locator('#next-turn').evaluate(el => {
+						const style = getComputedStyle(el, '::after');
+
+						return style.animationName !== 'none' && style.content !== 'none';
+					});
+				},
 			};
 		},
 

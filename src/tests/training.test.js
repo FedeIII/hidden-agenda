@@ -200,6 +200,11 @@ test.describe('FIELD TRAINING', () => {
 		await page.click('#next-turn');
 		await expect(page.locator('#training-finding')).toBeVisible();
 		await expect(page.locator('#turn-player')).toHaveText('SARA');
+
+		// The real table carries the new turn in from the middle of the screen; a lesson does not.
+		// The finding card is already coming down on this board and two arrivals over one small mat is
+		// one too many, so `announce` is the play phase's and the default is off.
+		await expect(page.locator('#turn-announce')).toHaveCount(0);
 	});
 
 	// The gate is what makes the course impossible to get stuck in. It is enforced on the dispatch,

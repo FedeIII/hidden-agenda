@@ -66,13 +66,10 @@ export function invalidateStage() {
 // rather than travelling there, and a lit sniper stays lit rather than pulsing. The flat renderer
 // only ever animated for 200ms at a time, so continuous motion is something this layer introduced
 // and something it should be able to withdraw.
-export function prefersReducedMotion() {
-	return (
-		typeof window !== 'undefined' &&
-		!!window.matchMedia &&
-		window.matchMedia('(prefers-reduced-motion: reduce)').matches
-	);
-}
+//
+// Re-exported from `client/motion.js` rather than defined here: the turn strip asks the same
+// question, and it should not have to import the WebGL stage to ask it.
+export { prefersReducedMotion } from '../motion';
 
 function createCanvas() {
 	const canvas = document.createElement('canvas');
