@@ -14,8 +14,19 @@ const GlobalStyle = createGlobalStyle`
     background-color: var(--ha-ground);
     /* The ground's texture belongs on the document, never on .game: the WebGL canvas is a sibling
        of .game and sits UNDER it, so a background anywhere inside the app is a filter over
-       everything the renderer drew rather than a backdrop behind it. */
+       everything the renderer drew rather than a backdrop behind it.
+
+       Four declarations for one thing, because a direction's ground is a stack of layers and each of
+       them needs a size, a place to sit and an answer about tiling — the desk's telephone is one
+       phone in the corner, the drawing's watermark repeats across the whole sheet. The four lists are
+       written together in theme/ground.js and must stay the same length: CSS cycles a short list
+       instead of complaining. */
     background-image: var(--ha-ground-wash);
+    background-size: var(--ha-ground-size);
+    background-position: var(--ha-ground-position);
+    background-repeat: var(--ha-ground-repeat);
+    /* Fixed, so the props are anchored to the corners of the screen rather than to the top of a
+       document that is taller than it. */
     background-attachment: fixed;
     /* Stops iOS inflating text in landscape, which is one reason labels overran their boxes. */
     -webkit-text-size-adjust: 100%;

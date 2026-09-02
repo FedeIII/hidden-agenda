@@ -1,4 +1,5 @@
 import { SKINS } from 'Domain/skins';
+import { CASE, DESK, DRAWING } from './ground';
 
 // The look of each direction, as one flat table of custom properties.
 //
@@ -24,6 +25,17 @@ import { SKINS } from 'Domain/skins';
 //     the one piece of vocabulary a returning player owns, they are the same in all three
 //     directions, and the browser suite asserts them literally.
 //   - anything with a length that decides where a hexagon lands. See the note in domain/skins.js.
+
+// The four ground tokens, which are one thing said in four declarations: a list of layers, and the
+// size, position and repeat of each. They are written together, from one object per direction in
+// ground.js, because CSS cycles a short list rather than complaining — drop one entry and layer four
+// quietly takes layer one's position. skin.test.js counts the four back.
+const groundTokens = ({ wash, size, position, repeat }) => ({
+	'--ha-ground-wash': wash,
+	'--ha-ground-size': size,
+	'--ha-ground-position': position,
+	'--ha-ground-repeat': repeat,
+});
 
 // Shared across all three. The friend/foe green and red the game has used from the start, and the
 // four team colours.
@@ -64,8 +76,10 @@ const DOSSIER = {
 	'--ha-ground': '#c9b083',
 	// On html, never on .game — the canvas sits under .game, so a background there is a filter on
 	// everything the renderer drew rather than a backdrop behind it.
-	'--ha-ground-wash': `radial-gradient(140% 110% at 8% -8%, rgba(255, 250, 235, 0.5), transparent 55%),
-		repeating-linear-gradient(97deg, rgba(120, 92, 48, 0.055) 0 2px, transparent 2px 6px)`,
+	//
+	// The rest of the desk the board is sitting on: the open file, the pens, the cold coffee and the
+	// telephone, each cropped by the edge of the screen. See ground.js.
+	...groundTokens(DESK),
 	// The board's own recess, and the rule that frames it. The colour is the same one the renderer
 	// clears the board's rectangle with (SKIN_PLINTH.well below); this is the flat path's copy of it,
 	// where there is no canvas to sit in front of.
@@ -216,10 +230,26 @@ const DOSSIER = {
 	// Typed, then underlined by hand in red pencil.
 	'--ha-claim-holder-rule': '1px solid #a3282b',
 
-	// A drawing's coordinates and dimension callouts. Not a Dossier idea: a file has no scale.
-	'--ha-mark-display': 'none',
-	'--ha-mark-ink': 'transparent',
-	'--ha-mark-rule': 'transparent',
+	// A drawing's coordinates and its dimension line. Not a Dossier idea: a file has no scale.
+	'--ha-mark-grid-display': 'none',
+
+	// What a file does have is a subject, and something to clip to it. The piece in hand gets a typed
+	// slip on a dotted leader — the leader of dots a typed index runs between an entry and its page
+	// number, which is the one kind of line a typewriter can actually draw.
+	'--ha-mark-display': 'block',
+	'--ha-mark-callout-display': 'block',
+	'--ha-mark-ink': '#2c2620',
+	'--ha-mark-rule': 'rgba(90, 70, 36, 0.6)',
+	'--ha-mark-lead': '1px dotted #6a5834',
+	'--ha-mark-rotate': '-1.5deg',
+	'--ha-mark-badge-bg': 'rgba(255, 250, 235, 0.94)',
+	'--ha-mark-badge-ink': '#2c2620',
+	'--ha-mark-badge-radius': '0',
+	'--ha-mark-badge-shadow': '1px 1px 0 rgba(90, 70, 36, 0.35)',
+	'--ha-mark-tag-bg': 'rgba(255, 250, 235, 0.94)',
+	'--ha-mark-tag-ink': '#2c2620',
+	'--ha-mark-tag-edge': '1px solid rgba(90, 70, 36, 0.55)',
+	'--ha-mark-tag-shadow': '1px 1px 0 rgba(90, 70, 36, 0.3)',
 
 	// The one loud control at the table. A round rubber stamp, because it is an authorisation.
 	'--ha-control-radius-primary': '50% / 44%',
@@ -249,20 +279,17 @@ const DOSSIER = {
  */
 const BLUEPRINT = {
 	'--ha-ground': '#143452',
-	// Every slash and every parenthesis in this data URI is percent-encoded, and none of that is
-	// decoration. styled-components v4 preprocesses with stylis, which strips `//` as a line comment
-	// and cannot cope with a bare `(` inside a quoted url() — either one swallows the rest of this
-	// declaration AND the closing brace of the block, which silently nests the next skin and the whole
-	// `html` rule inside this one and leaves the page with no ground at all. Nothing throws; every
-	// custom property still resolves; the page is simply unpainted. skin.test.js guards it now.
+	// The drawing grid, and the watermark that says whose drawing it is without saying whose.
 	//
-	// A data URI is percent-decoded before the SVG is parsed, so %2F, %28 and %29 arrive as the
-	// slashes and brackets the markup needs. The fill is a hex colour with a separate fill-opacity
-	// rather than rgba(), for the same reason: no brackets.
-	'--ha-ground-wash': `url("data:image/svg+xml,%3Csvg xmlns='http:%2F%2Fwww.w3.org%2F2000%2Fsvg' width='760' height='420'%3E%3Ctext x='380' y='230' text-anchor='middle' transform='rotate%28-24 380 230%29' font-family='monospace' font-size='27' letter-spacing='9' fill='%23ffffff' fill-opacity='0.06'%3EPROPERTY OF %E2%96%88%E2%96%88%E2%96%88%E2%96%88%E2%96%88%E2%96%88 INDUSTRIES%3C/text%3E%3C/svg%3E"),
-		radial-gradient(120% 100% at 50% -10%, rgba(255, 255, 255, 0.07), transparent 60%),
-		repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 22px),
-		repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 22px)`,
+	// Every slash and every bracket in that data URI is percent-encoded, and none of that is
+	// decoration: styled-components v4 preprocesses with stylis, which strips `//` as a line comment
+	// and cannot cope with a bare `(` inside a quoted url() — either one swallows the rest of the
+	// declaration AND the closing brace of its block, which silently nests the next skin and the whole
+	// `html` rule inside this one and leaves the page with no ground at all. Nothing throws; every
+	// custom property still resolves; the page is simply unpainted. It is `asset()` in ground.js that
+	// does the encoding now, for this and for the eight props the other two directions have; the
+	// hazard is the same and hand-encoding it was how it was found. skin.test.js guards it.
+	...groundTokens(DRAWING),
 	'--ha-well': 'rgba(8, 26, 42, 0.55)',
 	// The same chalk hairline every other section of the drawing is framed with, because that is what
 	// divides one from the next.
@@ -394,10 +421,27 @@ const BLUEPRINT = {
 
 	// The direction that actually wants coordinates: on a drawing they are native, and they let the
 	// table say R3C4 out loud. They land on the phantom ring — the cells that are already clickable
-	// but never drawn, which is exactly where a label belongs.
+	// but never drawn, which is exactly where a label belongs. The one direction of the three that
+	// rules a grid and a dimension on the board, and the reason those are a token of their own.
 	'--ha-mark-display': 'block',
+	'--ha-mark-grid-display': 'block',
 	'--ha-mark-ink': '#9dc2dc',
 	'--ha-mark-rule': 'rgba(157, 194, 220, 0.75)',
+
+	// The part called out on a leader line, unchanged: chalk on the sheet, the ground broken under the
+	// label rather than a card laid on it, and no word in front of the id — the sheet has numbered its
+	// figures on the cards already.
+	'--ha-mark-callout-display': 'block',
+	'--ha-mark-lead': '1px solid rgba(157, 194, 220, 0.75)',
+	'--ha-mark-rotate': '0deg',
+	'--ha-mark-badge-bg': 'var(--ha-ground)',
+	'--ha-mark-badge-ink': '#9dc2dc',
+	'--ha-mark-badge-radius': '50%',
+	'--ha-mark-badge-shadow': 'none',
+	'--ha-mark-tag-bg': 'var(--ha-ground)',
+	'--ha-mark-tag-ink': '#9dc2dc',
+	'--ha-mark-tag-edge': '1px solid transparent',
+	'--ha-mark-tag-shadow': 'none',
 
 	'--ha-control-radius-primary': '0',
 
@@ -425,8 +469,10 @@ const BLUEPRINT = {
  */
 const VAULT = {
 	'--ha-ground': '#24282d',
-	'--ha-ground-wash': `linear-gradient(rgba(255, 255, 255, 0.05), transparent 45%),
-		repeating-linear-gradient(92deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 3px)`,
+	// The lining of the case the tray is fitted into: die-cut foam with the spare pieces still in it,
+	// markings stencilled up both inside walls, and the maker's plate riveted where a plate goes. See
+	// ground.js.
+	...groundTokens(CASE),
 	'--ha-well': '#14171a',
 	'--ha-well-edge': '#0c0e10',
 
@@ -557,9 +603,25 @@ const VAULT = {
 	'--ha-claim-rule': '1px solid transparent',
 	'--ha-claim-holder-rule': '1px solid transparent',
 
-	'--ha-mark-display': 'none',
-	'--ha-mark-ink': 'transparent',
-	'--ha-mark-rule': 'transparent',
+	// A case is not a drawing and has no grid, but every item in one has a plate beside it saying what
+	// the item is. The piece in hand gets that plate: engraved, bezelled in brass, on a brass leader
+	// screwed to the tray — and the number on a brass tab, because that is the only part of a case
+	// anybody is meant to read from across the room.
+	'--ha-mark-grid-display': 'none',
+	'--ha-mark-display': 'block',
+	'--ha-mark-callout-display': 'block',
+	'--ha-mark-ink': '#e5e7ea',
+	'--ha-mark-rule': '#a8842f',
+	'--ha-mark-lead': '1px solid #a8842f',
+	'--ha-mark-rotate': '0deg',
+	'--ha-mark-badge-bg': 'linear-gradient(#d9b464, #a8842f)',
+	'--ha-mark-badge-ink': '#2a2210',
+	'--ha-mark-badge-radius': '2px',
+	'--ha-mark-badge-shadow': 'inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 1px 2px rgba(0, 0, 0, 0.5)',
+	'--ha-mark-tag-bg': 'linear-gradient(#2b3035, #22262a)',
+	'--ha-mark-tag-ink': '#e5e7ea',
+	'--ha-mark-tag-edge': '1px solid #a8842f',
+	'--ha-mark-tag-shadow': 'inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 3px rgba(0, 0, 0, 0.5)',
 
 	'--ha-control-radius-primary': '2px',
 
@@ -589,7 +651,7 @@ export { SHARED };
 /**
  * The words a direction says, per language.
  *
- * These six tokens are the only ones in this file whose value is *text* rather than a look, and they
+ * These seven tokens are the only ones in this file whose value is *text* rather than a look, and they
  * are here rather than in the string catalog because which words they are is the skin's business as
  * much as the language's: a file stamps CONTROL:, a drawing signs a sheet off, a case is taped shut
  * and says CLAIMED. Three voices, and each of them has to be said in two languages — so this is a
@@ -614,6 +676,8 @@ export const SKIN_WORDS = {
 			'--ha-card-fig-friend': "''",
 			'--ha-card-fig-foe': "''",
 			'--ha-card-swatch-key': "'colour of record'",
+			// A file has subjects, and the slip clipped to the piece in hand names one.
+			'--ha-mark-key': "'SUBJECT '",
 			// Claiming a team is a stamp on the file, and the file says so even when nobody has claimed it.
 			'--ha-claim-key': "'CONTROL: '",
 			'--ha-claim-empty': "'CONTROL: UNCLAIMED'",
@@ -624,6 +688,7 @@ export const SKIN_WORDS = {
 			'--ha-card-fig-friend': "''",
 			'--ha-card-fig-foe': "''",
 			'--ha-card-swatch-key': "'color de registro'",
+			'--ha-mark-key': "'SUJETO '",
 			'--ha-claim-key': "'CONTROL: '",
 			'--ha-claim-empty': "'CONTROL: SIN RECLAMAR'",
 			'--ha-strip-mark': "''",
@@ -637,6 +702,8 @@ export const SKIN_WORDS = {
 			'--ha-card-fig-foe': "'FIG. 2 — '",
 			// And references a part by its number rather than by its name.
 			'--ha-card-swatch-key': "'colour ref'",
+			// The leader line points at the part and the id names it. A drawing does not label a label.
+			'--ha-mark-key': "''",
 			'--ha-claim-key': "'SIGNED OFF '",
 			'--ha-claim-empty': "'UNASSIGNED'",
 			'--ha-strip-mark': "'SECTION A–A'",
@@ -645,6 +712,7 @@ export const SKIN_WORDS = {
 			'--ha-card-fig-friend': "'FIG. 1 — '",
 			'--ha-card-fig-foe': "'FIG. 2 — '",
 			'--ha-card-swatch-key': "'ref. de color'",
+			'--ha-mark-key': "''",
 			'--ha-claim-key': "'FIRMADO POR '",
 			'--ha-claim-empty': "'SIN ASIGNAR'",
 			'--ha-strip-mark': "'SECCIÓN A–A'",
@@ -658,6 +726,8 @@ export const SKIN_WORDS = {
 			'--ha-card-fig-foe': "''",
 			// A plate is engraved with a finish, not a part number.
 			'--ha-card-swatch-key': "'anodised'",
+			// Everything in the case is an item, and the plate beside it says which.
+			'--ha-mark-key': "'ITEM '",
 			// Tamper tape, which reads as claimed from across the room at any size. This direction would
 			// rather say nothing at all than say UNCLAIMED — an unsealed tray is already the statement.
 			// It says it anyway, because the line is what a player clicks to claim the team and a control
@@ -670,6 +740,7 @@ export const SKIN_WORDS = {
 			'--ha-card-fig-friend': "''",
 			'--ha-card-fig-foe': "''",
 			'--ha-card-swatch-key': "'anodizado'",
+			'--ha-mark-key': "'PIEZA '",
 			'--ha-claim-key': "'RECLAMADO · '",
 			'--ha-claim-empty': "'SIN RECLAMAR'",
 			'--ha-strip-mark': "''",

@@ -136,6 +136,64 @@ test.describe('a skin actually paints the page', () => {
 		});
 	}
 
+	// The ground is four declarations saying one thing — the layers, and the size, position and repeat
+	// of each — and CSS cycles a short list instead of complaining. Drop one entry and the desk's
+	// telephone silently takes the memo's corner, at the memo's size, tiled. It looks like a design
+	// decision, which is the whole reason to count them from the outside.
+	//
+	// Splitting on top-level commas only, because every one of these values is full of commas that are
+	// not separators: `url("data:...,%3Csvg")`, `rgba(255, 250, 235, 0.5)`, and the stops of every
+	// gradient in the file.
+	const layerCount = value => {
+		let depth = 0;
+		let quote = null;
+		let layers = 1;
+
+		for (const character of value) {
+			if (quote) {
+				if (character === quote) {
+					quote = null;
+				}
+			} else if (character === '"' || character === "'") {
+				quote = character;
+			} else if (character === '(') {
+				depth += 1;
+			} else if (character === ')') {
+				depth -= 1;
+			} else if (character === ',' && depth === 0) {
+				layers += 1;
+			}
+		}
+
+		return layers;
+	};
+
+	for (const skin of SKIN_NAMES) {
+		test(`${skin} sizes and places every layer of its ground`, async ({ page }) => {
+			await page.goto(`/?skin=${skin}&hotseat`);
+			await expect(page.locator('#start-btn')).toBeVisible();
+
+			const ground = await page.evaluate(() => {
+				const root = getComputedStyle(document.documentElement);
+
+				return {
+					image: root.backgroundImage,
+					size: root.backgroundSize,
+					position: root.backgroundPosition,
+					repeat: root.backgroundRepeat,
+				};
+			});
+
+			const layers = layerCount(ground.image);
+
+			// More than one, or this direction has no ground to get wrong.
+			expect(layers).toBeGreaterThan(1);
+			expect(layerCount(ground.size), 'sizes').toBe(layers);
+			expect(layerCount(ground.position), 'positions').toBe(layers);
+			expect(layerCount(ground.repeat), 'repeats').toBe(layers);
+		});
+	}
+
 	test('every skin block is a block of its own', async ({ page }) => {
 		// The failure above showed up in the cascade as one selector swallowing another. Reading the
 		// injected rules back is the only way to see that from the outside.
@@ -510,6 +568,106 @@ test.describe('a skin changes the chrome and nothing else', () => {
 		// Once the CEO is out there is nothing left to claim, so the offer is gone rather than dimmed and
 		// the line is purely a statement.
 		expect(all.map(skin => skin.claimed.offer)).toEqual([null, null, null]);
+	});
+
+	// The piece in hand, named on the board in each direction's own material: a typed slip clipped to
+	// the subject, a part called out on a leader line, an engraved plate screwed beside the item.
+	//
+	// This is the mark that used to be Blueprint's alone, and the two tokens behind it are why it is a
+	// spec rather than a look. The grid — the coordinates and the dimension line — stays the drawing's
+	// idea, so it hangs off `--ha-mark-grid-display` while the label hangs off
+	// `--ha-mark-callout-display`. One token for both would mean a file room with a scale on it, which
+	// is the thing the tokens exist to prevent.
+	test('names the piece in hand the way its own direction would', async ({ page, clickOn }) => {
+		const markFor = async skin => {
+			await toBoard(page, `?skin=${skin}`);
+
+			// Out of the tray and onto the board, where it stays selected — which is when a direction
+			// has something to say about it.
+			await clickOn.team(0).agent(1);
+			await clickOn.cell(3, 3);
+			await expect(page.locator('#board b')).toBeVisible();
+
+			return page.evaluate(() => {
+				// Everything is read off the label's own parent rather than off `#board`: a fallen
+				// sniper's mark carries an `i` too, and this spec is not about that one.
+				const label = document.querySelector('#board b');
+				const callout = label.parentElement;
+				const badge = callout.querySelector('i');
+				const marks = document.querySelector('#board > [aria-hidden="true"]');
+				// A coordinate tick. It is the first mark in the layer carrying an inline style, because
+				// the dimension line above it is placed by the stylesheet and every tick is placed from
+				// the projection the renderer handed back.
+				const tick = marks.querySelector('span[style]');
+				const tag = getComputedStyle(label);
+
+				return {
+					// The id and the piece's name, which is the fact underneath all three materials.
+					text: label.textContent,
+					// The word each direction puts in front of it, drawn by `content` — invisible to
+					// textContent, which is exactly why it is read this way.
+					key: getComputedStyle(label, '::before').content,
+					// A slip and a plate are objects and paint their own ground; a drawing merely breaks
+					// its own ground under the label. Read as a pair, because Vault's plate is a gradient
+					// and a gradient computes as an image with a transparent colour behind it.
+					tagFill: tag.backgroundColor,
+					tagImage: tag.backgroundImage,
+					tagEdge: tag.borderTopColor,
+					tagWidth: tag.borderTopWidth,
+					// Round on the drawing, square on the typed slip, bevelled on the case.
+					badgeRadius: getComputedStyle(badge).borderTopLeftRadius,
+					// And the leader itself: a drawn line, a typed leader of dots, a brass rod.
+					lead: getComputedStyle(callout, '::before').borderTopStyle,
+					// Only the drawing rules a grid on the board it is drawing.
+					ticks: !!tick,
+					gridShown: getComputedStyle(tick).display,
+				};
+			});
+		};
+
+		const dossier = await markFor('dossier');
+		const blueprint = await markFor('blueprint');
+		const vault = await markFor('vault');
+		const all = [dossier, blueprint, vault];
+
+		// One fact, three materials. The id and the piece's name are the same DOM text in all three —
+		// `TYPE_NAMES` is lettering on the mark, so it stays English the way FIG. 1 does.
+		expect(all.map(mark => mark.text)).toEqual([
+			'0-A1 · AGENT, TEAM 0',
+			'0-A1 · AGENT, TEAM 0',
+			'0-A1 · AGENT, TEAM 0',
+		]);
+
+		// A file has subjects and a case has items. A drawing has already numbered its figures on the
+		// cards and does not label a label.
+		expect(dossier.key).toContain('SUBJECT');
+		expect(vault.key).toContain('ITEM');
+		expect(blueprint.key).toBe('""');
+
+		// The slip is typed on paper and the plate is milled out of metal, so both are opaque objects
+		// laid on the board; the drawing only interrupts its own ground under the words.
+		expect(dossier.tagFill).not.toBe('rgba(0, 0, 0, 0)');
+		expect(vault.tagImage).toContain('gradient');
+		expect(blueprint.tagImage).toBe('none');
+
+		// A colour, never a width — the same rule the rest of the table follows, even here where this
+		// element floats over the board and could not move a hexagon if it tried.
+		expect(new Set(all.map(mark => mark.tagWidth)).size).toBe(1);
+		expect(new Set(all.map(mark => mark.tagEdge)).size).toBe(3);
+
+		// A typewriter's leader is a row of dots; the other two draw a line.
+		expect(dossier.lead).toBe('dotted');
+		expect(blueprint.lead).toBe('solid');
+		expect(vault.lead).toBe('solid');
+
+		// The number rides a disc on the drawing and a square tag on the typed slip.
+		expect(blueprint.badgeRadius).toBe('50%');
+		expect(dossier.badgeRadius).toBe('0px');
+
+		// And the grid stays the drawing's: the coordinates are in the DOM in all three directions,
+		// because the marks layer is one component, and only one direction shows them.
+		expect(all.map(mark => mark.ticks)).toEqual([true, true, true]);
+		expect(all.map(mark => mark.gridShown)).toEqual(['none', 'block', 'none']);
 	});
 
 	// Whose turn it is, in each direction's own words. Unlike the claim line above, this one is a real

@@ -170,6 +170,33 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.26.0
+* **Two of the three directions had a look; only one of them had a place.** Blueprint sat on a
+  watermarked sheet with the drawing grid behind it, ruled coordinates down the board and called the
+  selected piece out on a leader line. Dossier and Vault had colour, type and nothing around them.
+  `src/client/theme/ground.js` is what each direction now has lying around the board, as background
+  layers on the document
+* **Dossier is a desk.** An open file, typed, part-blacked-out and stamped `EYES ONLY`; a fountain pen
+  and a pencil put down across each other; a cold coffee and the two rings it left; and a rotary
+  telephone with the cord running off across the desk. Every prop is cropped by the edge of the
+  screen, because a desk is bigger than the part of it you can see — and the friend-and-foe cards are
+  dealt on the same desk, since that shell takes the ground too
+* **Vault is the inside of the case.** Die-cut foam cut to the shape of the tile, with three pieces
+  still seated in it; `PROPERTY OF ██████ · FIELD SET 04 OF 12 · DO NOT REMOVE FROM ROOM` stencilled
+  up both inside walls, cut into the metal rather than printed on it; and the maker's plate riveted in
+  the corner, redacted where it counts
+* **All three now name the piece in hand, each in its own material**: a typed slip on a leader of dots
+  reading `SUBJECT 0-A1 · AGENT, TEAM 0`, the drawing's disc on a leader line, an engraved plate
+  bezelled in brass reading `ITEM 0-A1 · …`. The coordinates and the dimension line stay the drawing's
+  alone — a file has no scale — which is why the grid and the label hang off two display tokens rather
+  than one
+* **`--ha-ground-wash` has `--ha-ground-size`, `--ha-ground-position` and `--ha-ground-repeat` beside
+  it now, and the four lists must stay the same length.** CSS cycles a short list rather than
+  complaining, so a dropped entry hands one layer another's position at another's size, tiled, and it
+  reads as a decision. `skin.test.js` counts all four back off the computed style
+* **Nothing in the theme hand-encodes a data URI any more**, Blueprint's watermark included: `asset()`
+  does it. That is the stylis hazard which once left the whole page with no ground and threw nothing —
+  it is a function now rather than a warning in a comment
 ### v3.25.1
 * **The new art is behind a `?v=`, or nobody would have seen it for a week.** `/img/` is served
   with `max-age=604800` because piece filenames are stable and nothing there is content-hashed — so

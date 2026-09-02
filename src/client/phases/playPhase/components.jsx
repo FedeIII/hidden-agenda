@@ -337,7 +337,13 @@ export const ScreenStyled = styled.div`
 	padding: 20px;
 	overflow-y: auto;
 	background-color: var(--ha-ground);
+	/* The same four declarations the document carries in globalStyle.js, and for the same reason: this
+	   shell IS the ground, so the cards are dealt on the desk the game is played on and not on a
+	   dialog. No backtick in this comment — it would close the template literal around it. */
 	background-image: var(--ha-ground-wash);
+	background-size: var(--ha-ground-size);
+	background-position: var(--ha-ground-position);
+	background-repeat: var(--ha-ground-repeat);
 `;
 
 export const ScreenBody = styled.div`
@@ -697,13 +703,18 @@ const asRack = ({ dimensional }) => {
 	}
 };
 
-// The coordinates and dimension callouts a drawing has, laid over the board.
+// What a direction writes on the board itself, laid over it: the coordinates and the measurement a
+// drawing rules on a sheet, and — in all three directions — the label on the piece in hand.
 //
 // Two things keep this safe. It never intercepts a pointer — the ring cells it sits on ARE clickable,
 // because that is how a piece on the border is pointed off the board, and an absolutely positioned
 // label over one would quietly eat that. And every projected pixel arrives through the `style` prop,
 // never through this template: styled-components mints a rule per distinct interpolated value and
 // reclaims none, so a px offset in here would leak a class per tick per layout, forever.
+//
+// The container is on in all three now, and what shows inside it is two tokens rather than one: a
+// grid is the drawing's idea and stays the drawing's, while every direction has something it would
+// clip, pin or screw to the piece it is talking about.
 export const BoardMarks = styled.div`
 	display: var(--ha-mark-display);
 	position: absolute;
@@ -717,16 +728,23 @@ export const BoardMarks = styled.div`
 `;
 
 export const Tick = styled.span`
+	display: var(--ha-mark-grid-display);
 	position: absolute;
 	transform: translate(-50%, -50%);
 	white-space: nowrap;
 `;
 
-// A part called out on a leader line, the way a drawing names the thing it is pointing at. Only ever
-// one at a time — whatever is selected — so it costs a single element and never crowds the board.
+// The piece in hand, named on a leader: a drawing points at a part and numbers it, a file clips a
+// typed slip to the subject, a case screws an engraved plate beside the item. Only ever one at a time
+// — whatever is selected — so it costs a single element and never crowds the board.
+//
+// Every material difference here is a token. Both borders keep the same width in all three
+// directions: this element floats over the board and could not move a hexagon if it tried, but a
+// rule that holds everywhere is a rule nobody has to stop and check.
 export const Callout = styled.span`
+	display: var(--ha-mark-callout-display);
 	position: absolute;
-	transform: translateY(-50%);
+	transform: translateY(-50%) rotate(var(--ha-mark-rotate));
 	white-space: nowrap;
 	padding-left: 34px;
 	color: var(--ha-mark-ink);
@@ -737,12 +755,13 @@ export const Callout = styled.span`
 		left: 4px;
 		top: 50%;
 		width: 26px;
-		border-top: 1px solid var(--ha-mark-rule);
+		border-top: var(--ha-mark-lead);
 	}
 
 	/* Both the bubble and the label sit on a break in the ground, which is what a drawing does with a
 	   leader label: the line is interrupted rather than drawn through the text. Without it the label
-	   is chalk over slate tiles and unreadable exactly where a piece is. */
+	   is chalk over slate tiles and unreadable exactly where a piece is. The other two directions do
+	   not break anything — a slip and a plate are objects, and they are opaque. */
 	i {
 		font-style: normal;
 		display: inline-block;
@@ -751,20 +770,33 @@ export const Callout = styled.span`
 		line-height: 14px;
 		text-align: center;
 		border: 1px solid var(--ha-mark-rule);
-		border-radius: 50%;
+		border-radius: var(--ha-mark-badge-radius);
 		margin-right: 6px;
-		background: var(--ha-ground);
+		background: var(--ha-mark-badge-bg);
+		color: var(--ha-mark-badge-ink);
+		box-shadow: var(--ha-mark-badge-shadow);
 	}
 
+	/* The word in front of the id is the direction's own — a file has subjects, a case has items, a
+	   drawing has already said FIG. on the cards and says nothing more here. SKIN_WORDS, so it is
+	   skin x language and neither on its own. */
 	b {
 		font-weight: 400;
 		padding: 1px 5px;
-		background: var(--ha-ground);
+		background: var(--ha-mark-tag-bg);
+		border: var(--ha-mark-tag-edge);
+		color: var(--ha-mark-tag-ink);
+		box-shadow: var(--ha-mark-tag-shadow);
+
+		&::before {
+			content: var(--ha-mark-key);
+		}
 	}
 `;
 
 // A dimension line with real end ticks, the way a drawing brackets a measurement.
 export const Dimension = styled.span`
+	display: var(--ha-mark-grid-display);
 	position: absolute;
 	left: 4%;
 	right: 4%;
