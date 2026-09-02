@@ -33,8 +33,9 @@ const asPrimary = css`
  * control the game needs a player to find rather than to look for: a turn that has ended looks
  * exactly like a turn that has not until somebody notices the button lit.
  *
- * One beat, then a long rest. A control that pulses without a pause reads as an alarm; one that
- * says something every couple of seconds reads as one that is ready and can wait.
+ * TWO beats, then a rest — a double knock rather than a single tap, because one soft pulse was easy
+ * to sit through. The pair is what makes it read as somebody asking rather than as something merely
+ * lit, and the rest after it is what keeps it from reading as an alarm.
  *
  * Three directions, one mechanism, two tokens — the same arrangement as everything else here: what
  * the beat LOOKS like is `--ha-control-beat-wash` and `--ha-control-beat`, so a stamp's second
@@ -46,17 +47,25 @@ const asPrimary = css`
  * would have hung several hundred specs on the actionability check. So the beat is opacity on a
  * pseudo-element and nothing else: the button's own box never moves, and the pseudo is inset to it,
  * clipped by its `clip-path` and rounded by its radius, so each direction's edge still holds.
+ *
+ * Which is also why "more insistent" is spent on the two things that cost no geometry — how OFTEN it
+ * says it and how LOUD each token is — and never on a transform. A box-shadow does not enter any
+ * bounding box either, but a `clip-path` direction would crop an outward glow and the other two
+ * would not, so the light stays inside the control in all three.
  * ------------------------------------------------------------------------------------------- */
 
 const beat = keyframes`
 	0%   { opacity: 0; }
-	9%   { opacity: 1; }
-	42%  { opacity: 0; }
+	5%   { opacity: 1; }
+	17%  { opacity: 0.28; }
+	27%  { opacity: 1; }
+	48%  { opacity: 0; }
 	100% { opacity: 0; }
 `;
 
-// One beat and a rest of about a second and a quarter, which is slow enough to read as patience.
-const BEAT_MS = 2200;
+// Both beats and the rest after them. Shorter than it was, because the pair has to land as one
+// gesture and then leave a silence long enough to be a silence.
+const BEAT_MS = 1900;
 
 const beats = css`
 	position: relative;
@@ -81,11 +90,12 @@ const beats = css`
 	}
 
 	/* Asked for less movement, the control still has to say it is ready, so it says it once and
-	   holds it rather than saying nothing at all. */
+	   holds it rather than saying nothing at all. Held higher than it was, for the same reason the
+	   beat is louder: this is the one control the game needs a player to find. */
 	@media (prefers-reduced-motion: reduce) {
 		&::after {
 			animation: none;
-			opacity: 0.6;
+			opacity: 0.8;
 		}
 	}
 `;

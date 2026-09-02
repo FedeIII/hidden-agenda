@@ -170,6 +170,21 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.26.1
+* **The piece-in-hand label is Blueprint's again, and only Blueprint's.** v3.26.0 gave Dossier a
+  typed slip and Vault an engraved plate; both are gone, along with the fourteen tokens and the skin
+  word behind them, so `--ha-mark-display` is one switch for the whole mark layer the way it was. The
+  desks and the cases stay — this is the label, not the ground
+* **The `NEXT TURN` beat is louder, in the two places that cost no geometry.** Two beats and a rest
+  rather than one pulse, on a 1.9s cycle rather than 2.2s, and every direction's `--ha-control-beat`
+  ring is thicker and at full strength. **The wash is deliberately not turned up with it**: that
+  pseudo-element paints over the button's own text, and in Dossier the beat and the control ink are
+  the same red, so a heavier fill reads as a solid red block with `NEXT TURN` invisible inside it.
+  Loudness goes into the edge, which has nothing behind it to hide
+* `skin.test.js` now beats the control in all three directions and measures its bounding box six
+  times across a cycle. Turning a beat up is exactly the edit that reaches for a transform, and
+  playwright will not click a target whose box moved between two frames — several hundred specs in
+  this suite click `#next-turn`
 ### v3.26.0
 * **Two of the three directions had a look; only one of them had a place.** Blueprint sat on a
   watermarked sheet with the drawing grid behind it, ruled coordinates down the board and called the

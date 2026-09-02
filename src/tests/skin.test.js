@@ -570,104 +570,88 @@ test.describe('a skin changes the chrome and nothing else', () => {
 		expect(all.map(skin => skin.claimed.offer)).toEqual([null, null, null]);
 	});
 
-	// The piece in hand, named on the board in each direction's own material: a typed slip clipped to
-	// the subject, a part called out on a leader line, an engraved plate screwed beside the item.
+	// The one control the game needs a player to FIND rather than to look for, said in each direction's
+	// own material.
 	//
-	// This is the mark that used to be Blueprint's alone, and the two tokens behind it are why it is a
-	// spec rather than a look. The grid — the coordinates and the dimension line — stays the drawing's
-	// idea, so it hangs off `--ha-mark-grid-display` while the label hangs off
-	// `--ha-mark-callout-display`. One token for both would mean a file room with a scale on it, which
-	// is the thing the tokens exist to prevent.
-	test('names the piece in hand the way its own direction would', async ({ page, clickOn }) => {
-		const markFor = async skin => {
-			await toBoard(page, `?skin=${skin}`);
-
-			// Out of the tray and onto the board, where it stays selected — which is when a direction
-			// has something to say about it.
-			await clickOn.team(0).agent(1);
-			await clickOn.cell(3, 3);
-			await expect(page.locator('#board b')).toBeVisible();
+	// Read off `:root` on the menu rather than off a lit button on a board, and that is a cost
+	// decision with a real reason behind it. What differs per direction is the value of exactly two
+	// custom properties; what *uses* them is one rule in components/button.js, and the spec below
+	// exercises that once. Playing three games to read three colours would add three games to a suite
+	// that already runs at this box's limit — and it was that extra load, not a broken assertion, that
+	// took five unrelated specs down with it the first time this was written.
+	test('says ready in each direction, from the same two tokens', async ({ page }) => {
+		const materialFor = async skin => {
+			await page.goto(`/?skin=${skin}&hotseat`);
+			await expect(page.locator('#start-btn')).toBeVisible();
 
 			return page.evaluate(() => {
-				// Everything is read off the label's own parent rather than off `#board`: a fallen
-				// sniper's mark carries an `i` too, and this spec is not about that one.
-				const label = document.querySelector('#board b');
-				const callout = label.parentElement;
-				const badge = callout.querySelector('i');
-				const marks = document.querySelector('#board > [aria-hidden="true"]');
-				// A coordinate tick. It is the first mark in the layer carrying an inline style, because
-				// the dimension line above it is placed by the stylesheet and every tick is placed from
-				// the projection the renderer handed back.
-				const tick = marks.querySelector('span[style]');
-				const tag = getComputedStyle(label);
+				const root = getComputedStyle(document.documentElement);
 
 				return {
-					// The id and the piece's name, which is the fact underneath all three materials.
-					text: label.textContent,
-					// The word each direction puts in front of it, drawn by `content` — invisible to
-					// textContent, which is exactly why it is read this way.
-					key: getComputedStyle(label, '::before').content,
-					// A slip and a plate are objects and paint their own ground; a drawing merely breaks
-					// its own ground under the label. Read as a pair, because Vault's plate is a gradient
-					// and a gradient computes as an image with a transparent colour behind it.
-					tagFill: tag.backgroundColor,
-					tagImage: tag.backgroundImage,
-					tagEdge: tag.borderTopColor,
-					tagWidth: tag.borderTopWidth,
-					// Round on the drawing, square on the typed slip, bevelled on the case.
-					badgeRadius: getComputedStyle(badge).borderTopLeftRadius,
-					// And the leader itself: a drawn line, a typed leader of dots, a brass rod.
-					lead: getComputedStyle(callout, '::before').borderTopStyle,
-					// Only the drawing rules a grid on the board it is drawing.
-					ticks: !!tick,
-					gridShown: getComputedStyle(tick).display,
+					wash: root.getPropertyValue('--ha-control-beat-wash').trim(),
+					glow: root.getPropertyValue('--ha-control-beat').trim(),
 				};
 			});
 		};
 
-		const dossier = await markFor('dossier');
-		const blueprint = await markFor('blueprint');
-		const vault = await markFor('vault');
-		const all = [dossier, blueprint, vault];
+		const all = [await materialFor('dossier'), await materialFor('blueprint'), await materialFor('vault')];
 
-		// One fact, three materials. The id and the piece's name are the same DOM text in all three —
-		// `TYPE_NAMES` is lettering on the mark, so it stays English the way FIG. 1 does.
-		expect(all.map(mark => mark.text)).toEqual([
-			'0-A1 · AGENT, TEAM 0',
-			'0-A1 · AGENT, TEAM 0',
-			'0-A1 · AGENT, TEAM 0',
-		]);
+		// Three materials, and neither half is empty in any of them: the wash and the glow together are
+		// the whole of what a waiting control shows.
+		expect(new Set(all.map(beat => beat.wash)).size).toBe(3);
+		expect(new Set(all.map(beat => beat.glow)).size).toBe(3);
+		all.forEach(beat => {
+			expect(beat.wash).not.toBe('');
+			expect(beat.glow).not.toBe('');
+			expect(beat.glow).not.toBe('none');
+		});
 
-		// A file has subjects and a case has items. A drawing has already numbered its figures on the
-		// cards and does not label a label.
-		expect(dossier.key).toContain('SUBJECT');
-		expect(vault.key).toContain('ITEM');
-		expect(blueprint.key).toBe('""');
+		// Every shadow in the list is INSET, in all three. Not tidiness: the beat is turned up by
+		// thickening this ring, and an outward glow would be cropped by Blueprint's `clip-path` and by
+		// nothing in the other two — so the same edit would land differently in each direction.
+		all.forEach(beat => expect(beat.glow.split('inset').length - 1).toBeGreaterThan(1));
+	});
 
-		// The slip is typed on paper and the plate is milled out of metal, so both are opaque objects
-		// laid on the board; the drawing only interrupts its own ground under the words.
-		expect(dossier.tagFill).not.toBe('rgba(0, 0, 0, 0)');
-		expect(vault.tagImage).toContain('gradient');
-		expect(blueprint.tagImage).toBe('none');
+	// And the half that cannot be read off a token: that the control actually beats, and that beating
+	// does not move it by so much as a pixel. Playwright refuses a target whose bounding box changed
+	// between two animation frames, and several hundred specs in this suite click `#next-turn` — so
+	// turning the beat up is exactly the edit that would reach for a transform and hang all of them.
+	//
+	// One direction is enough, and dossier is the one the fixture already pins: the keyframes and the
+	// rule are shared, and a token cannot introduce a transform.
+	test('beats NEXT TURN when the turn has ended, and never moves it', async ({ page, clickOn }) => {
+		await toBoard(page, '?skin=dossier');
 
-		// A colour, never a width — the same rule the rest of the table follows, even here where this
-		// element floats over the board and could not move a hexagon if it tried.
-		expect(new Set(all.map(mark => mark.tagWidth)).size).toBe(1);
-		expect(new Set(all.map(mark => mark.tagEdge)).size).toBe(3);
+		// Deploy an agent, point it, then drop it. Dropping is what ends a turn — see
+		// hasTurnEndedReducer — and an unfinished turn leaves the control dark on purpose.
+		await clickOn.team(0).agent(1);
+		await clickOn.cell(3, 3);
+		await clickOn.team(0).agent(1);
+		await expect(page.locator('#next-turn')).toBeEnabled();
 
-		// A typewriter's leader is a row of dots; the other two draw a line.
-		expect(dossier.lead).toBe('dotted');
-		expect(blueprint.lead).toBe('solid');
-		expect(vault.lead).toBe('solid');
+		const beat = await page.evaluate(() => {
+			const pulse = getComputedStyle(document.querySelector('#next-turn'), '::after');
 
-		// The number rides a disc on the drawing and a square tag on the typed slip.
-		expect(blueprint.badgeRadius).toBe('50%');
-		expect(dossier.badgeRadius).toBe('0px');
+			return { name: pulse.animationName, duration: pulse.animationDuration };
+		});
 
-		// And the grid stays the drawing's: the coordinates are in the DOM in all three directions,
-		// because the marks layer is one component, and only one direction shows them.
-		expect(all.map(mark => mark.ticks)).toEqual([true, true, true]);
-		expect(all.map(mark => mark.gridShown)).toEqual(['none', 'block', 'none']);
+		// It is running, and the rule's own two tokens have arrived on the element.
+		expect(beat.name).not.toBe('none');
+		expect(beat.duration).not.toBe('0s');
+
+		// Five samples across a second and a half, which covers both beats and part of the rest.
+		const boxes = [];
+
+		for (let sample = 0; sample < 5; sample++) {
+			boxes.push(await page.locator('#next-turn').boundingBox());
+			await page.waitForTimeout(300);
+		}
+
+		// Rounded, because a subpixel layout wobble is not what this is about. A transform would move
+		// the box by whole pixels.
+		const rounded = boxes.map(box => [box.x, box.y, box.width, box.height].map(Math.round).join());
+
+		expect(new Set(rounded).size, 'the beat moved the button').toBe(1);
 	});
 
 	// Whose turn it is, in each direction's own words. Unlike the claim line above, this one is a real

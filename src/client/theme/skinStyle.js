@@ -22,12 +22,12 @@ const skinBlocks = [
 ].join('\n\n');
 
 /**
- * The same blocks again, for the seven tokens whose value is a word — see SKIN_WORDS.
+ * The same blocks again, for the six tokens whose value is a word — see SKIN_WORDS.
  *
  * Separate from the constant above because these depend on the language and that one must not: the
  * whole point of `skinBlocks` is that switching skin is one attribute write with nothing recompiled,
  * and threading a language through it would mint a second copy of all six hundred declarations.
- * This is forty-two declarations, rebuilt when a player changes language and at no other time.
+ * This is thirty-six declarations, rebuilt when a player changes language and at no other time.
  *
  * Same shape as `skinBlocks`, and mounted after it, so the default block covers the first paint and
  * a `[data-skin]` block wins over it by coming later at equal specificity.
