@@ -170,6 +170,23 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.24.0
+* **Whose turn it is is now said in each direction's own words.** `on the desk of FEDE` is the file
+  room's line — a routing slip is how a file gets to a desk — and the other two directions were only
+  wearing it because it was the only one there. A drawing names who is working the sheet in its title
+  block, so Blueprint says `drawn by FEDE`; a case is open in front of one person at a time, so Vault
+  says `case open for FEDE`
+* It is three catalog keys and one map — `TURN_KEY` in `turnStrip.jsx` — rather than a seventh entry
+  in `SKIN_WORDS`, and the difference is what the line *is*. Those six are prefixes and flags with no
+  node of their own, so `content` on a pseudo-element is the only place they could live. This one has
+  a node, and it is the label on the one fact at this table nobody may miss: it stays a real string a
+  reader can read, a spec can assert with `textContent`, and `t()` can fall back to English for
+* In both languages, as ever. `dibujado por` is the box a Spanish title block uses, and it does not
+  collide with `firmado por`, which is already who *controls* a team
+* Two specs: the three English lines in `skin.test.js`, and the Spanish one under Vault in
+  `i18n.test.js` — the second because a skin's words are the one place a lost translation looks like
+  a direction that chose to say something else
+
 ### v3.23.1
 * **The turn is now held still in the middle of the table for a full second before it travels.** It
   was 200ms, which is long enough to *see* a card and not long enough to read one — it was gone by the

@@ -511,6 +511,34 @@ test.describe('a skin changes the chrome and nothing else', () => {
 		// the line is purely a statement.
 		expect(all.map(skin => skin.claimed.offer)).toEqual([null, null, null]);
 	});
+
+	// Whose turn it is, in each direction's own words. Unlike the claim line above, this one is a real
+	// text node rather than ::before content — see `TURN_KEY` in turnStrip.jsx — so it is read with
+	// textContent, which `text-transform: uppercase` on the key leaves alone.
+	test('says whose turn it is the way its own direction would', async ({ page }) => {
+		const turnFor = async skin => {
+			await toBoard(page, `?skin=${skin}`);
+
+			return page.evaluate(() => ({
+				key: document.querySelector('#turn-key').textContent,
+				name: document.querySelector('#turn-player').textContent,
+			}));
+		};
+
+		const dossier = await turnFor('dossier');
+		const blueprint = await turnFor('blueprint');
+		const vault = await turnFor('vault');
+
+		// A routing slip sends a file to a desk, a title block names who drew the sheet, and a case is
+		// open in front of one person at a time.
+		expect(dossier.key).toBe('on the desk of');
+		expect(blueprint.key).toBe('drawn by');
+		expect(vault.key).toBe('case open for');
+
+		// Three ways of saying it, one fact underneath — and the name is the same DOM text in all three,
+		// because that is what every other spec in this suite reads after a NEXT TURN.
+		expect([dossier, blueprint, vault].map(turn => turn.name)).toEqual(['FEDE', 'FEDE', 'FEDE']);
+	});
 });
 
 // ── Online ────────────────────────────────────────────────────────────────────────────────────

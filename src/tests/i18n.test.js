@@ -161,6 +161,17 @@ test.describe('THE BOARD IN SPANISH', () => {
 		expect(await contentOf(page, '#hq-control-0', '::before')).toContain('SIN RECLAMAR');
 	});
 
+	test("a skin's words are translated even where they do have a node", async ({ page, goToPlay }) => {
+		// Whose turn it is is the other kind of skin wording: three catalog keys and one map, because
+		// the line has a node of its own — see `TURN_KEY` in turnStrip.jsx. The case says it its own
+		// way in Spanish too, and nothing about that is in CSS.
+		await page.goto('/?skin=vault&hotseat&lang=es');
+		await goToPlay(2);
+
+		await expect(page.locator('#turn-key')).toHaveText('maletín abierto para');
+		await expect(page.locator('#turn-player')).toHaveText('FEDE');
+	});
+
 	test('the friend and foe cards, and the ledger behind them', async ({ page, goToPlay }) => {
 		await page.goto('/?skin=dossier&hotseat&lang=es');
 		await goToPlay(2);

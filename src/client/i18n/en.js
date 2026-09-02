@@ -205,8 +205,13 @@ export default {
 	},
 
 	play: {
-		// The strip above the board.
+		// The strip above the board. Whose turn it is, once per direction: a file is on somebody's
+		// desk, a drawing is drawn by somebody, a case is open in front of somebody. Which of the
+		// three a game says is `TURN_KEY` in turnStrip.jsx — see the note there for why this line is
+		// in the catalog and not in `SKIN_WORDS`.
 		onTheDeskOf: 'on the desk of',
+		drawnBy: 'drawn by',
+		caseOpenFor: 'case open for',
 		ceosDown: 'ceos down',
 		nextTurn: 'NEXT TURN',
 

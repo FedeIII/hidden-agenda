@@ -182,7 +182,11 @@ export default {
 	},
 
 	play: {
+		// DIBUJADO POR es la casilla del cajetín de un plano, y no choca con FIRMADO POR, que es de
+		// quien controla un equipo. El maletín se abre delante de quien tiene el turno.
 		onTheDeskOf: 'en el escritorio de',
+		drawnBy: 'dibujado por',
+		caseOpenFor: 'maletín abierto para',
 		ceosDown: 'ceos caídos',
 		nextTurn: 'PASAR TURNO',
 

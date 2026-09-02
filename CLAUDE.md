@@ -139,6 +139,7 @@ What each direction adds beyond colour and type, all of it token-driven:
 | | Dossier | Blueprint | Vault |
 | --- | --- | --- | --- |
 | Turn strip | routing slip, typed keys, initials boxes per seat | ruled title-block cells | machined rail segments |
+| Whose turn it is | `on the desk of FEDE` | `drawn by FEDE` | `case open for FEDE` |
 | HQ card | team-coloured file tab, cut, with a file number | reversed-out sheet label | embossed tape |
 | `FRIEND` / `FOE` | typed in the card's corner in ink mixed out of the stock, ruled under | reversed out of a filled corner tab, numbered `FIG. 1` / `FIG. 2` | small enamelled tag, bevelled |
 | The team, on a card | over-printed on a block of its own colour that runs the width of the sheet, ruled above and below, with a *colour of record* chip glued on crooked | named in chalk between two rules and never filled, with a half-hatched *colour ref* callout under it | anodised plate bezelled in brass, over the trays' own indicator jewel |
@@ -174,6 +175,7 @@ Where a string lives depends on what kind of string it is, and the split is deli
 - **The pieces have names in the catalog** (`play.pieceAgent` … `play.pieceSniper`), because the last-move mark says one. Deliberately *not* the `TYPE_NAMES` table in `tableBoard.jsx`: that one is lettering on Blueprint's own drawing and stays English in both languages, the way `FIG. 1` and `SECTION A–A` do.
 - **The training course** is an *overlay*: `exercises.js` stays the single course — boards, gates, and the predicate that closes each step — and `exercises.es.js` supplies only titles, findings, notes, verbs and hints, by slug and step position. `training/text.js` merges them. A translation cannot move a cell, which is the point.
 - **The skins' own wording** (`CONTROL:`, `SIGNED OFF`, `SECTION A–A`) is skin × language, because which words they are is the skin's business as much as the language's. `SKIN_WORDS` in `theme/tokens.js`, injected by `theme/skinWords.jsx` as a *second* `createGlobalStyle`: the first one is six hundred declarations that must be injected once and never again, and interpolating a language into it would mint a whole second copy of them.
+- **A skin's wording that has a node of its own stays in the catalog**, and the skin picks the key. That is the turn strip's first line — `on the desk of` / `drawn by` / `case open for`, `TURN_KEY` in `turnStrip.jsx`. The six in `SKIN_WORDS` are prefixes and flags drawn by `content` on a pseudo-element, which is the only place they *could* live; this one is the label on the one fact at the table nobody may miss, so it stays text a reader can read, a spec can assert with `textContent`, and `t()` can fall back to English for. Both halves are read back: `skin.test.js` for the three English lines, `i18n.test.js` for the Spanish one under Vault.
 
 Four things that must survive any edit:
 

@@ -2,8 +2,10 @@ import { useContext, useLayoutEffect, useRef, useState } from 'react';
 import { StateContext } from 'State';
 import py from 'Domain/py';
 import { pz, NUMBER_OF_PLAYERS_KILLED_FOR_GAME_END } from 'Domain/pieces';
+import { SKINS, DEFAULT_SKIN } from 'Domain/skins';
 import { Button } from 'Client/components/button';
 import { useCanAct } from 'Hooks/useSession';
+import useSkin from 'Hooks/useSkin';
 import useT from 'Client/i18n';
 import { nextTurn } from 'Game/actions';
 import { Title } from 'Client/components/title';
@@ -16,10 +18,27 @@ import { Cell, CellKey, CellValue, CellMark, Initials, InitialBox, TurnAnnounceS
 // this same markup as something their own world already has: Dossier types it on a routing slip with
 // a box per seat that has had the turn, Blueprint sets it in the ruled cells a drawing keeps its
 // facts in, Vault mounts it on the rail across the top of the case. One structure, three readings,
-// because moving it would move #next-turn and most of the suite clicks that.
+// because moving it would move #next-turn and most of the suite clicks that. The reading now goes
+// as far as the words themselves — see `TURN_KEY` below.
 //
 // It also finally says how close the game is to over. The game ends when three CEOs are dead and
 // nothing on screen has ever mentioned it, which is a strange thing to keep to yourself.
+
+// Whose turn it is, in each direction's own voice — and the words are the skin's business as much as
+// the language's, exactly as `CONTROL:` and `SECTION A–A` are. Each direction already has a place a
+// name goes: a file sits on somebody's desk, a drawing is drawn by somebody in its title block, and a
+// case is open in front of one person at a time.
+//
+// It is a catalog key per direction rather than a seventh entry in `SKIN_WORDS`, and the difference
+// is what the line IS. Those six are prefixes and flags with no node of their own, so `content` on a
+// pseudo-element is the only place they could live. This one has a node — it is the label on the one
+// fact at this table nobody may miss — so it stays a real string a reader can read, a spec can
+// assert and `t()` can fall back to English for. The skin only chooses which of the three it is.
+const TURN_KEY = {
+	[SKINS.DOSSIER]: 'play.onTheDeskOf',
+	[SKINS.BLUEPRINT]: 'play.drawnBy',
+	[SKINS.VAULT]: 'play.caseOpenFor',
+};
 
 // The line the strip's first cell holds, as its own component, because the announcement is a copy of
 // that cell flown in from the middle of the table and the two have to be the same markup — at the end
@@ -28,10 +47,11 @@ import { Cell, CellKey, CellValue, CellMark, Initials, InitialBox, TurnAnnounceS
 // is not a thing to have two of.
 function OnTheDesk({ turn, players, upTo, named }) {
 	const t = useT();
+	const skin = useSkin();
 
 	return (
 		<>
-			<CellKey>{t('play.onTheDeskOf')}</CellKey>
+			<CellKey id={named ? 'turn-key' : undefined}>{t(TURN_KEY[skin] || TURN_KEY[DEFAULT_SKIN])}</CellKey>
 			<CellValue id={named ? 'turn-player' : undefined}>{turn}</CellValue>
 			<Initials aria-hidden="true">
 				{players.map((player, at) => (
