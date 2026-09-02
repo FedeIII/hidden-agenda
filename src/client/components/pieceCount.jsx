@@ -2,6 +2,7 @@ import { useContext, useCallback } from 'react';
 import styled from 'styled-components';
 import { StateContext } from 'State';
 import { pz } from 'Domain/pieces';
+import { artSrc } from 'Client/art';
 import PieceStyled from './pieceStyled';
 
 // The cemetery. A typed tally on a file, a hatched write-off on a drawing, a milled recess with
@@ -47,7 +48,7 @@ function getGenericPieceTeam(team) {
 }
 
 function PieceType({ type, team }) {
-	const image = `img/${getGenericPieceTeam(team)}-${type}.png`;
+	const image = artSrc(getGenericPieceTeam(team), type);
 
 	return <PieceStyled src={image} killed />;
 }

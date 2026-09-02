@@ -1,5 +1,6 @@
 import { CanvasTexture, LinearFilter, MeshStandardMaterial, SRGBColorSpace, TextureLoader } from 'three';
 import { pz } from 'Domain/pieces';
+import { artSrc } from 'Client/art';
 import hexPrismGeometry, { ORIENTATION, prowGeometry } from './geometry';
 import { SELECTED, TEAM, tileColors } from './palette';
 import { R } from './layout';
@@ -105,7 +106,7 @@ const loader = new TextureLoader();
 function getFaceTexture(team, type) {
 	return cached(`face-${team}-${type}`, () => {
 		const texture = loader.load(
-			`img/${team}-${type}.png`,
+			artSrc(team, type),
 			() => {
 				const stage = getStage();
 

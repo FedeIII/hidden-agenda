@@ -5,19 +5,12 @@ import { togglePiece } from 'Game/actions';
 import { useDragController } from 'Client/drag';
 import { useCanAct, useCanSnipe } from 'Hooks/useSession';
 import PieceStyled from 'Client/components/pieceStyled';
-
-function previewSrc(team, type, [v, h] = []) {
-	if (typeof v === 'undefined' || typeof h === 'undefined') {
-		return `img/${team}-${type}.png`;
-	}
-
-	return `img/${team}-${type}-${v}${h}.png`;
-}
+import { artSrc } from 'Client/art';
 
 function Piece({ id, selectedDirection, selected, highlight, box }) {
 	const team = pz.getTeam(id);
 	const type = pz.getType(id);
-	const image = `img/${team}-${type}.png`;
+	const image = artSrc(team, type);
 
 	const [{ snipe }, dispatch] = useContext(StateContext);
 	const { startDrag, isClickSuppressed } = useDragController();
@@ -46,7 +39,7 @@ function Piece({ id, selectedDirection, selected, highlight, box }) {
 	const onPointerDown = useCallback(
 		event =>
 			startDrag(event, {
-				previewSrc: previewSrc(team, type, selectedDirection),
+				previewSrc: artSrc(team, type, selectedDirection),
 				pieceId: id,
 				// Beginning a drag selects the piece, so one gesture can pick it up and place
 				// it. Unlike the old item() callback this will not deselect an already selected

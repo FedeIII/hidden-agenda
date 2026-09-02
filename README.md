@@ -170,6 +170,17 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.25.1
+* **The new art is behind a `?v=`, or nobody would have seen it for a week.** `/img/` is served
+  with `max-age=604800` because piece filenames are stable and nothing there is content-hashed — so
+  swapping the faces under the same names left a Cloudflare edge and every returning browser holding
+  the old pair while serving the new bundle: two HQs repainted around tokens that had not moved.
+  Confirmed on the wire, `cf-cache-status: HIT` at 37 hours old. The box has no API token for this
+  zone, so the fix is in the app rather than a purge
+* `artSrc()` in `client/art.js` is now the one place a piece image path is built, for all five
+  callers — the flat board, the drag preview, the 3D face texture, the cemetery tally and the points
+  legend. It carries `ART_VERSION`, **which must be bumped whenever a file in `public/img` changes**
+
 ### v3.25.0
 * **The black and white teams have swapped faces, so each one's mark is now the colour it is
   called.** Red's arrow is red and yellow's is yellow; black's was white and white's was black,
