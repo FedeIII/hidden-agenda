@@ -105,25 +105,31 @@ export function tileColors(row, cell) {
 // body: sampled from the outer ring of {team}-A.png, so the extruded side continues the face.
 // rim: the machined chamfer, and the one place a team gets to be loud — it is what lets a black
 // token and a dark red one tell themselves apart across the table.
-// collar: the lip at the base. Shared and near-black for three teams and inverted for white,
-// because it is not identity, it is separation: a collar wider than the barrel throws a hard dark
-// line where the token meets the tile, from every angle, which is what lets a white chip sit on a
-// pale tile and a black chip on a dark one. That is a silhouette property, so it survives being
-// four pixels tall — where a colour difference does not.
+// collar: the lip at the base. Shared and near-black for three teams and inverted for the one
+// light token, because it is not identity, it is separation: a collar wider than the barrel throws
+// a hard dark line where the token meets the tile, from every angle, which is what lets a pale chip
+// sit on a pale tile and a dark chip on a dark one. That is a silhouette property, so it survives
+// being four pixels tall — where a colour difference does not.
+//
+// Teams 0 and 2 hold each other's values because the ART is what these follow, and the black and
+// white teams swapped faces: the black team plays the pale token with the black mark on it, the
+// white team the dark token with the white mark. The glyph carries the team's name, the way red's
+// and yellow's already do. Move a face and you must move these three with it.
 export const TEAM = {
-	0: { body: '#3d3843', rim: '#c7d2e3', collar: '#14171d' },
+	0: { body: '#bfbcc6', rim: '#2a2d35', collar: '#2a2d35' },
 	1: { body: '#4b0313', rim: '#e23048', collar: '#14171d' },
-	2: { body: '#bfbcc6', rim: '#2a2d35', collar: '#2a2d35' },
+	2: { body: '#3d3843', rim: '#c7d2e3', collar: '#14171d' },
 	3: { body: '#3a2f00', rim: '#e9bb1c', collar: '#14171d' },
 };
 
-// The HQ card is painted in a team colour today, and that mapping is deliberately contrasted
-// rather than literal: the black team's card is white so its pieces read against it. The tray
-// keeps that idea.
+// The HQ card is painted in the team's own colour — black team, black card — and the tray keeps
+// that idea: the deck and the socket are the furniture the team is named after, and the pieces
+// read against them because the faces are the other way round. Deck and frame are therefore one
+// decision, not two. A frame lightened without its deck leaves pale tokens on a pale deck.
 export const HQ_TRAY = {
-	0: { deck: '#8d949f', socket: '#5d646f', frame: '#c8ccd3' },
+	0: { deck: '#2a2d34', socket: '#191b20', frame: '#8f959f' },
 	1: { deck: '#5e2028', socket: '#3b1219', frame: '#d0293f' },
-	2: { deck: '#2a2d34', socket: '#191b20', frame: '#8f959f' },
+	2: { deck: '#8d949f', socket: '#5d646f', frame: '#c8ccd3' },
 	3: { deck: '#6b5a1c', socket: '#463a10', frame: '#e9bb1c' },
 };
 

@@ -11,8 +11,8 @@ const hqColor = ({ team }) => {
 		default:
 		case '0':
 			return css`
-				background-color: ${TEAM_COLORS[2]};
-				color: #1b1e23;
+				background-color: ${TEAM_COLORS[0]};
+				color: white;
 			`;
 		case '1':
 			return css`
@@ -21,8 +21,8 @@ const hqColor = ({ team }) => {
 			`;
 		case '2':
 			return css`
-				background-color: ${TEAM_COLORS[0]};
-				color: white;
+				background-color: ${TEAM_COLORS[2]};
+				color: #1b1e23;
 			`;
 		case '3':
 			return css`
@@ -32,8 +32,8 @@ const hqColor = ({ team }) => {
 	}
 };
 
-// The card is painted in a team colour so its pieces read against it — deliberately contrasted
-// rather than literal, which is why the black team's card is white. In 3D the rack behind it does
+// The card is painted in the team's own colour — the black team's card is black — and its pieces
+// read against it because the token faces are the other way round. In 3D the rack behind it does
 // that job, and the card would only be in the way, so it thins down to smoked glass: enough tint
 // to still be a card, little enough to let the tray through, and the team colour moves to the
 // frame where it reads as identity rather than as a background.

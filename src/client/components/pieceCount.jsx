@@ -27,7 +27,8 @@ function countColor({ team, dimensional }) {
 		return 'inherit';
 	}
 
-	return team === '1' || team === '2' ? 'white' : 'black';
+	// Black and red are the two dark cards; white and yellow are the two light ones.
+	return team === '0' || team === '1' ? 'white' : 'black';
 }
 
 const PieceTypeCount = styled.span`
@@ -38,8 +39,11 @@ const PieceTypeCount = styled.span`
 	flex-basis: 25%;
 `;
 
+// The tally shows a piece TYPE, not a piece, so it borrows whichever art reads on this card. Team 0
+// owns the pale face and team 2 the dark one, so the two dark cards borrow 0 and the two light ones
+// borrow 2 — the same split countColor makes, for the same reason.
 function getGenericPieceTeam(team) {
-	return team === '1' || team === '2' ? '2' : '0';
+	return team === '0' || team === '1' ? '0' : '2';
 }
 
 function PieceType({ type, team }) {

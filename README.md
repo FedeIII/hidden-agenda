@@ -170,6 +170,33 @@ Assets are content-hashed and must stay that way — the site sets `immutable` o
 precisely because the names change every build.
 
 ## Changelog
+### v3.25.0
+* **The black and white teams have swapped faces, so each one's mark is now the colour it is
+  called.** Red's arrow is red and yellow's is yellow; black's was white and white's was black,
+  which is a hard thing to unsee once a token is 40px across on a phone. `0-*.png` and `2-*.png`
+  are exchanged in `public/img` — the black team plays the pale token with the black mark, the
+  white team the dark token with the white mark
+* **The HQ went with it, and is now literal rather than contrasted: the black team's is black and
+  the white team's is white**, the way red's is red and yellow's is yellow. That is one decision in
+  three places, because a card fill, a tray deck and a frame are all the same surface seen by the
+  flat renderer, the lit one and the glass over it — `hqColor` in `hqStyled.js`, and `HQ_TRAY` in
+  `three/palette.js`, whose `deck`/`socket`/`frame` move together. **A frame lightened on its own
+  would leave pale tokens on a pale deck**, which is the failure this pairing exists to prevent
+* Everything else keyed to a *face* rather than to a team name moved with the art, and each was a
+  one-line change hiding behind a team id: the extruded token's `body`/`rim`/`collar` in `TEAM`,
+  which exist so a side continues the PNG on top of it; the brightness lift in `pieceStyled.js`,
+  which belongs to the pale face and now names team 0; and the two places that borrow a face for
+  something team-less — the cemetery tally in `pieceCount.jsx`, which picks whichever art reads on
+  this card, and the points legend in `pieceScore.jsx`, which picks the one that reads on all three
+  panels
+* **`--ha-team-*` in `theme/tokens.js` deliberately did not move.** Those four name the team on a
+  file tab and on an alignment card, so black stays dark and white stays pale — the same rule the
+  frame now follows. They used to be sampled off the token art; they are not any more, and the two
+  tables must not be resynced
+* Not done, and visible: the rules exhibits in `public/img/rules` are screenshots of the old
+  arrangement, so the tutorial still shows a pale black-team HQ. They are hand-made and there is no
+  generator for them
+
 ### v3.24.0
 * **Whose turn it is is now said in each direction's own words.** `on the desk of FEDE` is the file
   room's line — a routing slip is how a file gets to a desk — and the other two directions were only

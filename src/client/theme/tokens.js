@@ -26,7 +26,12 @@ import { SKINS } from 'Domain/skins';
 //   - anything with a length that decides where a hexagon lands. See the note in domain/skins.js.
 
 // Shared across all three. The friend/foe green and red the game has used from the start, and the
-// four team colours, sampled off the token art the same way three/palette.js samples them.
+// four team colours.
+//
+// These four name the team and are read on a tab and on an alignment card, so each one is the
+// colour its team is CALLED — black is dark, white is pale. They are no longer the token's own
+// colour: three/palette.js follows the face, and the black and white faces are inverted so their
+// marks can carry the team name. Do not resync the two tables.
 const SHARED = {
 	'--ha-friend': 'mediumseagreen',
 	'--ha-foe': 'indianred',

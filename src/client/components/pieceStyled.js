@@ -2,8 +2,9 @@ import styled, { css } from 'styled-components';
 import { pz } from 'Domain/pieces';
 import { directionToAngle } from 'Client/three/layout';
 
+// The lift belongs to the pale face, not to a team name — team 0 is the one that carries it now.
 const brightness = ({ pieceId = '' }) => {
-	if (pz.getTeam(pieceId) === '2') {
+	if (pz.getTeam(pieceId) === '0') {
 		return css`
 			filter: brightness(1.2);
 		`;
